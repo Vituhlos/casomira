@@ -51,10 +51,13 @@ nsis:
   # uninstallerIcon: build/icon.ico
 
 mac:
+  # Jeden DMG pro Intel (x64) i Apple Silicon (arm64).
+  arch:
+    - universal
   target:
     - dmg
   category: public.app-category.sports
-  artifactName: Casomira-${version}.${ext}
+  artifactName: Casomira-${version}-mac-universal.${ext}
   # Volitelně: build/icon.icns
   # icon: build/icon.icns
 

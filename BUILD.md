@@ -7,7 +7,7 @@
 | Systém | Soubor | Kde vznikne |
 |--------|--------|-------------|
 | **Windows** | `Casomira-Setup-0.9.0.exe` | složka `release/` |
-| **Mac** | `Casomira-0.9.0.dmg` | složka `release/` (jen na Macu nebo v CI) |
+| **Mac** | `Casomira-0.9.0-mac-universal.dmg` | složka `release/` (Intel x64 + Apple Silicon; jen na Macu nebo v CI) |
 
 Instalátor na Windows přidá program do menu Start, zástupce na plochu (volitelně) a odinstalaci v Nastavení.
 
@@ -74,7 +74,7 @@ npm install
 npm run dist:mac
 ```
 
-→ `release/Casomira-0.9.0.dmg`
+→ `release/Casomira-0.9.0-mac-universal.dmg` (jeden soubor pro **Intel i Apple Silicon**)
 
 Bez Apple Developer účtu může Mac při prvním spuštění ukázat varování — to se řeší později notarizací (není nutné pro závod u tebe doma).
 
@@ -100,7 +100,7 @@ Workflow [`.github/workflows/release.yml`](./.github/workflows/release.yml) sest
 
 **Ruční spuštění:** Actions → **Release** → **Run workflow** → zadej tag (např. `v0.9.0`). Tag musí na GitHubu existovat (`git push origin v0.9.0`), jinak krok Publish selže.
 
-Mac DMG v CI jede **bez notarizace** (`CSC_IDENTITY_AUTO_DISCOVERY=false`) — na cizím Macu může Gatekeeper vyžadovat „Otevřít přesto“ v System Settings.
+Mac DMG v CI je **universal** (x64 + arm64) a jede **bez notarizace** (`CSC_IDENTITY_AUTO_DISCOVERY=false`) — na cizím Macu může Gatekeeper vyžadovat „Otevřít přesto“ v System Settings. Build na Macu trvá déle než samotný arm64.
 
 ---
 

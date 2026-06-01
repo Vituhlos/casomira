@@ -17,7 +17,7 @@ Instalátory najdeš u **[GitHub Releases](https://github.com/Vituhlos/casomira/
 | Platforma | Soubor |
 |-----------|--------|
 | Windows | `Casomira-Setup-x.y.z.exe` — NSIS instalátor (Start menu, odinstalace) |
-| macOS | `Casomira-x.y.z.dmg` |
+| macOS | `Casomira-x.y.z-mac-universal.dmg` (Intel + Apple Silicon) |
 
 Bez release tagu můžeš sestavit lokálně — viz [BUILD.md](./BUILD.md).
 

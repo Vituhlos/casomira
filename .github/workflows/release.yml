@@ -33,7 +33,7 @@ jobs:
           - os: macos-latest
             os_label: macOS
             dist_cmd: dist:mac
-            artifact_glob: release/Casomira-*.dmg
+            artifact_glob: release/Casomira-*-mac-universal.dmg
 
     runs-on: ${{ matrix.os }}
 
