@@ -52,12 +52,13 @@ nsis:
 
 mac:
   # Jeden DMG pro Intel (x64) i Apple Silicon (arm64).
-  arch:
-    - universal
   target:
-    - dmg
+    - target: dmg
+      arch: universal
   category: public.app-category.sports
   artifactName: Casomira-${version}-mac-universal.${ext}
+  # Nativní moduly (better-sqlite3) v asarUnpack — pro universal obě architektury.
+  mergeASARs: true
   # Volitelně: build/icon.icns
   # icon: build/icon.icns
 
