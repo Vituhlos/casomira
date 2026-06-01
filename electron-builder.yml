@@ -1,0 +1,63 @@
+# Balení Časomíry pro Windows (NSIS) a macOS (DMG). Viz BUILD.md.
+appId: cz.casomira.app
+productName: Časomíra
+copyright: Copyright © Časomíra
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+  - '!**/.vscode/*'
+  - '!src/**'
+  - '!Casomira-macOS/**'
+  - '!release/**'
+  - '!*.md'
+  - '!*.tsbuildinfo'
+  - '!{.env,.env.*}'
+
+# Nativní SQLite — nesmí být uvnitř asar (CLAUDE.md + electron-vite guide).
+asarUnpack:
+  - node_modules/better-sqlite3/**
+
+# Přebuildovat native moduly jen když ještě nejsou pro Electron (viz `npm run rebuild`).
+# Při EPERM zavři běžící Časomíru / `npm run dev` a spusť znovu, nebo: npm run rebuild && npm run dist:win
+npmRebuild: false
+
+win:
+  target:
+    - nsis
+  executableName: Casomira
+  artifactName: Casomira-Setup-${version}.${ext}
+  # Bez podpisu kódu (vyhne se chybě symlinků winCodeSign na Windows bez dev režimu).
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Časomíra
+  uninstallDisplayName: Časomíra
+  # Volitelně: build/icon.ico (512×512 zdroj → viz BUILD.md)
+  # installerIcon: build/icon.ico
+  # uninstallerIcon: build/icon.ico
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.sports
+  artifactName: Casomira-${version}.${ext}
+  # Volitelně: build/icon.icns
+  # icon: build/icon.icns
+
+dmg:
+  title: Časomíra ${version}
+  # icon: build/dmg-icon.icns
+
+linux:
+  target: []

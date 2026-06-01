@@ -1,0 +1,2019 @@
+// Datová vrstva — čte a zapisuje do SQLite. Tvar dat i kanály IPC zůstávají
+// stejné jako v dřívější verzi v paměti, takže okno se nijak nemění.
+
+import type {
+  ImportCommit,
+  ImportPreview,
+  ImportResult,
+  ImportSheetPreview,
+  CelkoveRadek,
+  Jezdec,
+  JezdecPole,
+  JezdecUprava,
+  Kategorie,
+  KlasifikaceRadek,
+  KoloTyp,
+  MereniKanal,
+  MereniRadek,
+  MereniSetCisloResult,
+  NovyZavod,
+  RostKolo,
+  RostNavrh,
+  RostNavrhJizda,
+  RostSlot,
+  RostZapisJizda,
+  Ruleset,
+  SetRostResult,
+  BodovaPenalizaceArg,
+  CasovaPenalizaceArg,
+  PosunPoradiArg,
+  SetVysledekArg,
+  UpravaLogRadek,
+  VysledekJizda,
+  VysledekKolo,
+  VysledekRadek,
+  ZrusPenalizaciArg,
+  ZaverStav,
+  Zavod,
+  ZavodInfo,
+  ZavodUprava
+} from '../shared/types'
+import { getDb } from './db/connection'
+import { parseSheets } from './excel'
+import { aplikujRucniPoradi, spocitejJizdu, type JizdaVstup, type Penalizace } from './scoring'
+import {
+  celkovePoradi,
+  celkovePoradiSotolina,
+  jeKvalifikovan,
+  nasazFinaleZeSF,
+  nasazSF,
+  PRAH_SF
+} from './zaver'
+
+const JEZDEC_SLOUPCE =
+  'id, kategorie_id, st_cislo, prijmeni, jmeno, znacka, model, rok_narozeni, los'
+
+// Povolené sloupce pro inline editaci — chrání proti vložení cizího SQL přes
+// název pole (hodnoty se vždy předávají přes parametr ?).
+const EDITOVATELNA: JezdecPole[] = ['los', 'st_cislo', 'prijmeni', 'jmeno', 'znacka', 'model']
+
+function isUniqueError(e: unknown): boolean {
+  return (
+    e instanceof Error &&
+    'code' in e &&
+    (e as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE'
+  )
+}
+
+// ---- Nastavení (klíč/hodnota) ----
+
+export function getNastaveni(klic: string): string | null {
+  const row = getDb().prepare('SELECT hodnota FROM nastaveni WHERE klic = ?').get(klic) as
+    | { hodnota: string }
+    | undefined
+  return row?.hodnota ?? null
+}
+
+export function setNastaveni(klic: string, hodnota: string): void {
+  getDb()
+    .prepare(
+      'INSERT INTO nastaveni (klic, hodnota) VALUES (?, ?) ON CONFLICT(klic) DO UPDATE SET hodnota = excluded.hodnota'
+    )
+    .run(klic, hodnota)
+}
+
+export function deleteNastaveni(klic: string): void {
+  getDb().prepare('DELETE FROM nastaveni WHERE klic = ?').run(klic)
+}
+
+/** Logo do hlavičky PDF (data URL), nebo null když není nahrané. */
+export function getLogo(): string | null {
+  return getNastaveni('logo')
+}
+
+/** Kořenová složka, kam se ukládají generovaná PDF (nebo null = nenastaveno). */
+export function getPdfRoot(): string | null {
+  return getNastaveni('pdf_root')
+}
+export function setPdfRoot(cesta: string): void {
+  setNastaveni('pdf_root', cesta)
+}
+
+const ZAVOD_SLOUPCE = 'id, nazev, datum, misto, typ'
+
+export function getZavodById(id: number): Zavod | null {
+  const row = getDb()
+    .prepare(`SELECT ${ZAVOD_SLOUPCE} FROM zavod WHERE id = ?`)
+    .get(id) as Zavod | undefined
+  return row ?? null
+}
+
+// Aktivní (právě otevřený) závod si pamatujeme v nastavení, ať přežije restart.
+// Když není nastavený nebo zmizel, vezmeme první závod v DB.
+export function getAktivniZavod(): Zavod | null {
+  const ulozeny = getNastaveni('aktivni_zavod')
+  if (ulozeny) {
+    const z = getZavodById(Number(ulozeny))
+    if (z) return z
+  }
+  const row = getDb()
+    .prepare(`SELECT ${ZAVOD_SLOUPCE} FROM zavod ORDER BY id LIMIT 1`)
+    .get() as Zavod | undefined
+  return row ?? null
+}
+
+export function setAktivniZavod(id: number): void {
+  setNastaveni('aktivni_zavod', String(id))
+}
+
+// Otevře závod (udělá ho aktivním) a vrátí ho.
+export function openZavod(id: number): Zavod | null {
+  const z = getZavodById(id)
+  if (z) setAktivniZavod(id)
+  return z
+}
+
+// Seznam všech závodů s počty kategorií a jezdců (pro úvodní obrazovku).
+export function listZavody(): ZavodInfo[] {
+  return getDb()
+    .prepare(
+      `SELECT z.id AS id, z.nazev AS nazev, z.datum AS datum, z.misto AS misto, z.typ AS typ,
+              (SELECT COUNT(*) FROM kategorie k WHERE k.zavod_id = z.id) AS pocetKategorii,
+              (SELECT COUNT(*) FROM jezdec j JOIN kategorie k ON k.id = j.kategorie_id
+               WHERE k.zavod_id = z.id) AS pocetJezdcu
+       FROM zavod z
+       ORDER BY z.datum DESC, z.id DESC`
+    )
+    .all() as ZavodInfo[]
+}
+
+// Založí nový závod i s kategoriemi, nastaví ho jako aktivní a vrátí ho.
+export function createZavod(data: NovyZavod): Zavod {
+  const db = getDb()
+  const typ = data.typ === 'RX' ? 'RX' : 'RAC'
+  const id = db.transaction(() => {
+    const r = db
+      .prepare('INSERT INTO zavod (nazev, datum, misto, typ) VALUES (?, ?, ?, ?)')
+      .run(data.nazev.trim() || 'Nový závod', data.datum, data.misto.trim(), typ)
+    const zavodId = Number(r.lastInsertRowid)
+    const insKat = db.prepare('INSERT INTO kategorie (zavod_id, nazev, ruleset) VALUES (?, ?, ?)')
+    for (const k of data.kategorie) {
+      const nazev = k.nazev.trim()
+      if (!nazev) continue
+      insKat.run(zavodId, nazev, k.ruleset === 'SOTOLINA' ? 'SOTOLINA' : 'STANDARD')
+    }
+    return zavodId
+  })()
+  setAktivniZavod(id)
+  return getZavodById(id) as Zavod
+}
+
+export function updateZavod(uprava: ZavodUprava): Zavod {
+  getDb()
+    .prepare('UPDATE zavod SET nazev = ?, datum = ?, misto = ? WHERE id = ?')
+    .run(uprava.nazev.trim() || 'Závod', uprava.datum, uprava.misto.trim(), uprava.id)
+  return getZavodById(uprava.id) as Zavod
+}
+
+// Smaže závod; kaskáda v DB smaže kategorie, jezdce, kola, rošty i výsledky.
+export function deleteZavod(id: number): void {
+  getDb().prepare('DELETE FROM zavod WHERE id = ?').run(id)
+}
+
+export function listKategorie(zavodId: number): Kategorie[] {
+  return getDb()
+    .prepare(
+      `SELECT k.id, k.zavod_id, k.nazev, k.ruleset,
+              (SELECT COUNT(*) FROM jezdec j WHERE j.kategorie_id = k.id) AS pocet
+       FROM kategorie k
+       WHERE k.zavod_id = ?
+       ORDER BY k.id`
+    )
+    .all(zavodId) as Kategorie[]
+}
+
+// Jedna kategorie podle id (i s číslem závodu) — bez počtu jezdců.
+export function getKategorieById(
+  id: number
+): { id: number; zavod_id: number; nazev: string; ruleset: Ruleset } | null {
+  const row = getDb()
+    .prepare('SELECT id, zavod_id, nazev, ruleset FROM kategorie WHERE id = ?')
+    .get(id) as { id: number; zavod_id: number; nazev: string; ruleset: Ruleset } | undefined
+  return row ?? null
+}
+
+export function listJezdci(kategorieId: number): Jezdec[] {
+  return getDb()
+    .prepare(
+      `SELECT ${JEZDEC_SLOUPCE} FROM jezdec
+       WHERE kategorie_id = ?
+       ORDER BY los IS NULL, los`
+    )
+    .all(kategorieId) as Jezdec[]
+}
+
+export function updateJezdec(uprava: JezdecUprava): Jezdec {
+  if (!EDITOVATELNA.includes(uprava.pole)) {
+    throw new Error(`Nepovolené pole: ${uprava.pole}`)
+  }
+  const db = getDb()
+
+  // Los musí být v rámci kategorie unikátní (prázdný los je povolen).
+  if (uprava.pole === 'los' && typeof uprava.hodnota === 'number') {
+    const kat = db.prepare('SELECT kategorie_id FROM jezdec WHERE id = ?').get(uprava.id) as
+      | { kategorie_id: number }
+      | undefined
+    if (kat) {
+      const kolize = db
+        .prepare('SELECT id FROM jezdec WHERE kategorie_id = ? AND los = ? AND id <> ?')
+        .get(kat.kategorie_id, uprava.hodnota, uprava.id)
+      if (kolize) throw new Error(`Los ${uprava.hodnota} už v této kategorii má jiný jezdec.`)
+    }
+  }
+
+  try {
+    db.prepare(`UPDATE jezdec SET ${uprava.pole} = ? WHERE id = ?`).run(uprava.hodnota, uprava.id)
+  } catch (e) {
+    if (uprava.pole === 'st_cislo' && isUniqueError(e)) {
+      throw new Error(`Startovní číslo ${uprava.hodnota} už v této kategorii existuje.`)
+    }
+    throw e
+  }
+  return db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`).get(uprava.id) as Jezdec
+}
+
+// Přidá prázdného jezdce do kategorie (startovní číslo doplní operátor inline).
+export function addJezdec(kategorieId: number): Jezdec {
+  const db = getDb()
+  const r = db
+    .prepare(
+      `INSERT INTO jezdec (kategorie_id, st_cislo, prijmeni, jmeno, znacka, model)
+       VALUES (?, NULL, '', '', '', '')`
+    )
+    .run(kategorieId)
+  return db
+    .prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
+    .get(Number(r.lastInsertRowid)) as Jezdec
+}
+
+export function deleteJezdec(id: number): void {
+  getDb().prepare('DELETE FROM jezdec WHERE id = ?').run(id)
+}
+
+// Sestaví náhled importu: rozparsuje Excel a ke každému listu doplní, na kterou
+// kategorii v aktivním závodě se mapuje a kolik startovních čísel už existuje.
+export function buildImportPreview(soubor: string): ImportPreview {
+  const db = getDb()
+  const zavod = getAktivniZavod() // import míří do právě otevřeného závodu
+  const cats = zavod
+    ? (db.prepare('SELECT id, nazev FROM kategorie WHERE zavod_id = ?').all(zavod.id) as {
+        id: number
+        nazev: string
+      }[])
+    : []
+  const catByName = new Map(cats.map((c) => [c.nazev, c.id]))
+
+  const listy: ImportSheetPreview[] = parseSheets(soubor).map((s) => {
+    const kategorieId = catByName.get(s.mappedNazev) ?? null
+    let konflikty = 0
+    if (kategorieId !== null) {
+      const existing = new Set(
+        (
+          db
+            .prepare('SELECT st_cislo FROM jezdec WHERE kategorie_id = ? AND st_cislo IS NOT NULL')
+            .all(kategorieId) as { st_cislo: number }[]
+        ).map((x) => x.st_cislo)
+      )
+      konflikty = s.jezdci.filter((j) => j.st_cislo !== null && existing.has(j.st_cislo)).length
+    }
+
+    // Duplicitní losy v rámci listu (jen vyplněné) — los musí být unikátní.
+    const pocty = new Map<number, number>()
+    for (const j of s.jezdci) {
+      if (j.los !== null) pocty.set(j.los, (pocty.get(j.los) ?? 0) + 1)
+    }
+    const losKolize = [...pocty.entries()]
+      .filter(([, c]) => c >= 2)
+      .map(([los]) => los)
+      .sort((a, b) => a - b)
+
+    return {
+      sheet: s.sheet,
+      mappedNazev: s.mappedNazev,
+      kategorieId,
+      pocet: s.jezdci.length,
+      konflikty,
+      losKolize,
+      jezdci: s.jezdci
+    }
+  })
+
+  return { soubor, listy }
+}
+
+// Zapíše naimportované jezdce. Při kolizi startovního čísla buď přepíše
+// existujícího jezdce (overwrite), nebo ho přeskočí (skip).
+export function importJezdci(commit: ImportCommit): ImportResult {
+  const db = getDb()
+  const najdi = db.prepare('SELECT id FROM jezdec WHERE kategorie_id = ? AND st_cislo = ?')
+  const vloz = db.prepare(
+    `INSERT INTO jezdec (kategorie_id, st_cislo, prijmeni, jmeno, znacka, model, rok_narozeni, los)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+  const prepis = db.prepare(
+    `UPDATE jezdec SET prijmeni = ?, jmeno = ?, znacka = ?, model = ?, rok_narozeni = ?, los = ?
+     WHERE id = ?`
+  )
+
+  let vlozeno = 0
+  let prepsano = 0
+  let preskoceno = 0
+
+  const tx = db.transaction(() => {
+    for (const list of commit.listy) {
+      for (const j of list.jezdci) {
+        const existing =
+          j.st_cislo !== null
+            ? (najdi.get(list.kategorieId, j.st_cislo) as { id: number } | undefined)
+            : undefined
+        if (existing) {
+          if (commit.policy === 'overwrite') {
+            prepis.run(j.prijmeni, j.jmeno, j.znacka, j.model, j.rok_narozeni, j.los, existing.id)
+            prepsano++
+          } else {
+            preskoceno++
+          }
+        } else {
+          vloz.run(
+            list.kategorieId,
+            j.st_cislo,
+            j.prijmeni,
+            j.jmeno,
+            j.znacka,
+            j.model,
+            j.rok_narozeni,
+            j.los
+          )
+          vlozeno++
+        }
+      }
+    }
+  })
+  tx()
+
+  return { vlozeno, prepsano, preskoceno }
+}
+
+// =====================================================================
+// Rošty / Výsledky / Klasifikace
+// =====================================================================
+
+type Db = ReturnType<typeof getDb>
+
+const JEZDEC_COLS_J =
+  'j.id AS id, j.kategorie_id AS kategorie_id, j.st_cislo AS st_cislo, j.prijmeni AS prijmeni, j.jmeno AS jmeno, j.znacka AS znacka, j.model AS model, j.rok_narozeni AS rok_narozeni, j.los AS los'
+
+const MAX_NA_JIZDU = 8
+
+function koloPoradi(typ: KoloTyp): number {
+  return { Q1: 1, Q2: 2, Q3: 3, SF: 4, F: 5, F_A: 5, F_B: 6 }[typ]
+}
+
+function jezdecZRadku(r: Record<string, unknown>): Jezdec {
+  return {
+    id: r.id as number,
+    kategorie_id: r.kategorie_id as number,
+    st_cislo: (r.st_cislo as number | null) ?? null,
+    prijmeni: r.prijmeni as string,
+    jmeno: r.jmeno as string,
+    znacka: r.znacka as string,
+    model: r.model as string,
+    rok_narozeni: (r.rok_narozeni as number | null) ?? null,
+    los: (r.los as number | null) ?? null
+  }
+}
+
+// Zajistí kolo. Nové kolo dostane výchozí vyrovnaný počet jízd; u existujícího
+// počet jízd PONECHÁME (operátor ho mohl ručně změnit), jen doplníme na
+// kapacitní minimum (strop 8/jízda), kdyby přibyli jezdci. Vrátí id kola.
+function ensureKolo(db: Db, kategorieId: number, typ: KoloTyp): number {
+  const pocet = (
+    db.prepare('SELECT COUNT(*) AS n FROM jezdec WHERE kategorie_id = ?').get(kategorieId) as {
+      n: number
+    }
+  ).n
+  const kolo = db.prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?').get(
+    kategorieId,
+    typ
+  ) as { id: number } | undefined
+
+  // Jen kvalifikace (Q) mají počet jízd odvozený od počtu jezdců. SF/finále si
+  // jízdy vytvoří generování (nasazení), tady je neřešíme.
+  const jeQ = typ === 'Q1' || typ === 'Q2' || typ === 'Q3'
+
+  if (kolo) {
+    if (jeQ) {
+      const min = Math.max(1, Math.ceil(pocet / MAX_NA_JIZDU))
+      const mam = (
+        db.prepare('SELECT COUNT(*) AS n FROM jizda WHERE kolo_id = ?').get(kolo.id) as { n: number }
+      ).n
+      const ins = db.prepare('INSERT INTO jizda (kolo_id, cislo) VALUES (?, ?)')
+      for (let c = mam + 1; c <= min; c++) ins.run(kolo.id, c)
+    }
+    return kolo.id
+  }
+
+  const r = db
+    .prepare('INSERT INTO kolo (kategorie_id, typ, poradi) VALUES (?, ?, ?)')
+    .run(kategorieId, typ, koloPoradi(typ))
+  const koloId = Number(r.lastInsertRowid)
+  if (jeQ) {
+    const ins = db.prepare('INSERT INTO jizda (kolo_id, cislo) VALUES (?, ?)')
+    for (let c = 1; c <= pocetJizd(pocet); c++) ins.run(koloId, c)
+  }
+  return koloId
+}
+
+export function getRosty(kategorieId: number, typ: KoloTyp): RostKolo {
+  const db = getDb()
+  const koloId = ensureKolo(db, kategorieId, typ)
+  const jizdy = db
+    .prepare('SELECT id, cislo FROM jizda WHERE kolo_id = ? ORDER BY cislo')
+    .all(koloId) as { id: number; cislo: number }[]
+
+  // Kolik pozic ukázat na jízdu: Q/SF mají strop 8, finále podle nastavené
+  // velikosti finále (8 nebo 10) — ať jsou u finále o 10 vidět i pozice 9 a 10.
+  const jeFinale = typ === 'F' || typ === 'F_A' || typ === 'F_B'
+  const cap = jeFinale
+    ? (
+        db.prepare('SELECT finale_velikost FROM kategorie WHERE id = ?').get(kategorieId) as {
+          finale_velikost: number
+        }
+      ).finale_velikost
+    : MAX_NA_JIZDU
+
+  const selPoz = db.prepare(
+    `SELECT rp.pozice AS pozice, ${JEZDEC_COLS_J}
+     FROM rost_pozice rp JOIN jezdec j ON j.id = rp.jezdec_id
+     WHERE rp.jizda_id = ?`
+  )
+
+  return {
+    koloId,
+    jizdy: jizdy.map((jz) => {
+      const rows = selPoz.all(jz.id) as (Record<string, unknown> & { pozice: number })[]
+      const byPoz = new Map(rows.map((r) => [r.pozice, r]))
+      // Aspoň `cap` pozic, a kdyby ručně přibyla vyšší pozice, ukaž i ji.
+      const nejvyssi = rows.reduce((m, r) => Math.max(m, r.pozice), 0)
+      const pocetSlotu = Math.max(cap, nejvyssi)
+      const sloty: RostSlot[] = []
+      for (let p = 1; p <= pocetSlotu; p++) {
+        const r = byPoz.get(p)
+        sloty.push({ pozice: p, jezdec: r ? jezdecZRadku(r) : null })
+      }
+      return { id: jz.id, cislo: jz.cislo, sloty }
+    })
+  }
+}
+
+export function setRostSlot(
+  jizdaId: number,
+  pozice: number,
+  st_cislo: number | null
+): SetRostResult {
+  const db = getDb()
+  const meta = db
+    .prepare('SELECT k.kategorie_id AS kategorie_id FROM jizda jz JOIN kolo k ON k.id = jz.kolo_id WHERE jz.id = ?')
+    .get(jizdaId) as { kategorie_id: number } | undefined
+  if (!meta) throw new Error('Jízda neexistuje')
+
+  if (st_cislo === null) {
+    db.prepare('DELETE FROM rost_pozice WHERE jizda_id = ? AND pozice = ?').run(jizdaId, pozice)
+    return { ok: true, jezdec: null }
+  }
+
+  const jezdec = db
+    .prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE kategorie_id = ? AND st_cislo = ?`)
+    .get(meta.kategorie_id, st_cislo) as Jezdec | undefined
+  if (!jezdec) return { ok: false, jezdec: null }
+
+  // Jeden jezdec nesmí být v téže jízdě na dvou pozicích.
+  const dup = db
+    .prepare('SELECT 1 FROM rost_pozice WHERE jizda_id = ? AND jezdec_id = ? AND pozice <> ?')
+    .get(jizdaId, jezdec.id, pozice)
+  if (dup) return { ok: false, jezdec: null, duplicitni: true }
+
+  db.transaction(() => {
+    db.prepare('DELETE FROM rost_pozice WHERE jizda_id = ? AND pozice = ?').run(jizdaId, pozice)
+    db.prepare('INSERT INTO rost_pozice (jizda_id, pozice, jezdec_id) VALUES (?, ?, ?)').run(
+      jizdaId,
+      pozice,
+      jezdec.id
+    )
+  })()
+
+  return { ok: true, jezdec }
+}
+
+// Je v daném roštu (kole) už nějaký jezdec?
+function rostObsazen(db: Db, kategorieId: number, typ: KoloTyp): boolean {
+  const kolo = db.prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?').get(
+    kategorieId,
+    typ
+  ) as { id: number } | undefined
+  if (!kolo) return false
+  const c = db
+    .prepare(
+      'SELECT COUNT(*) AS n FROM rost_pozice rp JOIN jizda jz ON jz.id = rp.jizda_id WHERE jz.kolo_id = ?'
+    )
+    .get(kolo.id) as { n: number }
+  return c.n > 0
+}
+
+// Sekundární klíč: startovní číslo (chybějící až nakonec) — kvůli determinismu.
+function porovnejCislo(a: Jezdec, b: Jezdec): number {
+  return (a.st_cislo ?? Number.POSITIVE_INFINITY) - (b.st_cislo ?? Number.POSITIVE_INFINITY)
+}
+
+// Porovnání podle losu. Jezdci BEZ losu jdou vždy ZA ty s losem; při shodě
+// (i mezi bezlosými) rozhoduje startovní číslo.
+function porovnejLos(a: Jezdec, b: Jezdec, vzestupne: boolean): number {
+  if (a.los === null && b.los === null) return porovnejCislo(a, b)
+  if (a.los === null) return 1
+  if (b.los === null) return -1
+  if (a.los !== b.los) return vzestupne ? a.los - b.los : b.los - a.los
+  return porovnejCislo(a, b)
+}
+
+// Rovnoměrné velikosti skupin: N jezdců do `h` jízd (zbytek do prvních jízd).
+// Příklady: 9,2→[5,4] · 17,3→[6,6,5] · 15,3→[5,5,5].
+function rovneVelikosti(n: number, h: number): number[] {
+  const base = Math.floor(n / h)
+  const rem = n % h
+  return Array.from({ length: h }, (_, i) => base + (i < rem ? 1 : 0))
+}
+
+// Výchozí (vyrovnaný) počet jízd dle reálných pravidel:
+// ceil(N/8), ale když by tak vznikla „nečistá" jízda s 8 a N není násobek 8,
+// přidá jízdu navíc. (15→3 ⇒ 5+5+5, ale 16→2 ⇒ 8+8.)
+function pocetJizd(n: number): number {
+  if (n <= MAX_NA_JIZDU) return 1
+  let h = Math.ceil(n / MAX_NA_JIZDU)
+  if (n % MAX_NA_JIZDU !== 0 && Math.ceil(n / h) === MAX_NA_JIZDU) h += 1
+  return h
+}
+
+// =====================================================================
+// Fixní skupiny — jen ruleset SOTOLINA (CLAUDE.md §6, Šotolina Cup)
+// =====================================================================
+// V Šotolině jezdí stejní jezdci spolu napříč Q1–Q3 (skupina A jede spolu
+// v Q1, Q2 i Q3). Skupiny se vytvoří při zápisu Q1 a propojí s jízdami přes
+// `jizda.skupina_id`. Q2/Q3 pak generujeme v rámci těchto skupin.
+
+interface SkupinaInfo {
+  id: number
+  nazev: string
+}
+
+function listSkupiny(db: Db, kategorieId: number): SkupinaInfo[] {
+  return db
+    .prepare('SELECT id, nazev FROM skupina WHERE kategorie_id = ? ORDER BY id')
+    .all(kategorieId) as SkupinaInfo[]
+}
+
+// Idempotentně doplní chybějící skupiny na požadovaný počet (A, B, C…).
+// Existující nikdy neruší — uživatel by tak přišel o jezdce v Q2/Q3.
+function ensureSkupiny(db: Db, kategorieId: number, pocet: number): SkupinaInfo[] {
+  const stav = listSkupiny(db, kategorieId)
+  if (stav.length >= pocet) return stav
+  const ins = db.prepare('INSERT INTO skupina (kategorie_id, nazev) VALUES (?, ?)')
+  const out = stav.slice()
+  for (let i = stav.length; i < pocet; i++) {
+    const nazev = String.fromCharCode(65 + i) // A, B, C…
+    const r = ins.run(kategorieId, nazev)
+    out.push({ id: Number(r.lastInsertRowid), nazev })
+  }
+  return out
+}
+
+// Kdo je v dané skupině podle Q1 roštu (Q1 určuje, kdo s kým jezdí).
+function jezdciVeSkupineQ1(db: Db, kategorieId: number, skupinaId: number): Jezdec[] {
+  const rows = db
+    .prepare(
+      `SELECT ${JEZDEC_COLS_J}
+       FROM jizda jz
+       JOIN kolo k ON k.id = jz.kolo_id
+       JOIN rost_pozice rp ON rp.jizda_id = jz.id
+       JOIN jezdec j ON j.id = rp.jezdec_id
+       WHERE jz.skupina_id = ? AND k.kategorie_id = ? AND k.typ = 'Q1'
+       ORDER BY rp.pozice`
+    )
+    .all(skupinaId, kategorieId) as Record<string, unknown>[]
+  return rows.map(jezdecZRadku)
+}
+
+// Návrh roštu pro kategorii s ruleset SOTOLINA. Jede ve fixních skupinách.
+function navrhniRostSotolina(
+  db: Db,
+  kategorieId: number,
+  typ: KoloTyp,
+  jezdci: Jezdec[],
+  obsazeno: boolean,
+  pozadovanyPocet?: number
+): RostNavrh {
+  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
+  const n = jezdci.length
+
+  if (typ === 'Q1') {
+    // Q1 dle losu (bezlosí na konec). Bloky = budoucí skupiny — v DB se
+    // skupiny vytvoří/propojí až při zápisu roštu.
+    const sorted = [...jezdci].sort((a, b) => porovnejLos(a, b, true))
+    const minJizd = Math.max(1, Math.ceil(n / MAX_NA_JIZDU))
+    const maxJizd = Math.max(1, n)
+    const h = Math.min(maxJizd, Math.max(minJizd, pozadovanyPocet ?? pocetJizd(n)))
+    const sizes = rovneVelikosti(n, h)
+    const bloky: Jezdec[][] = []
+    let idx = 0
+    for (const s of sizes) {
+      bloky.push(sorted.slice(idx, idx + s))
+      idx += s
+    }
+    const jizdy: RostNavrhJizda[] = bloky.map((b, i) => ({ cislo: i + 1, jezdci: b }))
+    return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd, maxJizd }
+  }
+
+  if (typ !== 'Q2' && typ !== 'Q3') {
+    return { ok: false, chyba: 'Generování zatím jen pro Q1–Q3.', obsazeno, jizdy: [], ...prazdny }
+  }
+
+  // Q2/Q3 vyžadují nasazené Q1 (z něj vznikly skupiny).
+  const skupiny = listSkupiny(db, kategorieId)
+  if (skupiny.length === 0) {
+    return {
+      ok: false,
+      chyba: 'Nejdřív nasaď Q1 — Šotolina jezdí ve fixních skupinách (Q1 je tvoří).',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+  const podleSkupin = new Map<number, Jezdec[]>()
+  for (const s of skupiny) podleSkupin.set(s.id, jezdciVeSkupineQ1(db, kategorieId, s.id))
+  const maZasazene = [...podleSkupin.values()].some((arr) => arr.length > 0)
+  if (!maZasazene) {
+    return {
+      ok: false,
+      chyba: 'Q1 rošt je prázdný — nejdřív rozsaď jezdce do skupin v Q1.',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+
+  const h = skupiny.length
+
+  if (typ === 'Q2') {
+    // V rámci skupiny obrácený los (jako STANDARD Q2, jen po skupinách).
+    const jizdy: RostNavrhJizda[] = skupiny.map((s, i) => ({
+      cislo: i + 1,
+      jezdci: [...(podleSkupin.get(s.id) ?? [])].sort((a, b) => porovnejLos(a, b, false))
+    }))
+    return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd: h, maxJizd: h }
+  }
+
+  // typ === 'Q3': v rámci skupiny dle součtu bodů Q1+Q2 (sestupně).
+  const klas = getKlasifikace(kategorieId, ['Q1', 'Q2'])
+  const body = new Map(klas.map((r) => [r.jezdec_id, r.celkem]))
+  const maData = [...body.values()].some((b) => b !== 0)
+  if (!maData) {
+    return {
+      ok: false,
+      chyba: 'Nejdřív zadej výsledky Q1 a Q2 — klasifikace po Q2 je zatím prázdná.',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+  const jizdy: RostNavrhJizda[] = skupiny.map((s, i) => {
+    const sorted = [...(podleSkupin.get(s.id) ?? [])].sort((a, b) => {
+      const ba = body.get(a.id) ?? 0
+      const bb = body.get(b.id) ?? 0
+      if (ba !== bb) return bb - ba
+      return porovnejLos(a, b, true)
+    })
+    return { cislo: i + 1, jezdci: sorted }
+  })
+  return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd: h, maxJizd: h }
+}
+
+// Navrhne rošt podle pravidel §6 (RAC Race / RX Cup / Šotolina).
+// Bez zápisu — vrací jen náhled.
+export function navrhniRost(
+  kategorieId: number,
+  typ: KoloTyp,
+  pozadovanyPocet?: number
+): RostNavrh {
+  const db = getDb()
+  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
+  const jezdci = listJezdci(kategorieId)
+  if (jezdci.length === 0) {
+    return {
+      ok: false,
+      chyba: 'V kategorii nejsou žádní jezdci.',
+      obsazeno: false,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+  const obsazeno = rostObsazen(db, kategorieId, typ)
+
+  // Šotolinová kategorie má vlastní seeding ve fixních skupinách.
+  if (rulesetKategorie(db, kategorieId) === 'SOTOLINA') {
+    return navrhniRostSotolina(db, kategorieId, typ, jezdci, obsazeno, pozadovanyPocet)
+  }
+
+  // 1) Seřazení podle kritéria daného kolem.
+  let sorted: Jezdec[]
+  let reverseGrouping: boolean // true = nejhorší skupina do 1. jízdy (Q3)
+
+  if (typ === 'Q1') {
+    sorted = [...jezdci].sort((a, b) => porovnejLos(a, b, true))
+    reverseGrouping = false
+  } else if (typ === 'Q2') {
+    sorted = [...jezdci].sort((a, b) => porovnejLos(a, b, false))
+    reverseGrouping = false
+  } else if (typ === 'Q3') {
+    const klas = getKlasifikace(kategorieId, ['Q1', 'Q2'])
+    const maData = klas.some((r) => r.celkem !== 0)
+    if (klas.length === 0 || !maData) {
+      return {
+        ok: false,
+        chyba: 'Nejdřív zadej výsledky Q1 a Q2 — klasifikace po Q2 je zatím prázdná.',
+        obsazeno,
+        jizdy: [],
+        ...prazdny
+      }
+    }
+    const poradi = new Map(klas.map((r, i) => [r.jezdec_id, i]))
+    sorted = [...jezdci].sort((a, b) => {
+      const pa = poradi.has(a.id) ? (poradi.get(a.id) as number) : Number.POSITIVE_INFINITY
+      const pb = poradi.has(b.id) ? (poradi.get(b.id) as number) : Number.POSITIVE_INFINITY
+      if (pa !== pb) return pa - pb
+      // jezdci mimo klasifikaci (bez výsledků) → dle losu (bezlosí nakonec), pak čísla
+      return porovnejLos(a, b, true)
+    })
+    reverseGrouping = true
+  } else {
+    return { ok: false, chyba: 'Generování zatím jen pro Q1–Q3.', obsazeno, jizdy: [], ...prazdny }
+  }
+
+  // 2) Počet jízd: výchozí vyrovnaný, nebo ruční volba (osekaná na rozsah).
+  const n = sorted.length
+  const minJizd = Math.max(1, Math.ceil(n / MAX_NA_JIZDU)) // strop 8 na jízdu
+  const maxJizd = Math.max(1, n) // až 1 jezdec na jízdu
+  const h = Math.min(maxJizd, Math.max(minJizd, pozadovanyPocet ?? pocetJizd(n)))
+
+  // 3) Rozdělení do jízd rovnoměrně.
+  const sizes = rovneVelikosti(n, h)
+  const bloky: Jezdec[][] = []
+  let idx = 0
+  for (const s of sizes) {
+    bloky.push(sorted.slice(idx, idx + s))
+    idx += s
+  }
+
+  // 4) Přiřazení bloků jízdám. Q3 obráceně (nejlepší blok do poslední jízdy).
+  const jizdy: RostNavrhJizda[] = []
+  for (let i = 0; i < h; i++) {
+    const blok = reverseGrouping ? bloky[h - 1 - i] : bloky[i]
+    jizdy.push({ cislo: i + 1, jezdci: blok })
+  }
+
+  return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd, maxJizd }
+}
+
+// Zapíše vygenerovaný rošt: srovná počet jízd na požadovaný, vymaže staré
+// rozsazení a uloží nové. (Počet jízd si tak operátor může ručně nastavit.)
+// Pro Šotolinu navíc propojí jízdy Q1–Q3 s fixními skupinami (A, B, C…).
+export function zapisRost(kategorieId: number, typ: KoloTyp, jizdy: RostZapisJizda[]): RostKolo {
+  const db = getDb()
+  const koloId = ensureKolo(db, kategorieId, typ)
+  const potreba = Math.max(1, jizdy.length)
+  const ruleset = rulesetKategorie(db, kategorieId)
+  const propojSkupiny =
+    ruleset === 'SOTOLINA' && (typ === 'Q1' || typ === 'Q2' || typ === 'Q3')
+
+  db.transaction(() => {
+    const mam = (
+      db.prepare('SELECT COUNT(*) AS n FROM jizda WHERE kolo_id = ?').get(koloId) as { n: number }
+    ).n
+    // doplň chybějící jízdy a zruš přebytečné (kaskáda smaže i jejich data)
+    const ins = db.prepare('INSERT INTO jizda (kolo_id, cislo) VALUES (?, ?)')
+    for (let c = mam + 1; c <= potreba; c++) ins.run(koloId, c)
+    db.prepare('DELETE FROM jizda WHERE kolo_id = ? AND cislo > ?').run(koloId, potreba)
+
+    const jizdyDb = db
+      .prepare('SELECT id, cislo FROM jizda WHERE kolo_id = ? ORDER BY cislo')
+      .all(koloId) as { id: number; cislo: number }[]
+    const byCislo = new Map(jizdyDb.map((j) => [j.cislo, j.id]))
+
+    for (const j of jizdyDb) db.prepare('DELETE FROM rost_pozice WHERE jizda_id = ?').run(j.id)
+    const insP = db.prepare('INSERT INTO rost_pozice (jizda_id, pozice, jezdec_id) VALUES (?, ?, ?)')
+    for (const jz of jizdy) {
+      const jizdaId = byCislo.get(jz.cislo)
+      if (jizdaId === undefined) continue
+      // finále má až 10 míst v jedné jízdě, proto neořezáváme na 8
+      jz.jezdecIds.slice(0, 16).forEach((jid, i) => insP.run(jizdaId, i + 1, jid))
+    }
+
+    // Šotolina: propojit jízdy se skupinami (fixní skupiny napříč Q1–Q3).
+    // Jízda 1 ↔ skupina A, jízda 2 ↔ skupina B, … Pořadí jízd dle čísla.
+    if (propojSkupiny) {
+      const skupiny = ensureSkupiny(db, kategorieId, jizdyDb.length)
+      const upd = db.prepare('UPDATE jizda SET skupina_id = ? WHERE id = ?')
+      jizdyDb.forEach((jz, i) => {
+        if (i < skupiny.length) upd.run(skupiny[i].id, jz.id)
+      })
+    }
+  })()
+
+  return getRosty(kategorieId, typ)
+}
+
+function rulesetKategorie(db: Db, kategorieId: number): Ruleset {
+  return (db.prepare('SELECT ruleset FROM kategorie WHERE id = ?').get(kategorieId) as {
+    ruleset: Ruleset
+  }).ruleset
+}
+
+// Načte žebříček a penalizace pro daný ruleset (z tabulek zebricek/pravidla).
+function nactiBodovani(db: Db, ruleset: Ruleset): {
+  bodyZaPozici: (p: number) => number
+  penalizace: Penalizace
+} {
+  const zRows = db.prepare('SELECT poradi, body FROM zebricek WHERE ruleset = ?').all(ruleset) as {
+    poradi: number
+    body: number
+  }[]
+  const zMap = new Map(zRows.map((r) => [r.poradi, r.body]))
+  const pr = db
+    .prepare(
+      'SELECT dnf_offset, dns_offset, dq_offset, dnf_body, dns_body, dq_body FROM pravidla WHERE ruleset = ?'
+    )
+    .get(ruleset) as Penalizace | undefined
+  return {
+    bodyZaPozici: (p: number) => zMap.get(p) ?? 0,
+    penalizace: pr ?? {
+      dnf_offset: null,
+      dns_offset: null,
+      dq_offset: null,
+      dnf_body: null,
+      dns_body: null,
+      dq_body: null
+    }
+  }
+}
+
+/** Automatická body jezdce v jízdě (bez `body_rucni` — čistý výpočet z času/stavu). */
+function vypocetAutoBodyJezdce(
+  db: Db,
+  jizdaId: number,
+  jezdecId: number,
+  bodyZaPozici: (p: number) => number,
+  penalizace: Penalizace
+): number | null {
+  const rows = db
+    .prepare(
+      'SELECT jezdec_id, namereny_cas_ms, penalizace_ms, stav FROM vysledek WHERE jizda_id = ?'
+    )
+    .all(jizdaId) as {
+    jezdec_id: number
+    namereny_cas_ms: number | null
+    penalizace_ms: number
+    stav: JizdaVstup['stav']
+  }[]
+  const vstupy: JizdaVstup[] = rows.map((r) => ({
+    jezdec_id: r.jezdec_id,
+    cas_ms: r.namereny_cas_ms === null ? null : r.namereny_cas_ms + (r.penalizace_ms ?? 0),
+    stav: r.stav
+  }))
+  const vysl = spocitejJizdu(vstupy, bodyZaPozici, penalizace)
+  return vysl.find((v) => v.jezdec_id === jezdecId)?.body ?? null
+}
+
+// Přepočítá pořadí a body celé jízdy a uloží je do databáze.
+function prepoctiJizdu(
+  db: Db,
+  jizdaId: number,
+  bodyZaPozici: (p: number) => number,
+  penalizace: Penalizace
+): void {
+  const rows = db
+    .prepare(
+      `SELECT jezdec_id, namereny_cas_ms, penalizace_ms, stav, body_rucni, rucni_poradi
+       FROM vysledek WHERE jizda_id = ?`
+    )
+    .all(jizdaId) as {
+    jezdec_id: number
+    namereny_cas_ms: number | null
+    penalizace_ms: number
+    stav: JizdaVstup['stav']
+    body_rucni: number | null
+    rucni_poradi: number | null
+  }[]
+
+  const vstupy: JizdaVstup[] = rows.map((r) => ({
+    jezdec_id: r.jezdec_id,
+    cas_ms: r.namereny_cas_ms === null ? null : r.namereny_cas_ms + (r.penalizace_ms ?? 0),
+    stav: r.stav
+  }))
+  const override = new Map(rows.map((r) => [r.jezdec_id, r.body_rucni]))
+  const rucniPoradi = new Map<number, number>()
+  const stavByJezdec = new Map<number, JizdaVstup['stav']>()
+  const casByJezdec = new Map<number, number | null>()
+  for (const r of rows) {
+    stavByJezdec.set(r.jezdec_id, r.stav)
+    casByJezdec.set(
+      r.jezdec_id,
+      r.namereny_cas_ms === null ? null : r.namereny_cas_ms + (r.penalizace_ms ?? 0)
+    )
+    if (r.rucni_poradi != null) rucniPoradi.set(r.jezdec_id, r.rucni_poradi)
+  }
+
+  let vysl = spocitejJizdu(vstupy, bodyZaPozici, penalizace)
+  if (rucniPoradi.size > 0) {
+    vysl = aplikujRucniPoradi(
+      vysl,
+      stavByJezdec,
+      casByJezdec,
+      rucniPoradi,
+      bodyZaPozici,
+      penalizace
+    )
+  }
+  const upd = db.prepare('UPDATE vysledek SET poradi = ?, body = ? WHERE jizda_id = ? AND jezdec_id = ?')
+  for (const v of vysl) {
+    // Ruční override má přednost — uloží se jako finální `body` (klasifikace
+    // čte právě tento sloupec, takže se upravené body promítnou všude).
+    const rucni = override.get(v.jezdec_id)
+    const finalBody = rucni !== null && rucni !== undefined ? rucni : v.body
+    upd.run(v.poradi, finalBody, jizdaId, v.jezdec_id)
+  }
+}
+
+function nactiJizdu(db: Db, jizdaId: number, cislo: number): VysledekJizda {
+  const vysledky = db
+    .prepare(
+      `SELECT v.id AS vysledek_id, v.jezdec_id AS jezdec_id, j.st_cislo AS st_cislo,
+              j.prijmeni AS prijmeni, j.jmeno AS jmeno, j.znacka AS znacka, j.model AS model,
+              v.namereny_cas_ms AS namereny_cas_ms,
+              COALESCE(v.penalizace_ms, 0) AS penalizace_ms,
+              v.stav AS stav, v.poradi AS poradi, v.body AS body,
+              v.body_rucni AS body_rucni, v.rucni_poradi AS rucni_poradi,
+              ul.typ AS uprava_typ, ul.hodnota AS uprava_hodnota,
+              ul.duvod AS uprava_duvod, ul.kdy AS uprava_kdy
+       FROM vysledek v
+       JOIN jezdec j ON j.id = v.jezdec_id
+       LEFT JOIN uprava_log ul ON ul.id = (
+         SELECT id FROM uprava_log WHERE vysledek_id = v.id ORDER BY kdy DESC LIMIT 1
+       )
+       WHERE v.jizda_id = ?
+       ORDER BY (v.poradi IS NULL), v.poradi`
+    )
+    .all(jizdaId) as VysledekRadek[]
+  return { id: jizdaId, cislo, vysledky }
+}
+
+function ensureVysledekRow(db: Db, jizdaId: number, jezdecId: number): number {
+  db.prepare(
+    `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
+  ).run(jizdaId, jezdecId)
+  const row = db
+    .prepare('SELECT id FROM vysledek WHERE jizda_id = ? AND jezdec_id = ?')
+    .get(jizdaId, jezdecId) as { id: number } | undefined
+  if (!row) throw new Error('Výsledek neexistuje')
+  return row.id
+}
+
+function zapisUpravaLog(
+  db: Db,
+  vysledekId: number,
+  typ: 'CASOVA_PENALIZACE' | 'BODOVA_PENALIZACE' | 'POSUN_PORADI' | 'ZRUSENI',
+  hodnota: number | null,
+  duvod: string
+): void {
+  db.prepare(
+    `INSERT INTO uprava_log (vysledek_id, typ, hodnota, duvod, rozhodl, kdy)
+     VALUES (?, ?, ?, ?, 'ředitel', ?)`
+  ).run(vysledekId, typ, hodnota, duvod.trim(), new Date().toISOString())
+}
+
+function jizdaMeta(
+  db: Db,
+  jizdaId: number
+): { kategorie_id: number; cislo: number } {
+  const meta = db
+    .prepare(
+      `SELECT k.kategorie_id AS kategorie_id, jz.cislo AS cislo
+       FROM jizda jz JOIN kolo k ON k.id = jz.kolo_id WHERE jz.id = ?`
+    )
+    .get(jizdaId) as { kategorie_id: number; cislo: number } | undefined
+  if (!meta) throw new Error('Jízda neexistuje')
+  return meta
+}
+
+export function getVysledky(kategorieId: number, typ: KoloTyp): VysledekKolo {
+  const db = getDb()
+  const koloId = ensureKolo(db, kategorieId, typ)
+  const jizdy = db
+    .prepare('SELECT id, cislo FROM jizda WHERE kolo_id = ? ORDER BY cislo')
+    .all(koloId) as { id: number; cislo: number }[]
+
+  // Sesynchronizuj výsledkové řádky s rošty: smaž jezdce, co už v jízdě nejsou,
+  // a doplň prázdné řádky pro ty, kdo přibyli.
+  const clean = db.prepare(
+    'DELETE FROM vysledek WHERE jizda_id = ? AND jezdec_id NOT IN (SELECT jezdec_id FROM rost_pozice WHERE jizda_id = ?)'
+  )
+  const ensure = db.prepare(
+    `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
+  )
+  const selPoz = db.prepare('SELECT jezdec_id FROM rost_pozice WHERE jizda_id = ?')
+  db.transaction(() => {
+    for (const jz of jizdy) {
+      clean.run(jz.id, jz.id)
+      for (const p of selPoz.all(jz.id) as { jezdec_id: number }[]) ensure.run(jz.id, p.jezdec_id)
+    }
+  })()
+
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, kategorieId))
+  return {
+    koloId,
+    jizdy: jizdy.map((jz) => {
+      prepoctiJizdu(db, jz.id, bodyZaPozici, penalizace)
+      return nactiJizdu(db, jz.id, jz.cislo)
+    })
+  }
+}
+
+export function setVysledek(arg: SetVysledekArg): VysledekJizda {
+  const db = getDb()
+  const meta = db
+    .prepare(
+      `SELECT k.kategorie_id AS kategorie_id, k.id AS kolo_id, jz.cislo AS cislo
+       FROM jizda jz JOIN kolo k ON k.id = jz.kolo_id WHERE jz.id = ?`
+    )
+    .get(arg.jizdaId) as { kategorie_id: number; cislo: number } | undefined
+  if (!meta) throw new Error('Jízda neexistuje')
+
+  db.prepare(
+    `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
+  ).run(arg.jizdaId, arg.jezdecId)
+
+  if (arg.cas_ms !== undefined) {
+    // Zadání času znamená, že jezdec dojel (stav OK).
+    db.prepare(`UPDATE vysledek SET namereny_cas_ms = ?, stav = 'OK' WHERE jizda_id = ? AND jezdec_id = ?`).run(
+      arg.cas_ms,
+      arg.jizdaId,
+      arg.jezdecId
+    )
+  } else if (arg.stav !== undefined) {
+    // Měníme jen stav. Naměřený čas SCHOVÁVÁME (nezahazujeme) — pro tooltip
+    // a pro návrat zpět na čas (CLAUDE.md §11: namereny_cas_ms se nepřepisuje).
+    // Pro bodování stejně rozhoduje stav, ne čas (viz scoring.ts).
+    db.prepare('UPDATE vysledek SET stav = ? WHERE jizda_id = ? AND jezdec_id = ?').run(
+      arg.stav,
+      arg.jizdaId,
+      arg.jezdecId
+    )
+  }
+
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+  prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, arg.jizdaId, meta.cislo)
+}
+
+// Ruční přepis bodů. body = null zruší override (návrat k automatu). Přepočet
+// pak zapíše do vysledek.body finální hodnotu (override má přednost).
+export function setBodyOverride(
+  jizdaId: number,
+  jezdecId: number,
+  body: number | null
+): VysledekJizda {
+  const db = getDb()
+  const meta = db
+    .prepare(
+      `SELECT k.kategorie_id AS kategorie_id, jz.cislo AS cislo
+       FROM jizda jz JOIN kolo k ON k.id = jz.kolo_id WHERE jz.id = ?`
+    )
+    .get(jizdaId) as { kategorie_id: number; cislo: number } | undefined
+  if (!meta) throw new Error('Jízda neexistuje')
+
+  db.prepare(
+    `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
+  ).run(jizdaId, jezdecId)
+  db.prepare('UPDATE vysledek SET body_rucni = ? WHERE jizda_id = ? AND jezdec_id = ?').run(
+    body,
+    jizdaId,
+    jezdecId
+  )
+
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+  prepoctiJizdu(db, jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, jizdaId, meta.cislo)
+}
+
+/** Časová penalizace ředitele — celková hodnota v sekundách, přepočet jízdy. */
+export function setCasovaPenalizace(arg: CasovaPenalizaceArg): VysledekJizda {
+  const duvod = arg.duvod.trim()
+  if (!duvod) throw new Error('Důvod penalizace je povinný')
+  if (!Number.isFinite(arg.sekundy) || arg.sekundy < 0) {
+    throw new Error('Penalizace musí být nezáporné číslo sekund')
+  }
+
+  const db = getDb()
+  const meta = jizdaMeta(db, arg.jizdaId)
+  const vysledekId = ensureVysledekRow(db, arg.jizdaId, arg.jezdecId)
+  const penalizaceMs = Math.round(arg.sekundy * 1000)
+
+  db.transaction(() => {
+    db.prepare('UPDATE vysledek SET penalizace_ms = ? WHERE id = ?').run(penalizaceMs, vysledekId)
+    zapisUpravaLog(db, vysledekId, 'CASOVA_PENALIZACE', penalizaceMs, duvod)
+  })()
+
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+  prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, arg.jizdaId, meta.cislo)
+}
+
+/** Automatická body jezdce v jízdě (pro dialog bodové penalizace). */
+export function getAutoBodyJizdy(jizdaId: number, jezdecId: number): number | null {
+  const db = getDb()
+  const meta = jizdaMeta(db, jizdaId)
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+  ensureVysledekRow(db, jizdaId, jezdecId)
+  return vypocetAutoBodyJezdce(db, jizdaId, jezdecId, bodyZaPozici, penalizace)
+}
+
+/** Bodová penalizace ředitele — delta vůči automatickým bodům, nezávisle na čase. */
+export function setBodovaPenalizace(arg: BodovaPenalizaceArg): VysledekJizda {
+  const duvod = arg.duvod.trim()
+  if (!duvod) throw new Error('Důvod penalizace je povinný')
+  if (!Number.isFinite(arg.delta)) throw new Error('Zadej platnou úpravu bodů (např. −5)')
+
+  const db = getDb()
+  const meta = jizdaMeta(db, arg.jizdaId)
+  const vysledekId = ensureVysledekRow(db, arg.jizdaId, arg.jezdecId)
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+  const auto = vypocetAutoBodyJezdce(db, arg.jizdaId, arg.jezdecId, bodyZaPozici, penalizace)
+  if (auto === null) {
+    throw new Error('Jezdec nemá automatická body — nejdřív zadej čas nebo stav (DNF/DNS/DQ).')
+  }
+  const delta = Math.round(arg.delta)
+  const finalBody = auto + delta
+
+  db.transaction(() => {
+    db.prepare('UPDATE vysledek SET body_rucni = ? WHERE id = ?').run(finalBody, vysledekId)
+    zapisUpravaLog(db, vysledekId, 'BODOVA_PENALIZACE', delta, duvod)
+  })()
+
+  prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, arg.jizdaId, meta.cislo)
+}
+
+/** Posun pořadí ředitele — ruční pozice v jízdě, ostatní se posunou, body z žebříčku. */
+export function setPosunPoradi(arg: PosunPoradiArg): VysledekJizda {
+  const duvod = arg.duvod.trim()
+  if (!duvod) throw new Error('Důvod posunu je povinný')
+  const pozice = Math.round(arg.poradi)
+  if (!Number.isFinite(pozice) || pozice < 1) {
+    throw new Error('Cílové pořadí musí být kladné celé číslo (1 = první)')
+  }
+
+  const db = getDb()
+  const meta = jizdaMeta(db, arg.jizdaId)
+  const vysledekId = ensureVysledekRow(db, arg.jizdaId, arg.jezdecId)
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+
+  // Ověř, že jezdec má výsledek v jízdě (pořadí z času/stavu).
+  prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
+  const akt = db
+    .prepare('SELECT poradi FROM vysledek WHERE jizda_id = ? AND jezdec_id = ?')
+    .get(arg.jizdaId, arg.jezdecId) as { poradi: number | null } | undefined
+  if (!akt?.poradi) {
+    throw new Error('Jezdec nemá pořadí v jízdě — nejdřív zadej čas nebo stav (DNF/DNS/DQ).')
+  }
+
+  const maxPoradi = db
+    .prepare('SELECT COUNT(*) AS n FROM vysledek WHERE jizda_id = ? AND poradi IS NOT NULL')
+    .get(arg.jizdaId) as { n: number }
+  if (pozice > maxPoradi.n) {
+    throw new Error(`V jízdě je jen ${maxPoradi.n} jezdců s pořadím (max. pozice ${maxPoradi.n}).`)
+  }
+
+  db.transaction(() => {
+    db.prepare('UPDATE vysledek SET rucni_poradi = ? WHERE id = ?').run(pozice, vysledekId)
+    zapisUpravaLog(db, vysledekId, 'POSUN_PORADI', pozice, duvod)
+  })()
+
+  prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, arg.jizdaId, meta.cislo)
+}
+
+/** Zruší zásah ředitele (dle typu) a přepočte jízdu. */
+export function zrusPenalizaci(arg: ZrusPenalizaciArg): VysledekJizda {
+  const duvod = arg.duvod.trim()
+  if (!duvod) throw new Error('Důvod zrušení je povinný')
+
+  const db = getDb()
+  const meta = jizdaMeta(db, arg.jizdaId)
+  const vysledekId = ensureVysledekRow(db, arg.jizdaId, arg.jezdecId)
+  const typ = arg.typ ?? 'CASOVA_PENALIZACE'
+
+  db.transaction(() => {
+    if (typ === 'CASOVA_PENALIZACE') {
+      db.prepare('UPDATE vysledek SET penalizace_ms = 0 WHERE id = ?').run(vysledekId)
+      zapisUpravaLog(db, vysledekId, 'ZRUSENI', null, `Časová penalizace zrušena: ${duvod}`)
+    } else if (typ === 'BODOVA_PENALIZACE') {
+      db.prepare('UPDATE vysledek SET body_rucni = NULL WHERE id = ?').run(vysledekId)
+      zapisUpravaLog(db, vysledekId, 'ZRUSENI', null, `Bodová penalizace zrušena: ${duvod}`)
+    } else if (typ === 'POSUN_PORADI') {
+      db.prepare('UPDATE vysledek SET rucni_poradi = NULL WHERE id = ?').run(vysledekId)
+      zapisUpravaLog(db, vysledekId, 'ZRUSENI', null, `Posun pořadí zrušen: ${duvod}`)
+    }
+  })()
+
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
+  prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, arg.jizdaId, meta.cislo)
+}
+
+/** Auditní přehled zásahů ředitele v kategorii (nejnovější nahoře). */
+export function listUpravaLog(kategorieId: number): UpravaLogRadek[] {
+  const db = getDb()
+  return db
+    .prepare(
+      `SELECT ul.id, ul.vysledek_id, ul.typ, ul.hodnota, ul.duvod, ul.rozhodl, ul.kdy,
+              v.jezdec_id, j.st_cislo, j.prijmeni, j.jmeno, k.typ AS kolo_typ, jz.cislo AS jizda_cislo,
+              kat.nazev AS kategorie_nazev
+       FROM uprava_log ul
+       JOIN vysledek v ON v.id = ul.vysledek_id
+       JOIN jezdec j ON j.id = v.jezdec_id
+       JOIN jizda jz ON jz.id = v.jizda_id
+       JOIN kolo k ON k.id = jz.kolo_id
+       JOIN kategorie kat ON kat.id = k.kategorie_id
+       WHERE k.kategorie_id = ?
+       ORDER BY ul.kdy DESC`
+    )
+    .all(kategorieId) as UpravaLogRadek[]
+}
+
+// Klasifikace = součet bodů přes jízdy uvedených kol. Tiebreak závisí na
+// ruleset kategorie (CLAUDE.md §7):
+//   STANDARD (RAC / RX): lepší (vyšší) výsledek v jakékoli jízdě.
+//   SOTOLINA:            pouze los do 1. jízdy (nižší los = lepší pořadí).
+export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): KlasifikaceRadek[] {
+  if (koloTypy.length === 0) return []
+  const db = getDb()
+  const ruleset = rulesetKategorie(db, kategorieId)
+  const ph = koloTypy.map(() => '?').join(',')
+  const rows = db
+    .prepare(
+      `SELECT v.jezdec_id AS jezdec_id, k.typ AS typ, v.body AS body
+       FROM vysledek v JOIN jizda jz ON jz.id = v.jizda_id JOIN kolo k ON k.id = jz.kolo_id
+       WHERE k.kategorie_id = ? AND k.typ IN (${ph})`
+    )
+    .all(kategorieId, ...koloTypy) as { jezdec_id: number; typ: string; body: number | null }[]
+
+  const map = new Map<number, { perKolo: Record<string, number>; celkem: number; heaty: number[] }>()
+  for (const r of rows) {
+    let e = map.get(r.jezdec_id)
+    if (!e) {
+      e = { perKolo: {}, celkem: 0, heaty: [] }
+      map.set(r.jezdec_id, e)
+    }
+    const b = r.body ?? 0
+    e.perKolo[r.typ] = (e.perKolo[r.typ] ?? 0) + b
+    e.celkem += b
+    if (r.body !== null) e.heaty.push(r.body)
+  }
+
+  const selJ = db.prepare('SELECT st_cislo, prijmeni, jmeno, los FROM jezdec WHERE id = ?')
+  const list = [...map.entries()].map(([jezdec_id, e]) => {
+    const j = selJ.get(jezdec_id) as {
+      st_cislo: number | null
+      prijmeni: string
+      jmeno: string
+      los: number | null
+    }
+    return {
+      jezdec_id,
+      st_cislo: j.st_cislo,
+      prijmeni: j.prijmeni,
+      jmeno: j.jmeno,
+      los: j.los,
+      perKolo: e.perKolo,
+      celkem: e.celkem,
+      heaty: e.heaty.sort((a, b) => b - a)
+    }
+  })
+
+  list.sort((a, b) => {
+    if (a.celkem !== b.celkem) return b.celkem - a.celkem
+    return ruleset === 'SOTOLINA' ? tiebreakLos(a.los, b.los) : tiebreakHeaty(a.heaty, b.heaty)
+  })
+
+  return list.map((r, i) => ({
+    poradi: i + 1,
+    jezdec_id: r.jezdec_id,
+    st_cislo: r.st_cislo,
+    prijmeni: r.prijmeni,
+    jmeno: r.jmeno,
+    los: r.los,
+    perKolo: r.perKolo,
+    celkem: r.celkem
+  }))
+}
+
+// STANDARD tiebreak: lepší (vyšší) výsledek v jakékoli jízdě je výš. Porovná
+// sestupně seřazené seznamy bodů z jednotlivých jízd lexikograficky.
+function tiebreakHeaty(a: number[], b: number[]): number {
+  const n = Math.max(a.length, b.length)
+  for (let i = 0; i < n; i++) {
+    const x = a[i] ?? -Infinity
+    const y = b[i] ?? -Infinity
+    if (x !== y) return y - x
+  }
+  return 0
+}
+
+// SOTOLINA tiebreak: jen los do 1. jízdy (nižší los = lepší pozice na startu
+// Q1 = výš v klasifikaci). Bezlosí spadnou až za jezdce s losem.
+function tiebreakLos(a: number | null, b: number | null): number {
+  const va = a ?? Number.POSITIVE_INFINITY
+  const vb = b ?? Number.POSITIVE_INFINITY
+  return va - vb
+}
+
+// =====================================================================
+// Závěr závodu — semifinále
+// =====================================================================
+
+// Kvalifikovaní jezdci seřazení dle Klasifikace po Q3 (nejlepší první).
+function kvalifikovaniPoradi(db: Db, kategorieId: number): number[] {
+  const stats = db
+    .prepare(
+      `SELECT v.jezdec_id AS jezdec_id,
+              SUM(CASE WHEN v.stav = 'OK' AND v.namereny_cas_ms IS NOT NULL THEN 1 ELSE 0 END) AS dokoncil,
+              SUM(CASE WHEN v.stav IN ('OK','DNF') THEN 1 ELSE 0 END) AS odstartoval
+       FROM vysledek v JOIN jizda jz ON jz.id = v.jizda_id JOIN kolo k ON k.id = jz.kolo_id
+       WHERE k.kategorie_id = ? AND k.typ IN ('Q1','Q2','Q3')
+       GROUP BY v.jezdec_id`
+    )
+    .all(kategorieId) as { jezdec_id: number; dokoncil: number; odstartoval: number }[]
+  const kval = new Set(
+    stats.filter((s) => jeKvalifikovan(s.dokoncil, s.odstartoval)).map((s) => s.jezdec_id)
+  )
+  // Pořadí dle Klasifikace po Q3, profiltrované jen na kvalifikované.
+  return getKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'])
+    .filter((r) => kval.has(r.jezdec_id))
+    .map((r) => r.jezdec_id)
+}
+
+// Šotolinová finálová pravidla (CLAUDE.md §8).
+const SOTOLINA_VELIKOST_A = 10
+const SOTOLINA_POSTUP_Z_B = 4
+
+export function getZaverStav(kategorieId: number): ZaverStav {
+  const db = getDb()
+  const ruleset = rulesetKategorie(db, kategorieId)
+  const kval = kvalifikovaniPoradi(db, kategorieId)
+  const finaleVelikost = (
+    db.prepare('SELECT finale_velikost FROM kategorie WHERE id = ?').get(kategorieId) as {
+      finale_velikost: number
+    }
+  ).finale_velikost
+  const maJizdy = (typ: KoloTyp): boolean => {
+    const k = db.prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?').get(
+      kategorieId,
+      typ
+    ) as { id: number } | undefined
+    if (!k) return false
+    return (db.prepare('SELECT COUNT(*) AS n FROM jizda WHERE kolo_id = ?').get(k.id) as {
+      n: number
+    }).n > 0
+  }
+
+  if (ruleset === 'SOTOLINA') {
+    // Šotolina nemá semifinále — má Finále A (10 nejlepších po Q3) a Finále B
+    // (od 11. místa po Q3). Velikost finále je u Šotoliny fixní (A = 10).
+    const pocetDoA = Math.min(SOTOLINA_VELIKOST_A, kval.length)
+    const pocetDoB = Math.max(0, kval.length - SOTOLINA_VELIKOST_A)
+    return {
+      ruleset,
+      kvalifikovani: kval.length,
+      prahSF: 0,
+      sfSeKona: false,
+      sfHotovo: false,
+      finaleHotovo: maJizdy('F_A'), // pro kompatibilitu (zda je hlavní finále hotové)
+      finaleVelikost: SOTOLINA_VELIKOST_A,
+      finaleAHotovo: maJizdy('F_A'),
+      finaleBHotovo: maJizdy('F_B'),
+      pocetDoA,
+      pocetDoB
+    }
+  }
+
+  return {
+    ruleset,
+    kvalifikovani: kval.length,
+    prahSF: PRAH_SF,
+    sfSeKona: kval.length >= PRAH_SF,
+    sfHotovo: maJizdy('SF'),
+    finaleHotovo: maJizdy('F'),
+    finaleVelikost
+  }
+}
+
+export function setFinaleVelikost(kategorieId: number, velikost: number): void {
+  getDb()
+    .prepare('UPDATE kategorie SET finale_velikost = ? WHERE id = ?')
+    .run(velikost === 10 ? 10 : 8, kategorieId)
+}
+
+// Návrh nasazení semifinále (liché/sudé z Klasifikace po Q3). Vrací RostNavrh
+// (zápis se pak udělá přes zapisRost(kategorieId, 'SF', …) — stejně jako rošty).
+export function navrhSF(kategorieId: number): RostNavrh {
+  const db = getDb()
+  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
+  const kval = kvalifikovaniPoradi(db, kategorieId)
+  if (kval.length < PRAH_SF) {
+    return {
+      ok: false,
+      chyba: `Semifinále se nekoná — jen ${kval.length} kvalifikovaných (potřeba ${PRAH_SF}). Jeď rovnou finále.`,
+      obsazeno: rostObsazen(db, kategorieId, 'SF'),
+      jizdy: [],
+      ...prazdny
+    }
+  }
+  const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
+  const toJezdci = (ids: number[]): Jezdec[] => ids.map((id) => sel.get(id) as Jezdec)
+  const { heat1, heat2 } = nasazSF(kval)
+  return {
+    ok: true,
+    chyba: null,
+    obsazeno: rostObsazen(db, kategorieId, 'SF'),
+    jizdy: [
+      { cislo: 1, jezdci: toJezdci(heat1) },
+      { cislo: 2, jezdci: toJezdci(heat2) }
+    ],
+    pocetJizd: 2,
+    minJizd: 2,
+    maxJizd: 2
+  }
+}
+
+// Návrh nasazení finále (§D/§E). Když bylo SF → postupující z obou jízd spárované
+// dle bodů po Q3; když SF nebylo → prvních N kvalifikovaných dle Klasifikace po Q3.
+// N = velikost finále (8/10). Finále je jedna jízda.
+export function navrhFinale(kategorieId: number): RostNavrh {
+  const db = getDb()
+  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
+  const stav = getZaverStav(kategorieId)
+  const N = stav.finaleVelikost
+  const obsazeno = rostObsazen(db, kategorieId, 'F')
+  const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
+  const jizda = (ids: number[]): RostNavrh =>
+    ({
+      ok: true,
+      chyba: null,
+      obsazeno,
+      jizdy: [{ cislo: 1, jezdci: ids.map((id) => sel.get(id) as Jezdec) }],
+      pocetJizd: 1,
+      minJizd: 1,
+      maxJizd: 1
+    }) as RostNavrh
+  const chyba = (msg: string): RostNavrh => ({
+    ok: false,
+    chyba: msg,
+    obsazeno,
+    jizdy: [],
+    ...prazdny
+  })
+
+  if (stav.sfSeKona) {
+    // Finále z postupujících SF.
+    if (!stav.sfHotovo) return chyba('Nejdřív vygeneruj semifinále (záložka Semifinále).')
+    const sfKolo = db.prepare("SELECT id FROM kolo WHERE kategorie_id = ? AND typ = 'SF'").get(
+      kategorieId
+    ) as { id: number }
+    const sfJizdy = db
+      .prepare('SELECT id, cislo FROM jizda WHERE kolo_id = ? ORDER BY cislo')
+      .all(sfKolo.id) as { id: number; cislo: number }[]
+    const poradiJizdy = (jizdaId: number): { jezdec_id: number; poradi: number | null }[] =>
+      db
+        .prepare(
+          'SELECT jezdec_id, poradi FROM vysledek WHERE jizda_id = ? ORDER BY (poradi IS NULL), poradi'
+        )
+        .all(jizdaId) as { jezdec_id: number; poradi: number | null }[]
+    const h1 = sfJizdy[0] ? poradiJizdy(sfJizdy[0].id) : []
+    const h2 = sfJizdy[1] ? poradiJizdy(sfJizdy[1].id) : []
+    if (![...h1, ...h2].some((r) => r.poradi !== null)) {
+      return chyba('Nejdřív zadej výsledky semifinále.')
+    }
+    const naJizdu = Math.floor(N / 2) // 8 → 4, 10 → 5
+    const postup1 = h1.slice(0, naJizdu).map((r) => r.jezdec_id)
+    const postup2 = h2.slice(0, naJizdu).map((r) => r.jezdec_id)
+    const bodyQ3 = new Map(
+      getKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3']).map((r) => [r.jezdec_id, r.celkem])
+    )
+    return jizda(nasazFinaleZeSF(postup1, postup2, bodyQ3))
+  }
+
+  // SF se nekoná → prvních N kvalifikovaných dle Klasifikace po Q3.
+  const kval = kvalifikovaniPoradi(db, kategorieId)
+  if (kval.length === 0) return chyba('Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.')
+  return jizda(kval.slice(0, N))
+}
+
+// ---------------------------------------------------------------------
+// Šotolina — Finále A / Finále B (CLAUDE.md §3c, §8)
+// ---------------------------------------------------------------------
+
+// Vrátí pořadí jezdců v dané jízdě (řazení dle poradi). Null = bez pořadí.
+function poradiJednoJizda(
+  db: Db,
+  kategorieId: number,
+  typ: KoloTyp
+): { jezdec_id: number; poradi: number | null }[] {
+  const k = db.prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?').get(
+    kategorieId,
+    typ
+  ) as { id: number } | undefined
+  if (!k) return []
+  const jz = db.prepare('SELECT id FROM jizda WHERE kolo_id = ? ORDER BY cislo LIMIT 1').get(
+    k.id
+  ) as { id: number } | undefined
+  if (!jz) return []
+  return db
+    .prepare(
+      'SELECT jezdec_id, poradi FROM vysledek WHERE jizda_id = ? ORDER BY (poradi IS NULL), poradi'
+    )
+    .all(jz.id) as { jezdec_id: number; poradi: number | null }[]
+}
+
+// Návrh Finále B (od 11. místa po Q3). Jen pro SOTOLINA. Max 10 jezdců/jízda.
+export function navrhFinaleB(kategorieId: number): RostNavrh {
+  const db = getDb()
+  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
+  const obsazeno = rostObsazen(db, kategorieId, 'F_B')
+
+  if (rulesetKategorie(db, kategorieId) !== 'SOTOLINA') {
+    return {
+      ok: false,
+      chyba: 'Finále B se jede jen v Šotolině.',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+
+  const kval = kvalifikovaniPoradi(db, kategorieId)
+  if (kval.length === 0) {
+    return {
+      ok: false,
+      chyba: 'Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+  const doB = kval.slice(SOTOLINA_VELIKOST_A) // pozice 11+ po Q3
+  if (doB.length === 0) {
+    return {
+      ok: false,
+      chyba: `Méně než ${SOTOLINA_VELIKOST_A + 1} kvalifikovaných — Finále B se nekoná. Jeď rovnou Finále A.`,
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+
+  const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
+  return {
+    ok: true,
+    chyba: null,
+    obsazeno,
+    jizdy: [{ cislo: 1, jezdci: doB.map((id) => sel.get(id) as Jezdec) }],
+    pocetJizd: 1,
+    minJizd: 1,
+    maxJizd: 1
+  }
+}
+
+// Návrh Finále A (10 nejlepších po Q3). Pokud je B hotové a má výsledky,
+// poslední 4 pozice se nahradí 4 nejlepšími z Finále B (postup z B).
+export function navrhFinaleA(kategorieId: number): RostNavrh {
+  const db = getDb()
+  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
+  const obsazeno = rostObsazen(db, kategorieId, 'F_A')
+
+  if (rulesetKategorie(db, kategorieId) !== 'SOTOLINA') {
+    return {
+      ok: false,
+      chyba: 'Toto Finále A se používá jen v Šotolině.',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+
+  const kval = kvalifikovaniPoradi(db, kategorieId)
+  if (kval.length === 0) {
+    return {
+      ok: false,
+      chyba: 'Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.',
+      obsazeno,
+      jizdy: [],
+      ...prazdny
+    }
+  }
+
+  // Default: 10 nejlepších po Q3 (méně, pokud je málo kvalifikovaných).
+  const top10 = kval.slice(0, SOTOLINA_VELIKOST_A)
+  let finalisteA = top10
+
+  // Pokud B existuje a má výsledky, posledních 4 z A vyměníme za 4 nejlepší z B.
+  const fbRes = poradiJednoJizda(db, kategorieId, 'F_B').filter((r) => r.poradi !== null)
+  if (fbRes.length > 0 && top10.length === SOTOLINA_VELIKOST_A) {
+    const postup = fbRes
+      .slice(0, SOTOLINA_POSTUP_Z_B)
+      .map((r) => r.jezdec_id)
+      .filter((id) => !top10.includes(id))
+    if (postup.length > 0) {
+      const zachovej = top10.slice(0, SOTOLINA_VELIKOST_A - postup.length)
+      finalisteA = [...zachovej, ...postup]
+    }
+  }
+
+  const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
+  return {
+    ok: true,
+    chyba: null,
+    obsazeno,
+    jizdy: [{ cislo: 1, jezdci: finalisteA.map((id) => sel.get(id) as Jezdec) }],
+    pocetJizd: 1,
+    minJizd: 1,
+    maxJizd: 1
+  }
+}
+
+// Celkové výsledky (§9). Pořadí řídí finále, body se nepřičítají (BQ = body po Q3).
+// Pro SOTOLINA: pořadí dle Finále A → nepostupující z B → zbytek z Klasifikace po Q3.
+export function getCelkove(kategorieId: number): CelkoveRadek[] {
+  const db = getDb()
+  const ruleset = rulesetKategorie(db, kategorieId)
+  const klas = getKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'])
+
+  // Pořadí jezdců v daném kole (jezdec_id → poradi), jen pokud kolo existuje.
+  const poradiKola = (typ: KoloTyp): Map<number, number> => {
+    const k = db.prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?').get(
+      kategorieId,
+      typ
+    ) as { id: number } | undefined
+    const m = new Map<number, number>()
+    if (!k) return m
+    const rows = db
+      .prepare(
+        'SELECT v.jezdec_id AS jezdec_id, v.poradi AS poradi FROM vysledek v JOIN jizda jz ON jz.id = v.jizda_id WHERE jz.kolo_id = ?'
+      )
+      .all(k.id) as { jezdec_id: number; poradi: number | null }[]
+    for (const r of rows) if (r.poradi !== null) m.set(r.jezdec_id, r.poradi)
+    return m
+  }
+
+  if (ruleset === 'SOTOLINA') {
+    const pfaMap = poradiKola('F_A')
+    const pfbMap = poradiKola('F_B')
+    const vstupy = klas.map((r, i) => ({
+      jezdec_id: r.jezdec_id,
+      pq: i + 1,
+      pfa: pfaMap.get(r.jezdec_id) ?? null,
+      pfb: pfbMap.get(r.jezdec_id) ?? null,
+      bq: r.celkem
+    }))
+    const info = new Map(klas.map((r) => [r.jezdec_id, r]))
+    const byId = new Map(vstupy.map((v) => [v.jezdec_id, v]))
+
+    return celkovePoradiSotolina(vstupy).map((id, i) => {
+      const v = byId.get(id)!
+      const j = info.get(id)!
+      return {
+        poradi: i + 1,
+        jezdec_id: id,
+        st_cislo: j.st_cislo,
+        prijmeni: j.prijmeni,
+        jmeno: j.jmeno,
+        pq: v.pq,
+        psf: null,
+        pf: null,
+        pfa: v.pfa,
+        pfb: v.pfb,
+        bq: v.bq
+      }
+    })
+  }
+
+  // STANDARD (RAC / RX)
+  const psfMap = poradiKola('SF')
+  const pfMap = poradiKola('F')
+  const vstupy = klas.map((r, i) => ({
+    jezdec_id: r.jezdec_id,
+    pq: i + 1,
+    psf: psfMap.get(r.jezdec_id) ?? null,
+    pf: pfMap.get(r.jezdec_id) ?? null,
+    bq: r.celkem
+  }))
+  const info = new Map(klas.map((r) => [r.jezdec_id, r]))
+  const byId = new Map(vstupy.map((v) => [v.jezdec_id, v]))
+
+  return celkovePoradi(vstupy).map((id, i) => {
+    const v = byId.get(id)!
+    const j = info.get(id)!
+    return {
+      poradi: i + 1,
+      jezdec_id: id,
+      st_cislo: j.st_cislo,
+      prijmeni: j.prijmeni,
+      jmeno: j.jmeno,
+      pq: v.pq,
+      psf: v.psf,
+      pf: v.pf,
+      bq: v.bq
+    }
+  })
+}
+
+// =====================================================================
+// Stopky / měření (CLAUDE.md §13.8)
+// =====================================================================
+
+const MERENI_SLOUPCE =
+  'm.id AS id, m.jizda_id AS jizda_id, m.poradi_kliku AS poradi_kliku, m.cas_ms AS cas_ms, ' +
+  'm.jezdec_id AS jezdec_id, j.st_cislo AS st_cislo, j.prijmeni AS prijmeni, j.jmeno AS jmeno'
+
+function mereniRadek(db: Db, id: number): MereniRadek {
+  return db
+    .prepare(`SELECT ${MERENI_SLOUPCE} FROM mereni m LEFT JOIN jezdec j ON j.id = m.jezdec_id WHERE m.id = ?`)
+    .get(id) as MereniRadek
+}
+
+// Přehled rozměřených jízd (kanálů) — jízdy, které mají aspoň jeden záznam.
+export function mereniKanaly(): MereniKanal[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT m.jizda_id AS jizdaId, COUNT(*) AS pocet,
+              k.id AS kategorieId, k.nazev AS katNazev, ko.typ AS koloTyp, jz.cislo AS jizdaCislo
+       FROM mereni m
+       JOIN jizda jz ON jz.id = m.jizda_id
+       JOIN kolo ko ON ko.id = jz.kolo_id
+       JOIN kategorie k ON k.id = ko.kategorie_id
+       GROUP BY m.jizda_id
+       ORDER BY k.nazev, ko.poradi, jz.cislo`
+    )
+    .all() as {
+    jizdaId: number
+    pocet: number
+    kategorieId: number
+    katNazev: string
+    koloTyp: KoloTyp
+    jizdaCislo: number
+  }[]
+  return rows.map((r) => ({
+    jizdaId: r.jizdaId,
+    kategorieId: r.kategorieId,
+    koloTyp: r.koloTyp,
+    jizdaCislo: r.jizdaCislo,
+    pocet: r.pocet,
+    label: `${r.katNazev} · ${r.koloTyp} · ${r.jizdaCislo}. jízda`
+  }))
+}
+
+export function mereniList(jizdaId: number): MereniRadek[] {
+  return getDb()
+    .prepare(
+      `SELECT ${MERENI_SLOUPCE} FROM mereni m LEFT JOIN jezdec j ON j.id = m.jezdec_id
+       WHERE m.jizda_id = ? ORDER BY m.poradi_kliku`
+    )
+    .all(jizdaId) as MereniRadek[]
+}
+
+export function mereniPridej(jizdaId: number, cas_ms: number): MereniRadek {
+  const db = getDb()
+  const max = (
+    db.prepare('SELECT COALESCE(MAX(poradi_kliku), 0) AS m FROM mereni WHERE jizda_id = ?').get(
+      jizdaId
+    ) as { m: number }
+  ).m
+  const r = db
+    .prepare('INSERT INTO mereni (jizda_id, poradi_kliku, cas_ms) VALUES (?, ?, ?)')
+    .run(jizdaId, max + 1, Math.round(cas_ms))
+  return mereniRadek(db, Number(r.lastInsertRowid))
+}
+
+export function mereniVratPosledni(jizdaId: number): void {
+  const db = getDb()
+  const row = db
+    .prepare('SELECT id FROM mereni WHERE jizda_id = ? ORDER BY poradi_kliku DESC LIMIT 1')
+    .get(jizdaId) as { id: number } | undefined
+  if (row) db.prepare('DELETE FROM mereni WHERE id = ?').run(row.id)
+}
+
+export function mereniOpravCas(id: number, cas_ms: number): MereniRadek {
+  const db = getDb()
+  db.prepare('UPDATE mereni SET cas_ms = ? WHERE id = ?').run(Math.round(cas_ms), id)
+  return mereniRadek(db, id)
+}
+
+export function mereniSmazKanal(jizdaId: number): void {
+  getDb().prepare('DELETE FROM mereni WHERE jizda_id = ?').run(jizdaId)
+}
+
+// Přiřadí startovní číslo k záznamu. Jezdec se hledá v kategorii dané jízdy;
+// stejný jezdec nesmí být přiřazen víc časům téže jízdy.
+export function mereniSetCislo(id: number, st_cislo: number | null): MereniSetCisloResult {
+  const db = getDb()
+  const meta = db
+    .prepare(
+      `SELECT m.jizda_id AS jizdaId, ko.kategorie_id AS katId
+       FROM mereni m JOIN jizda jz ON jz.id = m.jizda_id JOIN kolo ko ON ko.id = jz.kolo_id
+       WHERE m.id = ?`
+    )
+    .get(id) as { jizdaId: number; katId: number } | undefined
+  if (!meta) throw new Error('Záznam měření neexistuje')
+
+  if (st_cislo === null) {
+    db.prepare('UPDATE mereni SET jezdec_id = NULL WHERE id = ?').run(id)
+    return { ok: true, jezdec: null }
+  }
+
+  const jezdec = db
+    .prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE kategorie_id = ? AND st_cislo = ?`)
+    .get(meta.katId, st_cislo) as Jezdec | undefined
+  if (!jezdec) return { ok: false, jezdec: null }
+
+  const dup = db
+    .prepare('SELECT 1 FROM mereni WHERE jizda_id = ? AND jezdec_id = ? AND id <> ?')
+    .get(meta.jizdaId, jezdec.id, id)
+  if (dup) return { ok: false, jezdec: null, duplicitni: true }
+
+  db.prepare('UPDATE mereni SET jezdec_id = ? WHERE id = ?').run(jezdec.id, id)
+  return { ok: true, jezdec }
+}
+
+// Vrátí sloty roštu pro jednu konkrétní jízdu — bez nutnosti znát kategorii/kolo.
+// Vrátí prázdné pole, pokud rošt ještě nebyl nasazen.
+export function getRostJizda(jizdaId: number): RostSlot[] {
+  const db = getDb()
+  const rows = db
+    .prepare(
+      `SELECT rp.pozice AS pozice, ${JEZDEC_COLS_J}
+       FROM rost_pozice rp JOIN jezdec j ON j.id = rp.jezdec_id
+       WHERE rp.jizda_id = ?
+       ORDER BY rp.pozice`
+    )
+    .all(jizdaId) as (Record<string, unknown> & { pozice: number })[]
+  if (rows.length === 0) return []
+  const byPoz = new Map(rows.map((r) => [r.pozice, r]))
+  const highest = rows.reduce((m, r) => Math.max(m, r.pozice), 0)
+  const sloty: RostSlot[] = []
+  for (let p = 1; p <= highest; p++) {
+    const r = byPoz.get(p)
+    sloty.push({ pozice: p, jezdec: r ? jezdecZRadku(r) : null })
+  }
+  return sloty
+}
+
+// Vrátí návrh předvýběru: první neodměřená jízda po posledním záznamu měření.
+// Logika: vezme kolo posledního mereni, najde v něm první jízdu bez mereni/vysledků;
+// pokud jsou všechny hotové, přeskočí do dalšího kola (dle poradi).
+export function mereniDalsiJizda(): import('../shared/types').MereniDalsiJizda | null {
+  const db = getDb()
+  const last = db
+    .prepare(
+      `SELECT ko.id AS koloId, ko.typ AS koloTyp, ko.kategorie_id AS katId, ko.poradi AS koloPoradi
+       FROM mereni m
+       JOIN jizda jz ON jz.id = m.jizda_id
+       JOIN kolo ko ON ko.id = jz.kolo_id
+       ORDER BY m.id DESC
+       LIMIT 1`
+    )
+    .get() as
+    | { koloId: number; koloTyp: KoloTyp; katId: number; koloPoradi: number }
+    | undefined
+  if (!last) return null
+
+  const firstEmpty = db
+    .prepare(
+      `SELECT jz.id AS jizdaId FROM jizda jz
+       WHERE jz.kolo_id = ?
+         AND NOT EXISTS (SELECT 1 FROM mereni WHERE jizda_id = jz.id)
+         AND NOT EXISTS (SELECT 1 FROM vysledek WHERE jizda_id = jz.id)
+       ORDER BY jz.cislo ASC LIMIT 1`
+    )
+    .get(last.koloId) as { jizdaId: number } | undefined
+  if (firstEmpty) return { katId: last.katId, koloTyp: last.koloTyp, jizdaId: firstEmpty.jizdaId }
+
+  // Všechny jízdy kola jsou hotové — zkus první jízdu dalšího kola.
+  const nextKolo = db
+    .prepare(
+      `SELECT id, typ FROM kolo WHERE kategorie_id = ? AND poradi > ? ORDER BY poradi ASC LIMIT 1`
+    )
+    .get(last.katId, last.koloPoradi) as { id: number; typ: KoloTyp } | undefined
+  if (nextKolo) {
+    const firstJizda = db
+      .prepare('SELECT id AS jizdaId FROM jizda WHERE kolo_id = ? ORDER BY cislo ASC LIMIT 1')
+      .get(nextKolo.id) as { jizdaId: number } | undefined
+    if (firstJizda) return { katId: last.katId, koloTyp: nextKolo.typ, jizdaId: firstJizda.jizdaId }
+  }
+  return null
+}
+
+// Vrátí jizdaId jízd v daném kole, které mají aspoň jeden záznam mereni nebo vysledek.
+export function mereniJizdyHotovo(katId: number, koloTyp: KoloTyp): number[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT DISTINCT jz.id AS id
+       FROM jizda jz JOIN kolo ko ON ko.id = jz.kolo_id
+       WHERE ko.kategorie_id = ? AND ko.typ = ?
+         AND (
+           EXISTS (SELECT 1 FROM mereni WHERE jizda_id = jz.id)
+           OR EXISTS (SELECT 1 FROM vysledek
+                      WHERE jizda_id = jz.id
+                        AND (namereny_cas_ms IS NOT NULL OR stav <> 'OK' OR poradi IS NOT NULL))
+         )`
+    )
+    .all(katId, koloTyp) as { id: number }[]
+  return rows.map((r) => r.id)
+}
+
+// Má daná jízda už zadané výsledky? (čas / nestandardní stav / pořadí)
+export function mereniMaVysledky(jizdaId: number): boolean {
+  const r = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS n FROM vysledek
+       WHERE jizda_id = ? AND (namereny_cas_ms IS NOT NULL OR stav <> 'OK' OR poradi IS NOT NULL)`
+    )
+    .get(jizdaId) as { n: number }
+  return r.n > 0
+}
+
+// Propíše naměřené časy (jen ty s přiřazeným jezdcem) do Výsledků jízdy a
+// přepočítá pořadí + body stejnou logikou jako ruční zadání.
+export function zapisMereniDoVysledku(jizdaId: number): VysledekJizda {
+  const db = getDb()
+  const meta = db
+    .prepare(
+      `SELECT ko.kategorie_id AS katId, jz.cislo AS cislo
+       FROM jizda jz JOIN kolo ko ON ko.id = jz.kolo_id WHERE jz.id = ?`
+    )
+    .get(jizdaId) as { katId: number; cislo: number } | undefined
+  if (!meta) throw new Error('Jízda neexistuje')
+
+  const rows = db
+    .prepare(
+      'SELECT cas_ms, jezdec_id FROM mereni WHERE jizda_id = ? AND jezdec_id IS NOT NULL ORDER BY poradi_kliku'
+    )
+    .all(jizdaId) as { cas_ms: number; jezdec_id: number }[]
+
+  db.transaction(() => {
+    // Zajisti, že přiřazení jezdci jsou v roštu jízdy — jinak by je synchronizace
+    // ve Výsledcích smazala (vysledek je vázán na rost_pozice).
+    let next = (
+      db.prepare('SELECT COALESCE(MAX(pozice), 0) AS m FROM rost_pozice WHERE jizda_id = ?').get(
+        jizdaId
+      ) as { m: number }
+    ).m
+    const jeVRostu = db.prepare('SELECT 1 FROM rost_pozice WHERE jizda_id = ? AND jezdec_id = ?')
+    const insPoz = db.prepare(
+      'INSERT INTO rost_pozice (jizda_id, pozice, jezdec_id) VALUES (?, ?, ?)'
+    )
+    const insV = db.prepare(
+      `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
+    )
+    const updV = db.prepare(
+      `UPDATE vysledek SET namereny_cas_ms = ?, stav = 'OK' WHERE jizda_id = ? AND jezdec_id = ?`
+    )
+    for (const r of rows) {
+      if (!jeVRostu.get(jizdaId, r.jezdec_id)) {
+        next += 1
+        insPoz.run(jizdaId, next, r.jezdec_id)
+      }
+      insV.run(jizdaId, r.jezdec_id)
+      updV.run(r.cas_ms, jizdaId, r.jezdec_id)
+    }
+  })()
+
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.katId))
+  prepoctiJizdu(db, jizdaId, bodyZaPozici, penalizace)
+  return nactiJizdu(db, jizdaId, meta.cislo)
+}

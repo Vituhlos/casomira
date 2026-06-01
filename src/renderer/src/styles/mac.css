@@ -1,0 +1,112 @@
+/* mac.css — macOS (Apple HIG) tokeny: vibrancy, grouped tables, SF Pro.
+   Téma přes html[data-theme], floating okno nad plochou. */
+
+:root {
+  --font: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
+  --font-display: -apple-system, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+
+  --r-win: 12px;
+  --r-card: 10px;
+  --r-ctrl: 7px;
+  --r-pill: 980px;
+
+  --sidebar-w: 252px;
+  --toolbar-h: 52px;
+
+  --accent: #007aff;
+}
+
+/* ---------- LIGHT (Sonoma light) ---------- */
+html[data-theme="light"] {
+  --accent: #007aff;
+  --accent-hover: #0a6ce0;
+  --on-accent: #ffffff;
+  --accent-text: #0067d6;
+
+  --desktop: linear-gradient(135deg, #aebfd2 0%, #c4bcd2 42%, #d9c8be 78%, #e7d6c6 100%);
+  --window: #ffffff;                       /* obsahová plocha (Mail/Notes styl) */
+  --content-bg: #f4f4f6;                    /* grouped pozadí pod inset tabulkami */
+  --sidebar: rgba(245,245,247,0.66);        /* vibrancy */
+  --sidebar-solid: #ececee;
+  --toolbar: rgba(246,246,248,0.72);
+  --card: #ffffff;                          /* inset tabulky */
+  --card-alt: #f7f7f9;                      /* zebra */
+  --hover: rgba(0,0,0,0.045);
+  --press: rgba(0,0,0,0.08);
+  --hairline: rgba(0,0,0,0.10);
+  --divider: rgba(0,0,0,0.065);
+  --ctrl-bg: #ffffff;
+  --ctrl-stroke: rgba(0,0,0,0.13);
+  --text-1: rgba(0,0,0,0.85);
+  --text-2: rgba(0,0,0,0.5);
+  --text-3: rgba(0,0,0,0.32);
+  --text-4: rgba(0,0,0,0.2);
+  --shadow-win: 0 30px 80px rgba(0,0,0,0.34), 0 2px 8px rgba(0,0,0,0.18);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-btn: 0 1px 1.5px rgba(0,0,0,0.08), inset 0 0 0 0.5px rgba(0,0,0,0.04);
+  --seg-track: rgba(0,0,0,0.045);
+  --seg-sel: #ffffff;
+  --seg-sel-shadow: 0 1px 3px rgba(0,0,0,0.16), inset 0 0 0 0.5px rgba(0,0,0,0.04);
+  --smoke: rgba(0,0,0,0.18);
+}
+
+/* ---------- DARK (Sonoma dark) ---------- */
+html[data-theme="dark"] {
+  --accent: #0a84ff;
+  --accent-hover: #2b96ff;
+  --on-accent: #ffffff;
+  --accent-text: #5eadff;
+
+  --desktop: linear-gradient(135deg, #2a3340 0%, #34303f 45%, #3a3138 80%, #2f3640 100%);
+  --window: #1e1e1e;
+  --content-bg: #1a1a1a;
+  --sidebar: rgba(40,40,42,0.58);
+  --sidebar-solid: #29292b;
+  --toolbar: rgba(46,46,48,0.66);
+  --card: #2c2c2e;
+  --card-alt: #313133;
+  --hover: rgba(255,255,255,0.06);
+  --press: rgba(255,255,255,0.10);
+  --hairline: rgba(255,255,255,0.12);
+  --divider: rgba(255,255,255,0.08);
+  --ctrl-bg: rgba(255,255,255,0.09);
+  --ctrl-stroke: rgba(255,255,255,0.12);
+  --text-1: rgba(255,255,255,0.88);
+  --text-2: rgba(255,255,255,0.55);
+  --text-3: rgba(255,255,255,0.34);
+  --text-4: rgba(255,255,255,0.22);
+  --shadow-win: 0 30px 80px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-btn: 0 1px 1.5px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(255,255,255,0.06);
+  --seg-track: rgba(255,255,255,0.07);
+  --seg-sel: #636366;
+  --seg-sel-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --smoke: rgba(0,0,0,0.45);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--desktop);
+  background-attachment: fixed;
+  color: var(--text-1);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.003em;
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+button, input, select { font-family: inherit; color: inherit; }
+
+/* jemný macOS scrollbar (overlay) */
+*::-webkit-scrollbar { width: 14px; height: 14px; }
+*::-webkit-scrollbar-thumb { background: rgba(120,120,120,0.5); border-radius: 99px; border: 4px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(120,120,120,0.7); background-clip: content-box; }
+
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+@keyframes macIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.screen-enter { animation: macIn 0.2s cubic-bezier(0.32,0.72,0,1) both; }
+
+@media print { .no-print { display: none !important; } }

@@ -1,0 +1,107 @@
+# Instalátory Časomíry (Windows + Mac)
+
+> Veřejný přehled projektu: [README.md](./README.md)
+
+## Co dostaneš
+
+| Systém | Soubor | Kde vznikne |
+|--------|--------|-------------|
+| **Windows** | `Casomira-Setup-0.9.0.exe` | složka `release/` |
+| **Mac** | `Casomira-0.9.0.dmg` | složka `release/` (jen na Macu nebo v CI) |
+
+Instalátor na Windows přidá program do menu Start, zástupce na plochu (volitelně) a odinstalaci v Nastavení.
+
+---
+
+## Na tvém Windows PC (nejčastější)
+
+1. Otevři terminál ve složce projektu.
+2. Jednorázově nainstaluj závislosti (už máš z vývoje):
+
+   ```bash
+   npm install
+   ```
+
+3. Sestav instalátor:
+
+   ```bash
+   npm run dist:win
+   ```
+
+4. Výsledek: `release/Casomira-Setup-0.9.0.exe` — ten pošli časoměřiči nebo ho spusť na testovacím PC.
+
+**Rychlý test bez instalátoru** (složka s programem, ne Setup.exe):
+
+```bash
+npm run dist:win:dir
+```
+
+→ `release/win-unpacked/Casomira.exe`
+
+---
+
+## Časté problémy při buildu
+
+**EPERM / „operation not permitted“ na `better_sqlite3.node`**
+
+Zavři běžící Časomíru i `npm run dev` (Electron drží soubor otevřený). Pak:
+
+```bash
+npm run rebuild
+npm run dist:win
+```
+
+**`npm install` padá na postinstall**
+
+Stejná příčina — ukonči appku, znovu `npm install`.
+
+**Varování o winCodeSign / symlinky**
+
+V `electron-builder.yml` je `signAndEditExecutable: false` — instalátor se sestaví bez podpisu kódu (pro závod u vás doma stačí). Podpis lze doplnit později s certifikátem.
+
+**`npmRebuild: false`**
+
+Balení nepřebuilduje native moduly automaticky. Před `dist:win` na čistém stroji stačí jednou `npm run rebuild` po `npm install`. V GitHub Actions obvykle není zamčený `.node` soubor.
+
+---
+
+## Mac (DMG)
+
+DMG musíš zabalit **na Macu** (nebo nechat GitHub Actions — viz níže):
+
+```bash
+npm install
+npm run dist:mac
+```
+
+→ `release/Casomira-0.9.0.dmg`
+
+Bez Apple Developer účtu může Mac při prvním spuštění ukázat varování — to se řeší později notarizací (není nutné pro závod u tebe doma).
+
+---
+
+## Obě platformy najednou (GitHub)
+
+Po pushnutí tagu `v0.9.0` workflow `.github/workflows/release.yml` zkusí sestavit Win + Mac v cloudu a přiložit soubory k release (potřebuješ repo na GitHubu).
+
+---
+
+## Ikona aplikace (volitelné)
+
+Teď se použije výchozí Electron ikona. Až budeš mít logo:
+
+1. Připrav **PNG 512×512** (průhledné pozadí).
+2. Ulož jako `build/icon.png`.
+3. Vygeneruj `.ico` / `.icns` (např. [cloudconvert.com](https://cloudconvert.com/png-to-ico)) do `build/icon.ico` a `build/icon.icns`.
+4. Odkomentuj řádky `installerIcon` / `icon` v `electron-builder.yml`.
+
+---
+
+## Příkazy
+
+| Příkaz | Co dělá |
+|--------|---------|
+| `npm run build` | Zkompiluje appku do `out/` (bez instalátoru) |
+| `npm run dist:win` | Windows instalátor NSIS |
+| `npm run dist:mac` | macOS DMG |
+| `npm run dist` | Balíček pro aktuální OS |
