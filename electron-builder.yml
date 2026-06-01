@@ -1,4 +1,7 @@
 # Balení Časomíry pro Windows (NSIS) a macOS (DMG). Viz BUILD.md.
+# Release na GitHub řeší .github/workflows/release.yml (ne auto-publish z tagu).
+publish: null
+
 appId: cz.casomira.app
 productName: Časomíra
 copyright: Copyright © Časomíra
