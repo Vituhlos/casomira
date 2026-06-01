@@ -2,7 +2,8 @@
 // bezpečně spustit při každém startu. Časy jsou v milisekundách (integer),
 // datum jako text ISO (YYYY-MM-DD).
 //
-// Pozn.: tabulka `mereni` se zakládá migrací v6; `uprava_log` migrací v7.
+// Pozn.: tabulka `mereni` se zakládá migrací v6, `zavod_id` migrací v8;
+// `uprava_log` migrací v7.
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS zavod (

@@ -4,6 +4,7 @@
 
 import { BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
+import { attachStopkyCloseGuard } from './stopkyClose'
 
 let stopkyWin: BrowserWindow | null = null
 
@@ -46,6 +47,8 @@ export function openStopky(): void {
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) void stopkyWin.loadURL(`${devUrl}#stopky`)
   else void stopkyWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'stopky' })
+
+  attachStopkyCloseGuard(stopkyWin)
 
   stopkyWin.on('closed', () => {
     stopkyWin = null

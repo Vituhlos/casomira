@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Kategorie, KoloTyp, MereniRadek, RostSlot } from '@shared/types'
+import type { Kategorie, KoloTyp, MereniRadek, MereniTimerStav, RostSlot } from '@shared/types'
 import { useTheme } from './hooks/useTheme'
 import { Btn } from './components/ui'
 import { Icon } from './components/Icon'
@@ -39,6 +39,7 @@ function elapsed(k: Kanal, t: number): number {
 export function StopkyApp(): React.JSX.Element {
   const { theme, toggle } = useTheme()
   const [kategorie, setKategorie] = useState<Kategorie[]>([])
+  const [zavodId, setZavodId] = useState<number | null>(null)
   const [zavodNazev, setZavodNazev] = useState('')
   const [kanaly, setKanaly] = useState<Kanal[]>([])
   const [aktivniId, setAktivniId] = useState<number | null>(null)
@@ -68,25 +69,87 @@ export function StopkyApp(): React.JSX.Element {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Načtení závodu, kategorií a existujících kanálů (přežijí restart).
-  useEffect(() => {
-    void (async () => {
-      const z = await window.api.getAktivniZavod()
-      if (z) {
-        setZavodNazev(z.nazev)
-        setKategorie(await window.api.listKategorie(z.id))
+  const timerPayload = (k: Kanal): MereniTimerStav => ({
+    jizdaId: k.jizdaId,
+    running: k.running,
+    baseMs: k.baseMs,
+    startEpochMs: k.startEpoch
+  })
+
+  const ulozVsechnyKanaly = useCallback(
+    (list: Kanal[], aktivni: number | null): void => {
+      if (zavodId == null) return
+      for (const k of list) {
+        void window.api.ulozMereniTimer(k.jizdaId, timerPayload(k))
       }
-      const ks = await window.api.mereniKanaly()
-      const full: Kanal[] = []
-      for (const k of ks) {
-        const klik = await window.api.mereniList(k.jizdaId)
-        const last = klik.length ? klik[klik.length - 1].cas_ms : 0
-        full.push({ jizdaId: k.jizdaId, label: k.label, klik, running: false, startEpoch: null, baseMs: last })
-      }
-      setKanaly(full)
-      setAktivniId(full.length ? full[0].jizdaId : null)
-    })()
+      void window.api.ulozMereniAktivniJizdu(aktivni)
+    },
+    [zavodId]
+  )
+
+  // Načtení aktivního závodu a jeho kanálů měření (přežijí restart i přepnutí závodu).
+  const nactiZavodAkanaly = useCallback(async (): Promise<void> => {
+    const z = await window.api.getAktivniZavod()
+    let zId: number | null = null
+    if (z) {
+      zId = z.id
+      setZavodId(z.id)
+      setZavodNazev(z.nazev)
+      setKategorie(await window.api.listKategorie(z.id))
+    } else {
+      setZavodId(null)
+      setZavodNazev('')
+      setKategorie([])
+    }
+    const [ks, timery, ulozenaAktivni] = await Promise.all([
+      window.api.mereniKanaly(),
+      zId != null ? window.api.nactiMereniTimery() : Promise.resolve([]),
+      zId != null ? window.api.nactiMereniAktivniJizdu() : Promise.resolve(null)
+    ])
+    const timerMap = new Map(timery.map((t) => [t.jizdaId, t]))
+    const full: Kanal[] = []
+    for (const k of ks) {
+      const klik = await window.api.mereniList(k.jizdaId)
+      const t = timerMap.get(k.jizdaId)
+      const last = klik.length ? klik[klik.length - 1].cas_ms : 0
+      full.push({
+        jizdaId: k.jizdaId,
+        label: k.label,
+        klik,
+        running: t?.running ?? false,
+        startEpoch: t?.running && t.startEpochMs != null ? t.startEpochMs : null,
+        baseMs: t != null ? t.baseMs : last
+      })
+    }
+    const aktivni =
+      ulozenaAktivni != null && full.some((k) => k.jizdaId === ulozenaAktivni)
+        ? ulozenaAktivni
+        : (full[0]?.jizdaId ?? null)
+    setKanaly(full)
+    setAktivniId(aktivni)
+    setNove(false)
+    setPotvrd(null)
+    setAktivniRadek(null)
   }, [])
+
+  useEffect(() => {
+    void nactiZavodAkanaly()
+  }, [nactiZavodAkanaly])
+
+  useEffect(() => window.api.onZavodChanged(() => void nactiZavodAkanaly()), [nactiZavodAkanaly])
+
+  // Autosave časovačů a aktivního kanálu (debounce + flush při zavření okna).
+  useEffect(() => {
+    if (zavodId == null || kanaly.length === 0) return
+    const t = setTimeout(() => ulozVsechnyKanaly(kanaly, aktivniId), 350)
+    return () => clearTimeout(t)
+  }, [kanaly, aktivniId, zavodId, ulozVsechnyKanaly])
+
+  useEffect(() => {
+    const flush = (): void => ulozVsechnyKanaly(kanaly, aktivniId)
+    window.addEventListener('beforeunload', flush)
+    return () => window.removeEventListener('beforeunload', flush)
+  }, [kanaly, aktivniId, ulozVsechnyKanaly])
 
   // Běžící hodiny — překresluj jen když aktivní kanál běží.
   useEffect(() => {
@@ -113,7 +176,14 @@ export function StopkyApp(): React.JSX.Element {
     if (!k || !k.running || k.startEpoch == null) return
     const cas = k.baseMs + (Date.now() - k.startEpoch)
     const row = await window.api.mereniPridej(k.jizdaId, cas)
-    setKanaly((prev) => prev.map((x) => (x.jizdaId === k.jizdaId ? { ...x, klik: [...x.klik, row] } : x)))
+    setKanaly((prev) => {
+      const next = prev.map((x) =>
+        x.jizdaId === k.jizdaId ? { ...x, klik: [...x.klik, row] } : x
+      )
+      const updated = next.find((x) => x.jizdaId === k.jizdaId)
+      if (updated) void window.api.ulozMereniTimer(updated.jizdaId, timerPayload(updated))
+      return next
+    })
   }, [kanaly, aktivniId])
 
   const vratPosledni = useCallback(async (): Promise<void> => {
@@ -129,10 +199,24 @@ export function StopkyApp(): React.JSX.Element {
     if (!akt) return
     if (akt.running) {
       const base = akt.baseMs + (akt.startEpoch != null ? Date.now() - akt.startEpoch : 0)
-      updKanal(akt.jizdaId, { running: false, startEpoch: null, baseMs: base })
+      const patch = { running: false, startEpoch: null, baseMs: base }
+      updKanal(akt.jizdaId, patch)
+      void window.api.ulozMereniTimer(akt.jizdaId, {
+        jizdaId: akt.jizdaId,
+        running: false,
+        baseMs: base,
+        startEpochMs: null
+      })
     } else {
-      updKanal(akt.jizdaId, { running: true, startEpoch: Date.now() })
-      setNow(Date.now())
+      const startEpoch = Date.now()
+      updKanal(akt.jizdaId, { running: true, startEpoch })
+      setNow(startEpoch)
+      void window.api.ulozMereniTimer(akt.jizdaId, {
+        jizdaId: akt.jizdaId,
+        running: true,
+        baseMs: akt.baseMs,
+        startEpochMs: startEpoch
+      })
     }
   }
 
@@ -295,8 +379,13 @@ export function StopkyApp(): React.JSX.Element {
             <button
               key={k.jizdaId}
               onClick={() => {
+                if (aktivniId != null && aktivniId !== k.jizdaId) {
+                  const pred = kanaly.find((x) => x.jizdaId === aktivniId)
+                  if (pred) void window.api.ulozMereniTimer(pred.jizdaId, timerPayload(pred))
+                }
                 setAktivniId(k.jizdaId)
                 setNove(false)
+                void window.api.ulozMereniAktivniJizdu(k.jizdaId)
               }}
               className={on ? 'btn btn--primary' : 'btn btn--bezel'}
               style={{
@@ -342,6 +431,7 @@ export function StopkyApp(): React.JSX.Element {
       {/* Obsah */}
       {nove ? (
         <NoveMereni
+          key={zavodId ?? 'none'}
           kategorie={kategorie}
           onZalozit={zalozMereni}
           onZrusit={() => setNove(false)}

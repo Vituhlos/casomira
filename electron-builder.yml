@@ -59,6 +59,13 @@ mac:
   artifactName: Casomira-${version}-mac-universal.${ext}
   # Nativní moduly (better-sqlite3) v asarUnpack — pro universal obě architektury.
   mergeASARs: true
+  # Hardened runtime + oprávnění: bez `disable-library-validation` macOS odmítne
+  # načíst nativní modul better-sqlite3 a appka spadne hned po startu (SIGTRAP).
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Test build nemá Apple notarizaci — nepouštěj Gatekeeper assess při buildu.
+  gatekeeperAssess: false
   # Volitelně: build/icon.icns
   # icon: build/icon.icns
 

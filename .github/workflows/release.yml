@@ -95,6 +95,15 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
+          body: |
+            ### Instalace
+            - **Windows:** stáhni `Casomira-Setup-*.exe` a spusť instalátor.
+            - **macOS:** stáhni `Casomira-*-mac-universal.dmg` (Intel i Apple Silicon).
+
+            > ⚠️ **macOS — aplikace není podepsaná Apple certifikátem.**
+            > Otevři ji poprvé přes **pravý klik (Ctrl+klik) na ikonu aplikace → Otevřít**
+            > a potvrď **Otevřít**. Jinak ji Gatekeeper zablokuje hláškou
+            > „nelze ověřit vývojáře". Stačí jednou, pak už se spouští normálně.
           files: |
             artifacts/**/*
         env:

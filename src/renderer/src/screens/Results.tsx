@@ -7,6 +7,7 @@ import { Badge, Medal } from '../components/ui'
 import { Card, Row, tdStyle, thStyle } from '../components/table'
 import { Tooltip } from '../components/Tooltip'
 import { fmtTime, parseTimeLoose } from '../lib/time'
+import { jizdaNekompletni, radekNekompletni } from '../lib/stav'
 
 interface ResultsProps {
   kategorieId: number
@@ -151,10 +152,41 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
         </div>
       )}
 
-      {(kolo?.jizdy ?? []).map((jz) => (
+      {(kolo?.jizdy ?? []).map((jz) => {
+        const nekompletni = jizdaNekompletni(jz.vysledky)
+        return (
         <div key={jz.id} style={{ margin: '0 22px 8px', fontSize: 13, fontWeight: 620 }}>
-          {jz.cislo}. JÍZDA
-          <Card style={{ margin: '8px 0 18px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            {jz.cislo}. JÍZDA
+            {nekompletni && (
+              <span
+                title="Někteří jezdci nemají čas ani stav (DNF/DNS/DQ)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 20,
+                  padding: '0 8px',
+                  borderRadius: 'var(--r-pill)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  color: 'var(--stav-partial)',
+                  background: 'var(--stav-warn-bg)',
+                  border: '0.5px solid color-mix(in srgb, var(--stav-partial) 35%, transparent)'
+                }}
+              >
+                nekompletní
+              </span>
+            )}
+          </span>
+          <Card
+            style={{
+              margin: '8px 0 18px',
+              ...(nekompletni
+                ? { boxShadow: 'inset 3px 0 0 var(--stav-partial)' }
+                : {})
+            }}
+          >
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 60 }} />
@@ -192,7 +224,12 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
                   </tr>
                 )}
                 {jz.vysledky.map((r, i) => (
-                  <Row key={r.jezdec_id} i={i} zebra penalized={maZasahReditele(r)}>
+                  <Row
+                    key={r.jezdec_id}
+                    i={i}
+                    zebra
+                    penalized={maZasahReditele(r) || radekNekompletni(r)}
+                  >
                     <td
                       style={{
                         ...tdStyle,
@@ -280,7 +317,8 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
             </table>
           </Card>
         </div>
-      ))}
+        )
+      })}
 
       {menu &&
         createPortal(

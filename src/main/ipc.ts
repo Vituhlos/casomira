@@ -17,8 +17,17 @@ import type {
   ZavodUprava
 } from '../shared/types'
 import * as repo from './repo'
+import {
+  exportAllDialog,
+  exportZavodDialog,
+  previewRestoreDialog,
+  restoreBackup
+} from './backup/actions'
+import { BackupValidationError } from './backup/import'
 import { exportJeden, exportVse, pdfRootStav, choosePdfRoot } from './pdf'
 import { openStopky, broadcast } from './windows'
+import { prehledZavodu, upozorneniPrechodFaze } from './stavZavodu'
+import type { BackupRestoreArg } from '../shared/backup'
 
 // Z přípony odvodí MIME typ obrázku (pro data URL loga).
 function mimeObrazku(cesta: string): string {
@@ -35,11 +44,54 @@ function mimeObrazku(cesta: string): string {
 export function registerIpc(): void {
   ipcMain.handle('zavod:aktivni', () => repo.getAktivniZavod())
   ipcMain.handle('zavod:list', () => repo.listZavody())
-  ipcMain.handle('zavod:open', (_e, id: number) => repo.openZavod(id))
-  ipcMain.handle('zavod:create', (_e, data: NovyZavod) => repo.createZavod(data))
+  ipcMain.handle('zavod:open', (_e, id: number) => {
+    const z = repo.openZavod(id)
+    if (z) broadcast('app:zavodChanged', z.id)
+    return z
+  })
+  ipcMain.handle('zavod:create', (_e, data: NovyZavod) => {
+    const z = repo.createZavod(data)
+    broadcast('app:zavodChanged', z.id)
+    return z
+  })
   ipcMain.handle('zavod:update', (_e, uprava: ZavodUprava) => repo.updateZavod(uprava))
   ipcMain.handle('zavod:delete', (_e, id: number) => repo.deleteZavod(id))
+
+  ipcMain.handle('backup:exportZavod', (e, zavodId: number) =>
+    exportZavodDialog(BrowserWindow.fromWebContents(e.sender), zavodId)
+  )
+  ipcMain.handle('backup:exportAll', (e) =>
+    exportAllDialog(BrowserWindow.fromWebContents(e.sender))
+  )
+  ipcMain.handle('backup:previewRestore', async (e) => {
+    try {
+      return await previewRestoreDialog(BrowserWindow.fromWebContents(e.sender))
+    } catch (err) {
+      if (err instanceof BackupValidationError) {
+        return { chyba: err.message } as { chyba: string }
+      }
+      throw err
+    }
+  })
+  ipcMain.handle('backup:restore', async (_e, arg: BackupRestoreArg) => {
+    const res = await restoreBackup(arg)
+    if (res.ok && res.zavodId != null) broadcast('app:zavodChanged', res.zavodId)
+    return res
+  })
   ipcMain.handle('kategorie:list', (_e, zavodId: number) => repo.listKategorie(zavodId))
+  ipcMain.handle('stav:prehled', (_e, zavodId: number, typ: import('../shared/types').RaceType) =>
+    prehledZavodu(zavodId, typ)
+  )
+  ipcMain.handle(
+    'stav:upozorneni',
+    (
+      _e,
+      kategorieId: number,
+      nazev: string,
+      faze: string,
+      ruleset: import('../shared/types').Ruleset
+    ) => upozorneniPrechodFaze(kategorieId, nazev, faze, ruleset)
+  )
   ipcMain.handle('jezdci:list', (_e, kategorieId: number) => repo.listJezdci(kategorieId))
   ipcMain.handle('jezdec:update', (_e, uprava: JezdecUprava) => repo.updateJezdec(uprava))
   ipcMain.handle('jezdec:add', (_e, kategorieId: number) => repo.addJezdec(kategorieId))
@@ -152,6 +204,30 @@ export function registerIpc(): void {
     const v = repo.zapisMereniDoVysledku(jizdaId)
     broadcast('app:dataChanged') // hlavní okno si obnoví výsledky
     return v
+  })
+  ipcMain.handle('mereni:ulozTimer', (_e, jizdaId: number, stav: import('../shared/types').MereniTimerStav) =>
+    repo.mereniUlozTimer(jizdaId, {
+      running: stav.running,
+      baseMs: stav.baseMs,
+      startEpochMs: stav.startEpochMs
+    })
+  )
+  ipcMain.handle('mereni:nactiTimery', () => {
+    const z = repo.getAktivniZavod()
+    if (!z) return []
+    return repo.mereniNactiTimery(z.id)
+  })
+  ipcMain.handle('mereni:ulozAktivni', (_e, jizdaId: number | null) => {
+    const z = repo.getAktivniZavod()
+    if (z) repo.mereniUlozAktivniJizdu(z.id, jizdaId)
+  })
+  ipcMain.handle('mereni:maNezapsane', () => {
+    const z = repo.getAktivniZavod()
+    return z ? repo.mereniMaNezapsane(z.id) : false
+  })
+  ipcMain.handle('mereni:nactiAktivni', () => {
+    const z = repo.getAktivniZavod()
+    return z ? repo.mereniNactiAktivniJizdu(z.id) : null
   })
 
   // Kořenová složka pro PDF

@@ -44,12 +44,14 @@ export interface NovyZavod {
   kategorie: KategorieVstup[]
 }
 
-/** Úprava základních údajů závodu. */
+/** Úprava závodu — volitelně synchronizace seznamu kategorií (přidání / odebrání). */
 export interface ZavodUprava {
   id: number
   nazev: string
   datum: string
   misto: string
+  /** Když je vyplněno, kategorie závodu se srovnají s tímto seznamem (chybějící se smažou). */
+  kategorie?: KategorieVstup[]
 }
 
 export interface Jezdec {
@@ -261,6 +263,14 @@ export interface MereniDalsiJizda {
   jizdaId: number
 }
 
+/** Uložený stav časovače jedné jízdy (běží / pauza, naběhlý čas). */
+export interface MereniTimerStav {
+  jizdaId: number
+  running: boolean
+  baseMs: number
+  startEpochMs: number | null
+}
+
 /** Souběžně rozměřená jízda (kanál) — pro přehled a přepínání. */
 export interface MereniKanal {
   jizdaId: number
@@ -420,6 +430,15 @@ export interface CasomiraApi {
   /** Smaže závod včetně všech jeho dat (kategorie, jezdci, rošty, výsledky). */
   deleteZavod(id: number): Promise<void>
   listKategorie(zavodId: number): Promise<Kategorie[]>
+  /** Přehled stavu fází (hotovo/částečně/prázdné) napříč kategoriemi. */
+  getPrehledZavodu(zavodId: number, typ: RaceType): Promise<import('./stav').PrehledZavodu>
+  /** Varování před přechodem do fáze závislé na výsledcích (null = v pořádku). */
+  getUpozorneniFaze(
+    kategorieId: number,
+    kategorieNazev: string,
+    faze: string,
+    ruleset: Ruleset
+  ): Promise<import('./stav').UpozorneniPrechod | null>
   listJezdci(kategorieId: number): Promise<Jezdec[]>
   updateJezdec(uprava: JezdecUprava): Promise<Jezdec>
   addJezdec(kategorieId: number): Promise<Jezdec>
@@ -493,6 +512,8 @@ export interface CasomiraApi {
   openStopky(): Promise<void>
   /** Přihlásí se k odběru události „data se změnila v jiném okně". Vrací odhlášení. */
   onDataChanged(cb: () => void): () => void
+  /** Aktivní závod se změnil (otevření / nový závod) — stopky si načtou kanály toho závodu. */
+  onZavodChanged(cb: (zavodId: number) => void): () => void
   /** Přehled souběžně rozměřených jízd (kanálů). */
   mereniKanaly(): Promise<MereniKanal[]>
   /** Záznamy měření jedné jízdy (řazené dle pořadí kliku). */
@@ -517,4 +538,22 @@ export interface CasomiraApi {
   mereniJizdyHotovo(katId: number, koloTyp: KoloTyp): Promise<number[]>
   /** Vrátí sloty roštu konkrétní jízdy (read-only náhled). Prázdné pole = rošt není sestaven. */
   getRostJizda(jizdaId: number): Promise<RostSlot[]>
+  /** Uloží stav běžícího časovače jízdy (autosave). */
+  ulozMereniTimer(jizdaId: number, stav: MereniTimerStav): Promise<void>
+  /** Načte uložené časovače pro aktivní závod. */
+  nactiMereniTimery(): Promise<MereniTimerStav[]>
+  /** Uloží aktivní kanál (jízdu) pro aktivní závod. */
+  ulozMereniAktivniJizdu(jizdaId: number | null): Promise<void>
+  nactiMereniAktivniJizdu(): Promise<number | null>
+  /** Má aktivní závod rozměřené časy ještě nezapsané do výsledků? */
+  mereniMaNezapsane(): Promise<boolean>
+  // Záloha / obnova závodu
+  /** Uloží jeden závod do JSON (dialog „kam uložit"). */
+  exportZavodBackup(zavodId: number): Promise<import('./backup').BackupExportResult>
+  /** Uloží všechny závody + globální nastavení do JSON. */
+  exportAllBackup(): Promise<import('./backup').BackupExportResult>
+  /** Vybere soubor zálohy a vrátí náhled (null = zrušeno). */
+  previewRestoreBackup(): Promise<import('./backup').BackupPreviewResponse>
+  /** Provede obnovu dle volby uživatele (nový / přepsat). */
+  restoreBackup(arg: import('./backup').BackupRestoreArg): Promise<import('./backup').BackupRestoreResult>
 }

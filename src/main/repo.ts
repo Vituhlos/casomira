@@ -168,10 +168,54 @@ export function createZavod(data: NovyZavod): Zavod {
   return getZavodById(id) as Zavod
 }
 
+// Srovná kategorie závodu s požadovaným seznamem (přidá nové, odebere chybějící).
+function syncKategorie(zavodId: number, pozadovane: { nazev: string; ruleset: Ruleset }[]): void {
+  const db = getDb()
+  const zavod = getZavodById(zavodId)
+  if (!zavod) return
+
+  const normalizuj = (n: string): string => n.trim()
+  const uniq: { nazev: string; ruleset: Ruleset }[] = []
+  const videne = new Set<string>()
+  for (const k of pozadovane) {
+    const nazev = normalizuj(k.nazev)
+    if (!nazev) continue
+    const key = nazev.toLocaleLowerCase('cs')
+    if (videne.has(key)) continue
+    videne.add(key)
+    const ruleset =
+      zavod.typ === 'RX'
+        ? 'STANDARD'
+        : k.ruleset === 'SOTOLINA'
+          ? 'SOTOLINA'
+          : 'STANDARD'
+    uniq.push({ nazev, ruleset })
+  }
+
+  const stavajici = listKategorie(zavodId)
+  const pozadovaneKeys = new Set(uniq.map((k) => k.nazev.toLocaleLowerCase('cs')))
+
+  db.transaction(() => {
+    for (const kat of stavajici) {
+      if (!pozadovaneKeys.has(kat.nazev.toLocaleLowerCase('cs'))) {
+        db.prepare('DELETE FROM kategorie WHERE id = ?').run(kat.id)
+      }
+    }
+    const ins = db.prepare('INSERT INTO kategorie (zavod_id, nazev, ruleset) VALUES (?, ?, ?)')
+    const existujiciKeys = new Set(stavajici.map((k) => k.nazev.toLocaleLowerCase('cs')))
+    for (const k of uniq) {
+      if (!existujiciKeys.has(k.nazev.toLocaleLowerCase('cs'))) {
+        ins.run(zavodId, k.nazev, k.ruleset)
+      }
+    }
+  })()
+}
+
 export function updateZavod(uprava: ZavodUprava): Zavod {
   getDb()
     .prepare('UPDATE zavod SET nazev = ?, datum = ?, misto = ? WHERE id = ?')
     .run(uprava.nazev.trim() || 'Závod', uprava.datum, uprava.misto.trim(), uprava.id)
+  if (uprava.kategorie) syncKategorie(uprava.id, uprava.kategorie)
   return getZavodById(uprava.id) as Zavod
 }
 
@@ -1757,6 +1801,43 @@ export function getCelkove(kategorieId: number): CelkoveRadek[] {
 // Stopky / měření (CLAUDE.md §13.8)
 // =====================================================================
 
+function zavodIdProJizdu(db: Db, jizdaId: number): number | null {
+  const row = db
+    .prepare(
+      `SELECT k.zavod_id AS zavodId FROM jizda jz
+       JOIN kolo ko ON ko.id = jz.kolo_id
+       JOIN kategorie k ON k.id = ko.kategorie_id
+       WHERE jz.id = ?`
+    )
+    .get(jizdaId) as { zavodId: number } | undefined
+  return row?.zavodId ?? null
+}
+
+function aktivniZavodIdNeboChyba(): number {
+  const z = getAktivniZavod()
+  if (!z) throw new Error('Není otevřený žádný závod.')
+  return z.id
+}
+
+function overMereniPatriAktivnimuZavodu(db: Db, mereniId: number): void {
+  const row = db
+    .prepare('SELECT zavod_id AS zid FROM mereni WHERE id = ?')
+    .get(mereniId) as { zid: number | null } | undefined
+  if (!row?.zid) throw new Error('Záznam měření neexistuje.')
+  const aktivni = aktivniZavodIdNeboChyba()
+  if (row.zid !== aktivni) {
+    throw new Error('Toto měření patří jinému závodu.')
+  }
+}
+
+function overJizdaPatriAktivnimuZavodu(db: Db, jizdaId: number): number {
+  const zid = zavodIdProJizdu(db, jizdaId)
+  if (zid == null) throw new Error('Jízda neexistuje.')
+  const aktivni = aktivniZavodIdNeboChyba()
+  if (zid !== aktivni) throw new Error('Tato jízda patří jinému závodu.')
+  return zid
+}
+
 const MERENI_SLOUPCE =
   'm.id AS id, m.jizda_id AS jizda_id, m.poradi_kliku AS poradi_kliku, m.cas_ms AS cas_ms, ' +
   'm.jezdec_id AS jezdec_id, j.st_cislo AS st_cislo, j.prijmeni AS prijmeni, j.jmeno AS jmeno'
@@ -1767,8 +1848,10 @@ function mereniRadek(db: Db, id: number): MereniRadek {
     .get(id) as MereniRadek
 }
 
-// Přehled rozměřených jízd (kanálů) — jízdy, které mají aspoň jeden záznam.
+// Přehled rozměřených jízd (kanálů) — jen aktivní závod.
 export function mereniKanaly(): MereniKanal[] {
+  const zavod = getAktivniZavod()
+  if (!zavod) return []
   const rows = getDb()
     .prepare(
       `SELECT m.jizda_id AS jizdaId, COUNT(*) AS pocet,
@@ -1777,10 +1860,11 @@ export function mereniKanaly(): MereniKanal[] {
        JOIN jizda jz ON jz.id = m.jizda_id
        JOIN kolo ko ON ko.id = jz.kolo_id
        JOIN kategorie k ON k.id = ko.kategorie_id
+       WHERE m.zavod_id = ?
        GROUP BY m.jizda_id
        ORDER BY k.nazev, ko.poradi, jz.cislo`
     )
-    .all() as {
+    .all(zavod.id) as {
     jizdaId: number
     pocet: number
     kategorieId: number
@@ -1799,29 +1883,35 @@ export function mereniKanaly(): MereniKanal[] {
 }
 
 export function mereniList(jizdaId: number): MereniRadek[] {
-  return getDb()
+  const db = getDb()
+  const zavodId = overJizdaPatriAktivnimuZavodu(db, jizdaId)
+  return db
     .prepare(
       `SELECT ${MERENI_SLOUPCE} FROM mereni m LEFT JOIN jezdec j ON j.id = m.jezdec_id
-       WHERE m.jizda_id = ? ORDER BY m.poradi_kliku`
+       WHERE m.jizda_id = ? AND m.zavod_id = ? ORDER BY m.poradi_kliku`
     )
-    .all(jizdaId) as MereniRadek[]
+    .all(jizdaId, zavodId) as MereniRadek[]
 }
 
 export function mereniPridej(jizdaId: number, cas_ms: number): MereniRadek {
   const db = getDb()
+  const zavodId = overJizdaPatriAktivnimuZavodu(db, jizdaId)
   const max = (
     db.prepare('SELECT COALESCE(MAX(poradi_kliku), 0) AS m FROM mereni WHERE jizda_id = ?').get(
       jizdaId
     ) as { m: number }
   ).m
   const r = db
-    .prepare('INSERT INTO mereni (jizda_id, poradi_kliku, cas_ms) VALUES (?, ?, ?)')
-    .run(jizdaId, max + 1, Math.round(cas_ms))
+    .prepare(
+      'INSERT INTO mereni (jizda_id, zavod_id, poradi_kliku, cas_ms) VALUES (?, ?, ?, ?)'
+    )
+    .run(jizdaId, zavodId, max + 1, Math.round(cas_ms))
   return mereniRadek(db, Number(r.lastInsertRowid))
 }
 
 export function mereniVratPosledni(jizdaId: number): void {
   const db = getDb()
+  overJizdaPatriAktivnimuZavodu(db, jizdaId)
   const row = db
     .prepare('SELECT id FROM mereni WHERE jizda_id = ? ORDER BY poradi_kliku DESC LIMIT 1')
     .get(jizdaId) as { id: number } | undefined
@@ -1830,18 +1920,23 @@ export function mereniVratPosledni(jizdaId: number): void {
 
 export function mereniOpravCas(id: number, cas_ms: number): MereniRadek {
   const db = getDb()
+  overMereniPatriAktivnimuZavodu(db, id)
   db.prepare('UPDATE mereni SET cas_ms = ? WHERE id = ?').run(Math.round(cas_ms), id)
   return mereniRadek(db, id)
 }
 
 export function mereniSmazKanal(jizdaId: number): void {
-  getDb().prepare('DELETE FROM mereni WHERE jizda_id = ?').run(jizdaId)
+  const db = getDb()
+  const zavodId = overJizdaPatriAktivnimuZavodu(db, jizdaId)
+  db.prepare('DELETE FROM mereni WHERE jizda_id = ? AND zavod_id = ?').run(jizdaId, zavodId)
+  mereniSmazTimer(jizdaId)
 }
 
 // Přiřadí startovní číslo k záznamu. Jezdec se hledá v kategorii dané jízdy;
 // stejný jezdec nesmí být přiřazen víc časům téže jízdy.
 export function mereniSetCislo(id: number, st_cislo: number | null): MereniSetCisloResult {
   const db = getDb()
+  overMereniPatriAktivnimuZavodu(db, id)
   const meta = db
     .prepare(
       `SELECT m.jizda_id AS jizdaId, ko.kategorie_id AS katId
@@ -1897,6 +1992,8 @@ export function getRostJizda(jizdaId: number): RostSlot[] {
 // Logika: vezme kolo posledního mereni, najde v něm první jízdu bez mereni/vysledků;
 // pokud jsou všechny hotové, přeskočí do dalšího kola (dle poradi).
 export function mereniDalsiJizda(): import('../shared/types').MereniDalsiJizda | null {
+  const zavod = getAktivniZavod()
+  if (!zavod) return null
   const db = getDb()
   const last = db
     .prepare(
@@ -1904,10 +2001,11 @@ export function mereniDalsiJizda(): import('../shared/types').MereniDalsiJizda |
        FROM mereni m
        JOIN jizda jz ON jz.id = m.jizda_id
        JOIN kolo ko ON ko.id = jz.kolo_id
+       WHERE m.zavod_id = ?
        ORDER BY m.id DESC
        LIMIT 1`
     )
-    .get() as
+    .get(zavod.id) as
     | { koloId: number; koloTyp: KoloTyp; katId: number; koloPoradi: number }
     | undefined
   if (!last) return null
@@ -1958,7 +2056,13 @@ export function mereniJizdyHotovo(katId: number, koloTyp: KoloTyp): number[] {
 
 // Má daná jízda už zadané výsledky? (čas / nestandardní stav / pořadí)
 export function mereniMaVysledky(jizdaId: number): boolean {
-  const r = getDb()
+  const db = getDb()
+  try {
+    overJizdaPatriAktivnimuZavodu(db, jizdaId)
+  } catch {
+    return false
+  }
+  const r = db
     .prepare(
       `SELECT COUNT(*) AS n FROM vysledek
        WHERE jizda_id = ? AND (namereny_cas_ms IS NOT NULL OR stav <> 'OK' OR poradi IS NOT NULL)`
@@ -1971,6 +2075,7 @@ export function mereniMaVysledky(jizdaId: number): boolean {
 // přepočítá pořadí + body stejnou logikou jako ruční zadání.
 export function zapisMereniDoVysledku(jizdaId: number): VysledekJizda {
   const db = getDb()
+  const zavodId = overJizdaPatriAktivnimuZavodu(db, jizdaId)
   const meta = db
     .prepare(
       `SELECT ko.kategorie_id AS katId, jz.cislo AS cislo
@@ -1981,9 +2086,10 @@ export function zapisMereniDoVysledku(jizdaId: number): VysledekJizda {
 
   const rows = db
     .prepare(
-      'SELECT cas_ms, jezdec_id FROM mereni WHERE jizda_id = ? AND jezdec_id IS NOT NULL ORDER BY poradi_kliku'
+      `SELECT cas_ms, jezdec_id FROM mereni
+       WHERE jizda_id = ? AND zavod_id = ? AND jezdec_id IS NOT NULL ORDER BY poradi_kliku`
     )
-    .all(jizdaId) as { cas_ms: number; jezdec_id: number }[]
+    .all(jizdaId, zavodId) as { cas_ms: number; jezdec_id: number }[]
 
   db.transaction(() => {
     // Zajisti, že přiřazení jezdci jsou v roštu jízdy — jinak by je synchronizace
@@ -2015,5 +2121,100 @@ export function zapisMereniDoVysledku(jizdaId: number): VysledekJizda {
 
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.katId))
   prepoctiJizdu(db, jizdaId, bodyZaPozici, penalizace)
+  mereniOznacZapsano(jizdaId)
   return nactiJizdu(db, jizdaId, meta.cislo)
+}
+
+// ---- Autosave stopek + detekce nezapsaného měření ----
+
+function klicMereniZapis(jizdaId: number): string {
+  return `mereni_zapis_max_${jizdaId}`
+}
+
+/** Po zápisu do výsledků — další kliky znovu vyžadují zápis. */
+export function mereniOznacZapsano(jizdaId: number): void {
+  const db = getDb()
+  const row = db
+    .prepare('SELECT COALESCE(MAX(id), 0) AS m FROM mereni WHERE jizda_id = ?')
+    .get(jizdaId) as { m: number }
+  setNastaveni(klicMereniZapis(jizdaId), String(row.m))
+}
+
+/** Existují záznamy mereni novější než poslední zápis do výsledků? */
+export function mereniMaNezapsane(zavodId: number): boolean {
+  const db = getDb()
+  const rows = db
+    .prepare(
+      `SELECT jizda_id AS jizdaId, MAX(id) AS maxId
+       FROM mereni WHERE zavod_id = ?
+       GROUP BY jizda_id`
+    )
+    .all(zavodId) as { jizdaId: number; maxId: number }[]
+  for (const r of rows) {
+    const ulozeny = getNastaveni(klicMereniZapis(r.jizdaId))
+    if (!ulozeny || Number(ulozeny) < r.maxId) return true
+  }
+  return false
+}
+
+export function mereniUlozTimer(
+  jizdaId: number,
+  stav: { running: boolean; baseMs: number; startEpochMs: number | null }
+): void {
+  const db = getDb()
+  const zavodId = zavodIdProJizdu(db, jizdaId)
+  if (zavodId == null) return
+  db.prepare(
+    `INSERT INTO mereni_timer (jizda_id, zavod_id, running, base_ms, start_epoch_ms)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(jizda_id) DO UPDATE SET
+       zavod_id = excluded.zavod_id,
+       running = excluded.running,
+       base_ms = excluded.base_ms,
+       start_epoch_ms = excluded.start_epoch_ms`
+  ).run(
+    jizdaId,
+    zavodId,
+    stav.running ? 1 : 0,
+    Math.round(stav.baseMs),
+    stav.startEpochMs != null ? Math.round(stav.startEpochMs) : null
+  )
+}
+
+export function mereniNactiTimery(zavodId: number): import('../shared/types').MereniTimerStav[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT jizda_id AS jizdaId, running, base_ms AS baseMs, start_epoch_ms AS startEpochMs
+       FROM mereni_timer WHERE zavod_id = ?`
+    )
+    .all(zavodId) as {
+    jizdaId: number
+    running: number
+    baseMs: number
+    startEpochMs: number | null
+  }[]
+  return rows.map((r) => ({
+    jizdaId: r.jizdaId,
+    running: r.running === 1,
+    baseMs: r.baseMs,
+    startEpochMs: r.startEpochMs
+  }))
+}
+
+export function mereniSmazTimer(jizdaId: number): void {
+  getDb().prepare('DELETE FROM mereni_timer WHERE jizda_id = ?').run(jizdaId)
+  deleteNastaveni(klicMereniZapis(jizdaId))
+}
+
+export function mereniUlozAktivniJizdu(zavodId: number, jizdaId: number | null): void {
+  const klic = `stopky_aktivni_${zavodId}`
+  if (jizdaId == null) deleteNastaveni(klic)
+  else setNastaveni(klic, String(jizdaId))
+}
+
+export function mereniNactiAktivniJizdu(zavodId: number): number | null {
+  const v = getNastaveni(`stopky_aktivni_${zavodId}`)
+  if (!v) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
 }

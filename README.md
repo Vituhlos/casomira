@@ -10,9 +10,18 @@ Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Prav
 
 ---
 
+## Dokumentace pro testery
+
+| Formát | Instalace Mac | Návod k použití |
+|--------|---------------|-----------------|
+| **Word (.docx)** — k poslání testerům | [docs/Casomira-instalace-Mac.docx](./docs/Casomira-instalace-Mac.docx) | [docs/Casomira-navod-pro-testery.docx](./docs/Casomira-navod-pro-testery.docx) |
+| Markdown (zdroj v repu) | [INSTALACE-MAC.md](./INSTALACE-MAC.md) | [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md) |
+
+Přegenerovat Word z Markdownu: `npm run docs:word`
+
 ## Stáhnout
 
-Instalátory najdeš u **[GitHub Releases](https://github.com/Vituhlos/casomira/releases)** (po vydání tagu, např. `v0.9.0`):
+Instalátory najdeš u **[GitHub Releases](https://github.com/Vituhlos/casomira/releases)** (po vydání tagu, např. `v0.9.1`):
 
 | Platforma | Soubor |
 |-----------|--------|

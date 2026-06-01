@@ -16,6 +16,8 @@ interface RaceListProps {
   onNew: () => void
   onEdit: (z: ZavodInfo) => void
   onDelete: (z: ZavodInfo) => void
+  onBackup: (z: ZavodInfo) => void
+  onRestore: () => void
   theme: Theme
   onToggleTheme: () => void
 }
@@ -26,6 +28,8 @@ export function RaceList({
   onNew,
   onEdit,
   onDelete,
+  onBackup,
+  onRestore,
   theme,
   onToggleTheme
 }: RaceListProps): React.JSX.Element {
@@ -59,6 +63,9 @@ export function RaceList({
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Btn variant="bezel" icon="import" onClick={onRestore} title="Obnovit ze zálohy">
+              Obnovit…
+            </Btn>
             <Btn
               variant="bezel"
               icon={theme === 'dark' ? 'sun' : 'moon'}
@@ -127,6 +134,17 @@ export function RaceList({
                     {z.typ === 'RX' && <DevBadge />}
                   </span>
                   <div className="race-card-actions" style={{ display: 'flex', gap: 2 }}>
+                    <button
+                      className="icon-btn"
+                      title="Zálohovat závod"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onBackup(z)
+                      }}
+                      style={{ width: 26, height: 26, display: 'grid', placeItems: 'center' }}
+                    >
+                      <Icon name="import" size={15} style={{ transform: 'rotate(180deg)' }} />
+                    </button>
                     <button
                       className="icon-btn"
                       title="Upravit údaje"

@@ -8,9 +8,21 @@ interface SettingsProps {
   kategorie: Kategorie[]
   onClose: () => void
   onToast: (zprava: string) => void
+  onEditZavod?: () => void
+  onBackupZavod?: () => void
+  onBackupAll?: () => void
+  onRestore?: () => void
 }
 
-export function Settings({ kategorie, onClose, onToast }: SettingsProps): React.JSX.Element {
+export function Settings({
+  kategorie,
+  onClose,
+  onToast,
+  onEditZavod,
+  onBackupZavod,
+  onBackupAll,
+  onRestore
+}: SettingsProps): React.JSX.Element {
   const [logo, setLogo] = useState<string | null>(null)
   const [root, setRoot] = useState<PdfRootStav | null>(null)
   const [vybrane, setVybrane] = useState<Set<number>>(new Set(kategorie.map((k) => k.id)))
@@ -79,6 +91,44 @@ export function Settings({ kategorie, onClose, onToast }: SettingsProps): React.
         </Btn>
       }
     >
+      {onEditZavod && (
+        <>
+          <SekceNadpis>Závod a kategorie</SekceNadpis>
+          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+            Přidat nebo odebrat kategorie, upravit název, datum a místo závodu.
+          </p>
+          <Btn variant="bezel" icon="pencil" onClick={onEditZavod}>
+            Upravit závod…
+          </Btn>
+          <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+        </>
+      )}
+
+      <SekceNadpis>Záloha a obnova</SekceNadpis>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+        Kompletní data závodu (rošty, výsledky, stopky, penalizace) do souboru JSON. Ostatní závody
+        v databázi zůstanou nedotčené.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {onBackupZavod && (
+          <Btn variant="bezel" icon="import" onClick={onBackupZavod}>
+            Zálohovat tento závod…
+          </Btn>
+        )}
+        {onBackupAll && (
+          <Btn variant="bezel" icon="import" onClick={onBackupAll}>
+            Zálohovat vše…
+          </Btn>
+        )}
+        {onRestore && (
+          <Btn variant="bezel" icon="import" onClick={onRestore}>
+            Obnovit ze zálohy…
+          </Btn>
+        )}
+      </div>
+
+      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+
       {/* ---- Logo ---- */}
       <SekceNadpis>Logo do hlavičky PDF</SekceNadpis>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

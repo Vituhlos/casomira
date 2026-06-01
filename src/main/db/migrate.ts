@@ -3,7 +3,8 @@ import { SCHEMA_SQL } from './schema'
 
 // Číslo poslední migrace. Až budeme schéma měnit (např. přidáme `mereni`),
 // přibude další krok a zvýšíme číslo. `user_version` si SQLite pamatuje v souboru.
-const LATEST = 7
+export const SCHEMA_VERSION = 9
+const LATEST = SCHEMA_VERSION
 
 export function migrate(db: Database.Database): void {
   const version = db.pragma('user_version', { simple: true }) as number
@@ -67,6 +68,35 @@ export function migrate(db: Database.Database): void {
     db.exec(
       'CREATE INDEX IF NOT EXISTS ix_uprava_vysledek ON uprava_log(vysledek_id, kdy DESC)'
     )
+  }
+
+  if (version < 8) {
+    // Měření stopek vázaná na závod — při přepnutí závodu se kanály nemíchají.
+    db.exec('ALTER TABLE mereni ADD COLUMN zavod_id INTEGER REFERENCES zavod(id) ON DELETE CASCADE')
+    db.exec(`
+      UPDATE mereni SET zavod_id = (
+        SELECT k.zavod_id FROM jizda jz
+        JOIN kolo ko ON ko.id = jz.kolo_id
+        JOIN kategorie k ON k.id = ko.kategorie_id
+        WHERE jz.id = mereni.jizda_id
+      )
+    `)
+    db.exec('DELETE FROM mereni WHERE zavod_id IS NULL')
+    db.exec('CREATE INDEX IF NOT EXISTS ix_mereni_zavod ON mereni(zavod_id)')
+  }
+
+  if (version < 9) {
+    // Stav běžícího časovače stopek (přežije zavření okna / pád aplikace).
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS mereni_timer (
+        jizda_id         INTEGER PRIMARY KEY REFERENCES jizda(id) ON DELETE CASCADE,
+        zavod_id         INTEGER NOT NULL REFERENCES zavod(id) ON DELETE CASCADE,
+        running          INTEGER NOT NULL DEFAULT 0,
+        base_ms          INTEGER NOT NULL DEFAULT 0,
+        start_epoch_ms   INTEGER
+      )
+    `)
+    db.exec('CREATE INDEX IF NOT EXISTS ix_mereni_timer_zavod ON mereni_timer(zavod_id)')
   }
 
   db.pragma(`user_version = ${LATEST}`)

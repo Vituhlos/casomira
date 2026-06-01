@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { BackupRestoreArg } from '../shared/backup'
 import type {
   CasomiraApi,
   ImportCommit,
@@ -25,7 +26,19 @@ const api: CasomiraApi = {
   createZavod: (data: NovyZavod) => ipcRenderer.invoke('zavod:create', data),
   updateZavod: (uprava: ZavodUprava) => ipcRenderer.invoke('zavod:update', uprava),
   deleteZavod: (id: number) => ipcRenderer.invoke('zavod:delete', id),
+  exportZavodBackup: (zavodId: number) => ipcRenderer.invoke('backup:exportZavod', zavodId),
+  exportAllBackup: () => ipcRenderer.invoke('backup:exportAll'),
+  previewRestoreBackup: () => ipcRenderer.invoke('backup:previewRestore'),
+  restoreBackup: (arg: BackupRestoreArg) => ipcRenderer.invoke('backup:restore', arg),
   listKategorie: (zavodId: number) => ipcRenderer.invoke('kategorie:list', zavodId),
+  getPrehledZavodu: (zavodId: number, typ: import('../shared/types').RaceType) =>
+    ipcRenderer.invoke('stav:prehled', zavodId, typ),
+  getUpozorneniFaze: (
+    kategorieId: number,
+    nazev: string,
+    faze: string,
+    ruleset: import('../shared/types').Ruleset
+  ) => ipcRenderer.invoke('stav:upozorneni', kategorieId, nazev, faze, ruleset),
   listJezdci: (kategorieId: number) => ipcRenderer.invoke('jezdci:list', kategorieId),
   updateJezdec: (uprava: JezdecUprava) => ipcRenderer.invoke('jezdec:update', uprava),
   addJezdec: (kategorieId: number) => ipcRenderer.invoke('jezdec:add', kategorieId),
@@ -80,6 +93,11 @@ const api: CasomiraApi = {
     ipcRenderer.on('app:dataChanged', h)
     return () => ipcRenderer.removeListener('app:dataChanged', h)
   },
+  onZavodChanged: (cb: (zavodId: number) => void) => {
+    const h = (_e: unknown, id: number): void => cb(id)
+    ipcRenderer.on('app:zavodChanged', h)
+    return () => ipcRenderer.removeListener('app:zavodChanged', h)
+  },
   mereniKanaly: () => ipcRenderer.invoke('mereni:kanaly'),
   mereniList: (jizdaId: number) => ipcRenderer.invoke('mereni:list', jizdaId),
   mereniPridej: (jizdaId: number, cas_ms: number) =>
@@ -94,7 +112,14 @@ const api: CasomiraApi = {
   getRostJizda: (jizdaId: number) => ipcRenderer.invoke('rost:jizda', jizdaId),
   mereniDalsiJizda: () => ipcRenderer.invoke('mereni:dalsiJizda'),
   mereniJizdyHotovo: (katId: number, koloTyp: KoloTyp) =>
-    ipcRenderer.invoke('mereni:jizdyHotovo', katId, koloTyp)
+    ipcRenderer.invoke('mereni:jizdyHotovo', katId, koloTyp),
+  ulozMereniTimer: (jizdaId: number, stav: import('../shared/types').MereniTimerStav) =>
+    ipcRenderer.invoke('mereni:ulozTimer', jizdaId, stav),
+  nactiMereniTimery: () => ipcRenderer.invoke('mereni:nactiTimery'),
+  ulozMereniAktivniJizdu: (jizdaId: number | null) =>
+    ipcRenderer.invoke('mereni:ulozAktivni', jizdaId),
+  nactiMereniAktivniJizdu: () => ipcRenderer.invoke('mereni:nactiAktivni'),
+  mereniMaNezapsane: () => ipcRenderer.invoke('mereni:maNezapsane')
 }
 
 contextBridge.exposeInMainWorld('api', api)

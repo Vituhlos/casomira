@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { BackupRestorePreview } from '@shared/backup'
+import { isBackupPreview } from '@shared/backup'
 import type {
   ImportCommit,
   ImportPreview,
@@ -10,6 +12,10 @@ import type {
   Zavod,
   ZavodInfo
 } from '@shared/types'
+import { RestoreBackupModal } from './components/RestoreBackupModal'
+import { PregledStavu } from './components/PregledStavu'
+import { UpozorneniFazeModal } from './components/UpozorneniFazeModal'
+import type { UpozorneniPrechod } from '@shared/stav'
 import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
 import { Segmented } from './components/Segmented'
@@ -80,8 +86,9 @@ export function App(): React.JSX.Element {
   const [view, setView] = useState<'list' | 'race'>('list')
   const [zavody, setZavody] = useState<ZavodInfo[]>([])
   const [novyOtevreno, setNovyOtevreno] = useState(false)
-  const [editZavod, setEditZavod] = useState<ZavodInfo | null>(null)
+  const [editZavod, setEditZavod] = useState<Zavod | null>(null)
   const [smazatZavod, setSmazatZavod] = useState<ZavodInfo | null>(null)
+  const [restorePreview, setRestorePreview] = useState<BackupRestorePreview | null>(null)
 
   const [zavod, setZavod] = useState<Zavod | null>(null)
   const [kategorie, setKategorie] = useState<Kategorie[]>([])
@@ -102,6 +109,8 @@ export function App(): React.JSX.Element {
   const [rootProblem, setRootProblem] = useState<PdfRootStav | null>(null)
   // Zvýší se, když jiné okno změní data → vynutí přenačtení obsahu.
   const [dataNonce, setDataNonce] = useState(0)
+  const [pendingPhase, setPendingPhase] = useState<string | null>(null)
+  const [upozorneniFaze, setUpozorneniFaze] = useState<UpozorneniPrechod | null>(null)
 
   // Krátké oznámení (volitelně s cestou ke složce → tlačítko „Otevřít").
   const oznam = useCallback((text: string, slozka?: string | null): void => {
@@ -250,7 +259,43 @@ export function App(): React.JSX.Element {
   const onSavedEdit = async (z: Zavod): Promise<void> => {
     setEditZavod(null)
     await reloadZavody()
-    if (zavod && zavod.id === z.id) setZavod(z)
+    if (zavod && zavod.id === z.id) {
+      setZavod(z)
+      const cats = await window.api.listKategorie(z.id)
+      setKategorie(cats)
+      if (activeCat != null && !cats.some((c) => c.id === activeCat)) {
+        setActiveCat(cats[0]?.id ?? null)
+        setPhase('start')
+      }
+    }
+  }
+
+  const onZalohovatZavod = async (z: ZavodInfo | Zavod): Promise<void> => {
+    const res = await window.api.exportZavodBackup(z.id)
+    if (res.ok) oznam('Záloha uložena.', res.cesta)
+    else if (!res.zruseno) oznam(res.chyba ?? 'Záloha se nezdařila.')
+  }
+
+  const onZalohovatVse = async (): Promise<void> => {
+    const res = await window.api.exportAllBackup()
+    if (res.ok) oznam('Záloha všech závodů uložena.', res.cesta)
+    else if (!res.zruseno) oznam(res.chyba ?? 'Záloha se nezdařila.')
+  }
+
+  const onObnovitZeZalohy = async (): Promise<void> => {
+    const raw = await window.api.previewRestoreBackup()
+    if (raw == null) return
+    if (!isBackupPreview(raw)) {
+      oznam('chyba' in raw ? raw.chyba : 'Neplatný soubor zálohy.')
+      return
+    }
+    setRestorePreview(raw)
+  }
+
+  const onRestoreHotovo = async (zavodId: number): Promise<void> => {
+    setRestorePreview(null)
+    await reloadZavody()
+    await otevriZavod(zavodId)
   }
 
   const onConfirmDeleteZavod = async (): Promise<void> => {
@@ -283,6 +328,31 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     if (!phases.some((p) => p.id === phase)) setPhase('start')
   }, [phases, phase])
+
+  const prejitNaFazi = (id: string): void => {
+    setPhase(id)
+    setSubView('rost')
+    setPendingPhase(null)
+    setUpozorneniFaze(null)
+  }
+
+  const onTabPhase = (id: string): void => {
+    if (id === phase) return
+    if (activeCat == null || !aktivniKategorie) {
+      prejitNaFazi(id)
+      return
+    }
+    void window.api
+      .getUpozorneniFaze(activeCat, catLabel, id, aktivniKategorie.ruleset)
+      .then((warn) => {
+        if (warn) {
+          setPendingPhase(id)
+          setUpozorneniFaze(warn)
+          return
+        }
+        prejitNaFazi(id)
+      })
+  }
 
   // Export aktuálního listu. saveAs=false → automaticky do struktury složek.
   const exportujAktualni = async (saveAs: boolean): Promise<void> => {
@@ -388,8 +458,10 @@ export function App(): React.JSX.Element {
           zavody={zavody}
           onOpen={(id) => void otevriZavod(id)}
           onNew={() => setNovyOtevreno(true)}
-          onEdit={setEditZavod}
+          onEdit={(z) => setEditZavod(z)}
           onDelete={setSmazatZavod}
+          onBackup={(z) => void onZalohovatZavod(z)}
+          onRestore={() => void onObnovitZeZalohy()}
           theme={theme}
           onToggleTheme={toggle}
         />
@@ -430,7 +502,15 @@ export function App(): React.JSX.Element {
             {/* Lišta fází: záložky vystředěné jako kompaktní blok (vodorovný scroll
                 až když se na úzkém okně nevejdou). Seznam fází zužujeme podle
                 typu závodu (RX bez „Klasifikace po Q2"). */}
-            <Segmented active={phase} phases={phases} onTab={setPhase} />
+            <Segmented active={phase} phases={phases} onTab={onTabPhase} />
+            {zavod && (
+              <PregledStavu
+                zavodId={zavod.id}
+                typ={zavod.typ}
+                aktivniKategorieId={activeCat}
+                dataNonce={dataNonce}
+              />
+            )}
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               <div
                 key={dataNonce}
@@ -457,6 +537,27 @@ export function App(): React.JSX.Element {
           zavod={editZavod}
           onCancel={() => setEditZavod(null)}
           onSaved={(z) => void onSavedEdit(z)}
+        />
+      )}
+
+      {upozorneniFaze && pendingPhase && (
+        <UpozorneniFazeModal
+          cilovaFazeLabel={phases.find((p) => p.id === pendingPhase)?.label ?? pendingPhase}
+          upozorneni={upozorneniFaze}
+          onPokracovat={() => prejitNaFazi(pendingPhase)}
+          onZrusit={() => {
+            setPendingPhase(null)
+            setUpozorneniFaze(null)
+          }}
+        />
+      )}
+
+      {restorePreview && (
+        <RestoreBackupModal
+          preview={restorePreview}
+          onClose={() => setRestorePreview(null)}
+          onDone={(id) => void onRestoreHotovo(id)}
+          onToast={oznam}
         />
       )}
 
@@ -490,6 +591,22 @@ export function App(): React.JSX.Element {
           kategorie={kategorie}
           onClose={() => setNastaveniOtevreno(false)}
           onToast={oznam}
+          onEditZavod={
+            zavod
+              ? () => {
+                  setNastaveniOtevreno(false)
+                  setEditZavod(zavod)
+                }
+              : undefined
+          }
+          onBackupZavod={
+            zavod ? () => void onZalohovatZavod(zavod) : undefined
+          }
+          onBackupAll={() => void onZalohovatVse()}
+          onRestore={() => {
+            setNastaveniOtevreno(false)
+            void onObnovitZeZalohy()
+          }}
         />
       )}
 

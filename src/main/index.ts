@@ -1,9 +1,38 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'node:path'
+import { appendFileSync, mkdirSync } from 'node:fs'
 import { registerIpc } from './ipc'
 import { getDb } from './db/connection'
 import { migrate } from './db/migrate'
 import { seed } from './db/seed'
+import { registerAppQuitGuard } from './stopkyClose'
+
+// Zapíše krok startu do souboru startup.log v datové složce aplikace. Když start
+// spadne (typicky nativní modul better-sqlite3 na macOS), z logu je přesně vidět,
+// u kterého kroku to skončilo — i bez konzole. Logování samo nesmí start shodit.
+function logStartup(msg: string): void {
+  try {
+    const dir = app.getPath('userData')
+    mkdirSync(dir, { recursive: true })
+    appendFileSync(join(dir, 'startup.log'), `[${new Date().toISOString()}] ${msg}\n`)
+  } catch {
+    /* prázdné — diagnostika nikdy nesmí být příčinou pádu */
+  }
+}
+
+// Nezachycená výjimka při startu = jinak tichý pád bez hlášky. Ukážeme ji.
+process.on('uncaughtException', (err) => {
+  const e = err as Error
+  logStartup(`uncaughtException: ${e?.stack ?? e?.message ?? String(err)}`)
+  try {
+    dialog.showErrorBox(
+      'Časomíra — neočekávaná chyba',
+      `${e?.message ?? err}\n\nPodrobnosti: ${join(app.getPath('userData'), 'startup.log')}`
+    )
+  } catch {
+    /* dialog nemusí být k dispozici (např. před app ready) */
+  }
+})
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -43,18 +72,43 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  // Databázi otevřeme, vytvoříme schéma (migrace) a při prvním běhu naplníme daty.
-  const db = getDb()
-  migrate(db)
-  seed(db)
+  try {
+    logStartup(
+      `start: platform=${process.platform} arch=${process.arch} ` +
+        `electron=${process.versions.electron} node=${process.versions.node}`
+    )
 
-  registerIpc()
-  createWindow()
+    // Databázi otevřeme, vytvoříme schéma (migrace) a při prvním běhu naplníme daty.
+    // Breadcrumbs okolo otevření DB: kdyby nativní modul spadl, log skončí přesně tady.
+    logStartup('otevírám databázi (better-sqlite3)…')
+    const db = getDb()
+    logStartup('databáze otevřena → migrace schématu')
+    migrate(db)
+    logStartup('migrace hotová → seed')
+    seed(db)
+    logStartup('seed hotový → IPC + okno')
 
-  app.on('activate', () => {
-    // macOS: kliknutí na ikonu v docku znovu otevře okno.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
+    registerIpc()
+    registerAppQuitGuard()
+    createWindow()
+    logStartup('start dokončen, okno vytvořeno')
+
+    app.on('activate', () => {
+      // macOS: kliknutí na ikonu v docku znovu otevře okno.
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  } catch (err) {
+    // JS-úrovňová chyba (např. nativní modul zkompilovaný pro jinou ABI, chybějící
+    // soubor DB). Ukážeme ji uživateli místo tichého zavření.
+    const e = err as Error
+    logStartup(`CHYBA při startu: ${e?.stack ?? e?.message ?? String(err)}`)
+    dialog.showErrorBox(
+      'Časomíra — chyba při spuštění',
+      `Aplikaci se nepodařilo spustit.\n\n${e?.message ?? err}\n\n` +
+        `Log: ${join(app.getPath('userData'), 'startup.log')}`
+    )
+    app.quit()
+  }
 })
 
 app.on('window-all-closed', () => {

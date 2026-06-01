@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import type { RaceType, Ruleset, Zavod } from '@shared/types'
+import { useEffect, useState } from 'react'
+import type { Kategorie, RaceType, Ruleset, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn, DevBadge } from '../components/ui'
 import { VYCHOZI_KATEGORIE } from '../data/raceDefaults'
@@ -12,27 +12,26 @@ function dnesISO(): string {
 
 const SOTOLINA_NAZEV = 'Šotolina'
 
-// Nabídka kategorií (badge) pro daný typ. RX Cup NEMÁ šotolinové kategorie
-// (CLAUDE.md §3b) — Šotolina se v RX vůbec nenabízí. RAC Race nabízí standardní
-// kategorie + Šotolinu jako volitelnou s vlastním rulesetem.
 function chipsProTyp(typ: RaceType): string[] {
   if (typ === 'RX') return VYCHOZI_KATEGORIE.RX
   return [...VYCHOZI_KATEGORIE.RAC, SOTOLINA_NAZEV]
 }
 
-// Ruleset podle názvu kategorie a typu závodu.
-// • RAC: „Šotolina" → SOTOLINA, ostatní STANDARD.
-// • RX:  vždy STANDARD (Šotolina v RX neexistuje, i kdyby si někdo název
-//        „Šotolina" přidal ručně jako vlastní kategorii).
 function rulesetPro(nazev: string, typ: RaceType): Ruleset {
   if (typ === 'RX') return 'STANDARD'
   return nazev === SOTOLINA_NAZEV ? 'SOTOLINA' : 'STANDARD'
 }
 
+function sjednotDostupne(typ: RaceType, nazvyZKategorie: string[]): string[] {
+  const chips = chipsProTyp(typ)
+  const extra = nazvyZKategorie.filter((n) => !chips.includes(n))
+  return [...chips, ...extra]
+}
+
 interface RaceDialogProps {
-  /** edit: jen základní údaje; new: i typ a kategorie. */
+  /** edit: údaje závodu + kategorie; new: i volba typu. */
   mode: 'new' | 'edit'
-  zavod?: Zavod // pro edit (předvyplnění)
+  zavod?: Zavod
   onCancel: () => void
   onSaved: (z: Zavod) => void
 }
@@ -42,15 +41,31 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   const [datum, setDatum] = useState(zavod?.datum ?? dnesISO())
   const [misto, setMisto] = useState(zavod?.misto ?? '')
   const [typ, setTyp] = useState<RaceType>(zavod?.typ ?? 'RAC')
-  // Dostupné badge a které jsou vybrané. Výchozí = všechny standardní (bez Šotoliny).
   const [dostupne, setDostupne] = useState<string[]>(() => chipsProTyp(zavod?.typ ?? 'RAC'))
   const [vybrane, setVybrane] = useState<Set<string>>(
     () => new Set(VYCHOZI_KATEGORIE[zavod?.typ ?? 'RAC'])
   )
+  const [existujici, setExistujici] = useState<Kategorie[]>([])
   const [vlastni, setVlastni] = useState('')
   const [uklada, setUklada] = useState(false)
+  const [nacita, setNacita] = useState(mode === 'edit')
 
-  // Změna typu předvyplní jeho nabídku i výchozí výběr.
+  useEffect(() => {
+    if (mode !== 'edit' || !zavod) return
+    let live = true
+    setNacita(true)
+    void window.api.listKategorie(zavod.id).then((cats) => {
+      if (!live) return
+      setExistujici(cats)
+      setDostupne(sjednotDostupne(zavod.typ, cats.map((c) => c.nazev)))
+      setVybrane(new Set(cats.map((c) => c.nazev)))
+      setNacita(false)
+    })
+    return () => {
+      live = false
+    }
+  }, [mode, zavod?.id, zavod?.typ])
+
   const zmenTyp = (t: RaceType): void => {
     setTyp(t)
     setDostupne(chipsProTyp(t))
@@ -75,14 +90,37 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   }
 
   const vybraneNazvy = dostupne.filter((n) => vybrane.has(n))
-  const muzeUlozit = nazev.trim() !== '' && datum !== '' && (mode === 'edit' || vybraneNazvy.length > 0)
+  const muzeUlozit =
+    nazev.trim() !== '' && datum !== '' && vybraneNazvy.length > 0 && !nacita
 
   const uloz = async (): Promise<void> => {
     if (!muzeUlozit || uklada) return
+
+    if (mode === 'edit' && zavod) {
+      const jeVybrana = (katNazev: string): boolean =>
+        vybraneNazvy.some((v) => v.toLocaleLowerCase('cs') === katNazev.toLocaleLowerCase('cs'))
+      const odstranene = existujici.filter((k) => !jeVybrana(k.nazev))
+      const sDaty = odstranene.filter((k) => k.pocet > 0)
+      if (sDaty.length > 0) {
+        const popis = sDaty.map((k) => `${k.nazev} (${k.pocet} jezdců)`).join(', ')
+        const ok = window.confirm(
+          `Odebereš kategorie: ${popis}.\n\nSmažou se včetně startovek, roštů, výsledků a PDF dat v databázi. Pokračovat?`
+        )
+        if (!ok) return
+      }
+    }
+
     setUklada(true)
     try {
+      const kategorie = vybraneNazvy.map((n) => ({ nazev: n, ruleset: rulesetPro(n, typ) }))
       if (mode === 'edit' && zavod) {
-        const z = await window.api.updateZavod({ id: zavod.id, nazev, datum, misto })
+        const z = await window.api.updateZavod({
+          id: zavod.id,
+          nazev,
+          datum,
+          misto,
+          kategorie
+        })
         onSaved(z)
       } else {
         const z = await window.api.createZavod({
@@ -90,7 +128,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
           datum,
           misto,
           typ,
-          kategorie: vybraneNazvy.map((n) => ({ nazev: n, ruleset: rulesetPro(n, typ) }))
+          kategorie
         })
         onSaved(z)
       }
@@ -98,6 +136,63 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
       setUklada(false)
     }
   }
+
+  const kategorieSekce = (
+    <>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '2px 0 8px' }}>
+        <span style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)' }}>
+          Kategorie{' '}
+          <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({vybraneNazvy.length} vybráno)</span>
+        </span>
+        <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>klikni pro výběr</span>
+      </div>
+
+      {nacita ? (
+        <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-3)' }}>Načítám kategorie…</p>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {dostupne.map((n) => {
+            const on = vybrane.has(n)
+            const kat = existujici.find((k) => k.nazev === n)
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => toggle(n)}
+                className={on ? 'chip chip--on' : 'chip'}
+                style={{ height: 30, padding: '0 13px', fontSize: 13, fontWeight: on ? 560 : 450 }}
+                title={kat && kat.pocet > 0 ? `${kat.pocet} jezdců — odebráním smažeš kategorii` : undefined}
+              >
+                {n}
+                {kat && kat.pocet > 0 ? (
+                  <span style={{ marginLeft: 6, opacity: 0.75, fontSize: 11 }}>{kat.pocet}</span>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <input
+          value={vlastni}
+          onChange={(e) => setVlastni(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              pridejVlastni()
+            }
+          }}
+          placeholder="přidat vlastní kategorii…"
+          style={{ ...inputStyle, flex: 1 }}
+          disabled={nacita}
+        />
+        <Btn variant="bezel" icon="plus" onClick={pridejVlastni} disabled={vlastni.trim() === '' || nacita}>
+          Přidat
+        </Btn>
+      </div>
+    </>
+  )
 
   return (
     <Modal
@@ -120,7 +215,6 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
         </>
       }
     >
-      {/* Základní údaje */}
       <Pole label="Název závodu">
         <input
           value={nazev}
@@ -145,15 +239,24 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
         </Pole>
       </div>
 
-      {mode === 'new' && (
+      {mode === 'new' ? (
         <>
           <Pole label="Typ závodu">
-            <span style={{ display: 'inline-flex', gap: 2, background: 'var(--seg-track)', borderRadius: 8, padding: 2 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                gap: 2,
+                background: 'var(--seg-track)',
+                borderRadius: 8,
+                padding: 2
+              }}
+            >
               {(['RAC', 'RX'] as RaceType[]).map((t) => {
                 const on = typ === t
                 return (
                   <button
                     key={t}
+                    type="button"
                     onClick={() => zmenTyp(t)}
                     className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
                     style={{
@@ -178,48 +281,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
               })}
             </span>
           </Pole>
-
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '2px 0 8px' }}>
-            <span style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)' }}>
-              Kategorie <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({vybraneNazvy.length} vybráno)</span>
-            </span>
-            <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>klikni pro výběr</span>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {dostupne.map((n) => {
-              const on = vybrane.has(n)
-              return (
-                <button
-                  key={n}
-                  onClick={() => toggle(n)}
-                  className={on ? 'chip chip--on' : 'chip'}
-                  style={{ height: 30, padding: '0 13px', fontSize: 13, fontWeight: on ? 560 : 450 }}
-                >
-                  {n}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Přidání vlastní kategorie */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <input
-              value={vlastni}
-              onChange={(e) => setVlastni(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  pridejVlastni()
-                }
-              }}
-              placeholder="přidat vlastní kategorii…"
-              style={{ ...inputStyle, flex: 1 }}
-            />
-            <Btn variant="bezel" icon="plus" onClick={pridejVlastni} disabled={vlastni.trim() === ''}>
-              Přidat
-            </Btn>
-          </div>
+          {kategorieSekce}
           {typ === 'RX' && (
             <p
               style={{
@@ -233,8 +295,8 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
                 border: '0.5px solid rgba(255, 159, 10, 0.22)'
               }}
             >
-              <b>RX Cup je ve vývoji</b> — bodování do seriálu zatím není finální. Závod
-              můžeš normálně založit a zkoušet.
+              <b>RX Cup je ve vývoji</b> — bodování do seriálu zatím není finální. Závod můžeš normálně
+              založit a zkoušet.
             </p>
           )}
           <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
@@ -249,6 +311,46 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
               </>
             )}
             Vlastní kategorii přidáš polem výše.
+          </p>
+        </>
+      ) : (
+        <>
+          <Pole label="Typ závodu">
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                height: 28,
+                padding: '0 12px',
+                borderRadius: 'var(--r-ctrl)',
+                fontSize: 12.5,
+                fontWeight: 560,
+                background: 'var(--seg-track)',
+                color: 'var(--text-2)'
+              }}
+            >
+              {typ === 'RAC' ? 'RAC Race' : 'RX Cup'}
+              {typ === 'RX' && (
+                <span style={{ marginLeft: 8 }}>
+                  <DevBadge />
+                </span>
+              )}
+            </span>
+            <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.45 }}>
+              Typ závodu nelze po založení změnit. Kategorie můžeš přidat nebo odebrat (odebrání smaže
+              i data kategorie).
+            </p>
+          </Pole>
+          {kategorieSekce}
+          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+            {typ === 'RAC' ? (
+              <>
+                U RAC můžeš přidat <b>Šotolinu</b> nebo vlastní název. Číslo u chipu = počet jezdců v
+                kategorii.
+              </>
+            ) : (
+              <>U RX Cup nelze přidat kategorii Šotolina (jiné pravidlo než RAC).</>
+            )}
           </p>
         </>
       )}
