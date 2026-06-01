@@ -68,14 +68,17 @@ Podrobný návod k balení a řešení EPERM při buildu: **[BUILD.md](./BUILD.m
 
 ---
 
-## Vydání na GitHubu
+## Vydání na GitHubu (Actions)
 
-Po pushnutí tagu `v*` (např. `v0.9.0`) workflow [`.github/workflows/release.yml`](./.github/workflows/release.yml) sestaví instalátory na Windows i Mac a přiloží je k release.
+Tag `v*` spustí workflow, který **paralelně** sestaví Windows instalátor i macOS DMG a nahraje je do Releases:
 
 ```bash
+# verze v package.json = 0.9.0
 git tag v0.9.0
 git push origin v0.9.0
 ```
+
+Podrobnosti a ruční spuštění: **[BUILD.md](./BUILD.md)** · workflow: [`.github/workflows/release.yml`](./.github/workflows/release.yml)
 
 ---
 

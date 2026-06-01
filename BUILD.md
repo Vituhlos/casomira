@@ -80,9 +80,27 @@ Bez Apple Developer účtu může Mac při prvním spuštění ukázat varován�
 
 ---
 
-## Obě platformy najednou (GitHub)
+## Obě platformy najednou (GitHub Actions)
 
-Po pushnutí tagu `v0.9.0` workflow `.github/workflows/release.yml` zkusí sestavit Win + Mac v cloudu a přiložit soubory k release (potřebuješ repo na GitHubu).
+Workflow [`.github/workflows/release.yml`](./.github/workflows/release.yml) sestaví **Windows Setup.exe** i **macOS DMG** a přiloží je k [GitHub Release](https://github.com/Vituhlos/casomira/releases).
+
+**Postup:**
+
+1. Uprav verzi v `package.json` (např. `0.9.0`).
+2. Commitni a pushni na GitHub.
+3. Vytvoř tag se stejnou verzí (s prefixem `v`):
+
+   ```bash
+   git tag v0.9.0
+   git push origin v0.9.0
+   ```
+
+4. V repu **Actions → Release** sleduj běh (2 joby: Windows + macOS, pak Publish).
+5. Hotové soubory najdeš u **Releases** u daného tagu.
+
+**Ruční spuštění:** Actions → **Release** → **Run workflow** → zadej tag (např. `v0.9.0`). Tag musí na GitHubu existovat (`git push origin v0.9.0`), jinak krok Publish selže.
+
+Mac DMG v CI jede **bez notarizace** (`CSC_IDENTITY_AUTO_DISCOVERY=false`) — na cizím Macu může Gatekeeper vyžadovat „Otevřít přesto“ v System Settings.
 
 ---
 
