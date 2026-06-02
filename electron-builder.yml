@@ -34,6 +34,10 @@ win:
     - nsis
   executableName: Casomira
   artifactName: Casomira-Setup-${version}.${ext}
+  # Ikona appky. electron-builder z jednoho PNG (1024×1024, průhledné pozadí) sám
+  # vyrobí multi-velikostní .ico — embedne ho do .exe (= i ikona okna a v liště)
+  # i do instalátoru. Žádný extra nástroj → funguje i na CI runneru.
+  icon: build/icon.png
   # Bez podpisu kódu (vyhne se chybě symlinků winCodeSign na Windows bez dev režimu).
   signAndEditExecutable: false
 
@@ -66,8 +70,8 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   # Test build nemá Apple notarizaci — nepouštěj Gatekeeper assess při buildu.
   gatekeeperAssess: false
-  # Volitelně: build/icon.icns
-  # icon: build/icon.icns
+  # Ikona .app — electron-builder z build/icon.png vyrobí .icns (vč. retina @2x).
+  icon: build/icon.png
 
 dmg:
   title: Časomíra ${version}

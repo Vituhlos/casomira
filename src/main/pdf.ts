@@ -7,7 +7,7 @@
 import { app, BrowserWindow, dialog } from 'electron'
 import { writeFile, unlink, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import type {
   ExportPdfResult,
   ExportVseResult,
@@ -555,7 +555,7 @@ export async function exportJeden(
       : await dialog.showSaveDialog(dlg)
     if (res.canceled || !res.filePath) return { ok: false, zruseno: true }
     cilSouboru = res.filePath
-    cilSlozky = join(res.filePath, '..')
+    cilSlozky = dirname(res.filePath) // nadřazená složka zvoleného souboru
   } else {
     const root = await zajistiRoot(parentWin)
     if (!root) return { ok: false, zruseno: true }

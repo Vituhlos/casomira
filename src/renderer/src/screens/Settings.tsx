@@ -12,6 +12,7 @@ interface SettingsProps {
   onBackupZavod?: () => void
   onBackupAll?: () => void
   onRestore?: () => void
+  onHotkeys?: () => void
 }
 
 export function Settings({
@@ -21,7 +22,8 @@ export function Settings({
   onEditZavod,
   onBackupZavod,
   onBackupAll,
-  onRestore
+  onRestore,
+  onHotkeys
 }: SettingsProps): React.JSX.Element {
   const [logo, setLogo] = useState<string | null>(null)
   const [root, setRoot] = useState<PdfRootStav | null>(null)
@@ -282,6 +284,20 @@ export function Settings({
           {probiha ? 'Exportuji…' : 'Exportovat vše'}
         </Btn>
       </div>
+
+      {onHotkeys && (
+        <>
+          <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+          <SekceNadpis>Klávesové zkratky</SekceNadpis>
+          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+            Přepínání fází i Rošt/Výsledky, uložení PDF, stopky a další — ať operátor u trati nehoní
+            myš. Modifikátor se přizpůsobí systému (⌘ na macOS, Ctrl na Windows).
+          </p>
+          <Btn variant="bezel" icon="keyboard" onClick={onHotkeys}>
+            Zobrazit zkratky…
+          </Btn>
+        </>
+      )}
 
       <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
 

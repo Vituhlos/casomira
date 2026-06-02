@@ -35,6 +35,12 @@ import { RaceList } from './screens/RaceList'
 import { RaceDialog } from './screens/RaceDialog'
 import { phasesForCategory } from './data/phases'
 import { useTheme } from './hooks/useTheme'
+import { useHotkeys } from './hooks/useHotkeys'
+import { HotkeyHelp } from './components/HotkeyHelp'
+import { isMac, HK_GENERATE_ROST } from './lib/hotkeys'
+
+// Fáze, které mají vnitřní přepínač Rošt/Výsledky (zkratky R / V a ⌘/Ctrl+G).
+const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final', 'final_a', 'final_b'])
 
 function czDate(iso: string): string {
   const parts = iso.split('-').map(Number)
@@ -105,6 +111,7 @@ export function App(): React.JSX.Element {
   const [toastSlozka, setToastSlozka] = useState<string | null>(null)
   const [nastaveniOtevreno, setNastaveniOtevreno] = useState(false)
   const [upravaLogOtevreno, setUpravaLogOtevreno] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   // Problém s kořenovou složkou pro PDF (nenastavená / smazaná) → výzva k výběru.
   const [rootProblem, setRootProblem] = useState<PdfRootStav | null>(null)
   // Zvýší se, když jiné okno změní data → vynutí přenačtení obsahu.
@@ -380,6 +387,47 @@ export function App(): React.JSX.Element {
     }
   }
 
+  // ---- Klávesové zkratky hlavního okna (u trati). ----
+  // Stopky mají vlastní zkratky ve svém okně — ty se sem nepletou.
+  const phaseIdx = phases.findIndex((p) => p.id === phase)
+  const phaseHasSub = SUB_PHASES.has(phase)
+  // Když je otevřený jakýkoli dialog, zkratky neodpalujeme (dialog řeší Esc sám).
+  const anyModalOpen =
+    novyOtevreno ||
+    editZavod !== null ||
+    smazatZavod !== null ||
+    restorePreview !== null ||
+    nastaveniOtevreno ||
+    upravaLogOtevreno ||
+    rootProblem !== null ||
+    importPreview !== null ||
+    smazat !== null ||
+    upozorneniFaze !== null ||
+    helpOpen
+
+  const gotoPhaseIdx = (i: number): void => {
+    if (i >= 0 && i < phases.length && phases[i].id !== phase) onTabPhase(phases[i].id)
+  }
+
+  useHotkeys({
+    enabled: view === 'race' && !anyModalOpen,
+    isMac,
+    onPrevPhase: () => gotoPhaseIdx(phaseIdx - 1),
+    onNextPhase: () => gotoPhaseIdx(phaseIdx + 1),
+    onPhaseIndex: gotoPhaseIdx,
+    onRost: () => {
+      if (phaseHasSub) setSubView('rost')
+    },
+    onVysledky: () => {
+      if (phaseHasSub) setSubView('res')
+    },
+    onPdf: () => void onPdf(),
+    onPdfSaveAs: () => void onPdfSaveAs(),
+    onStopky: () => void window.api.openStopky(),
+    onGenerateRost: () => window.dispatchEvent(new Event(HK_GENERATE_ROST)),
+    onToggleHelp: () => setHelpOpen((o) => !o)
+  })
+
   // Obsah podle vybrané fáze. Rošty/Výsledky/Klasifikace si data tahají samy
   // z databáze podle kategorie a kola.
   const renderPhase = (): React.JSX.Element => {
@@ -498,6 +546,7 @@ export function App(): React.JSX.Element {
                 activeCat != null ? () => setUpravaLogOtevreno(true) : undefined
               }
               onSettings={() => setNastaveniOtevreno(true)}
+              onHotkeys={() => setHelpOpen(true)}
             />
             {/* Lišta fází: záložky vystředěné jako kompaktní blok (vodorovný scroll
                 až když se na úzkém okně nevejdou). Seznam fází zužujeme podle
@@ -607,8 +656,14 @@ export function App(): React.JSX.Element {
             setNastaveniOtevreno(false)
             void onObnovitZeZalohy()
           }}
+          onHotkeys={() => {
+            setNastaveniOtevreno(false)
+            setHelpOpen(true)
+          }}
         />
       )}
+
+      {helpOpen && <HotkeyHelp onClose={() => setHelpOpen(false)} />}
 
       {upravaLogOtevreno && activeCat != null && (
         <UpravaLogModal

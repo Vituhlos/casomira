@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Jezdec, KoloTyp, RostKolo, RostNavrh } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { Btn } from '../components/ui'
 import { Modal } from '../components/Modal'
 import { thStyle, tdStyle } from '../components/table'
+import { HK_GENERATE_ROST } from '../lib/hotkeys'
 
 type SlotDuvod = 'duplicitni' | 'nenalezeno' | null
 
@@ -122,6 +123,16 @@ export function RostGrid({
     }
     setNavrh(n)
   }
+
+  // Klávesová zkratka ⌘/Ctrl+G z hlavního okna spustí generování právě
+  // zobrazeného roštu (ref drží nejnovější `generuj`, posluchač jen jeden).
+  const generujRef = useRef(generuj)
+  generujRef.current = generuj
+  useEffect(() => {
+    const onGen = (): void => void generujRef.current()
+    window.addEventListener(HK_GENERATE_ROST, onGen)
+    return () => window.removeEventListener(HK_GENERATE_ROST, onGen)
+  }, [])
 
   const zmenPocet = async (delta: number): Promise<void> => {
     if (!navrh) return

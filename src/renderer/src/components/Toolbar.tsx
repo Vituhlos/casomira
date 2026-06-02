@@ -18,6 +18,7 @@ interface ToolbarProps {
   onOpenPdfFolder?: () => void // otevřít kořenovou složku PDF
   onUpravaLog?: () => void // přehled zásahů ředitele
   onSettings?: () => void
+  onHotkeys?: () => void // přehled klávesových zkratek
 }
 
 export function Toolbar({
@@ -31,7 +32,8 @@ export function Toolbar({
   onPdfSaveAs,
   onOpenPdfFolder,
   onUpravaLog,
-  onSettings
+  onSettings,
+  onHotkeys
 }: ToolbarProps): React.JSX.Element {
   const [menu, setMenu] = useState(false)
   const pdfSplitRef = useRef<HTMLDivElement>(null)
@@ -84,6 +86,14 @@ export function Toolbar({
         <span style={{ color: 'var(--text-1)', fontWeight: 590 }}>{phaseLabel}</span>
       </div>
       <div style={{ flex: 1 }} />
+      {onHotkeys && (
+        <Btn
+          variant="bezel"
+          icon="keyboard"
+          onClick={onHotkeys}
+          title="Klávesové zkratky (?)"
+        />
+      )}
       <Btn variant="bezel" icon="gear" onClick={onSettings} title="Nastavení" />
       <Btn
         variant="bezel"

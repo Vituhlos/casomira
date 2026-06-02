@@ -361,3 +361,24 @@ mereni       (id, jizda_id, poradi_kliku, cas_ms, jezdec_id NULLABLE)
 - TypeScript strict; datová/pravidlová logika oddělená od UI a **parametrizovaná
   **parametrizovaná pravidly kategorie** (`ruleset`: STANDARD dle typu závodu
   RAC/RX, nebo SOTOLINA), ať se pravidla nerozsypou.
+
+## 16. Verzování a changelog (pravidlo vydávání)
+
+Verze dle **SemVer** (`MAJOR.MINOR.PATCH`), zatím v řadě `0.9.x`. Každé vydání má
+záznam v `CHANGELOG.md` a vzniká přes tag — z něj CI postaví instalačky a založí
+GitHub Release, jehož **popis se bere přímo z `CHANGELOG.md`**.
+
+**Postup při každém vydání (drž ho i jako Claude Code):**
+1. **`CHANGELOG.md`** — nahoru přidej sekci `## [X.Y.Z] – RRRR-MM-DD` s podsekcemi
+   **Přidáno / Změněno / Opraveno** (formát *Keep a Changelog*, česky, čitelně pro
+   uživatele — ne výpis commitů). Doplň i odkaz `[X.Y.Z]: …compare…` dole.
+2. **`package.json`** — zvedni `version` na `X.Y.Z` (zdroj „build N" v O aplikaci).
+3. **Commit** obojí (+ vlastní změny) jednou dávkou.
+4. **Tag** `vX.Y.Z` a `git push origin master --tags` (nebo push tagu).
+5. CI (`.github/workflows/release.yml`) postaví Win `.exe` + macOS `.dmg`, a
+   `scripts/release-notes.mjs` vytáhne sekci `X.Y.Z` z `CHANGELOG.md` jako popis
+   Release (+ instalační/Gatekeeper poznámka). Žádné ruční psaní popisu.
+
+Číslo bump: **PATCH** = opravy/drobnosti, **MINOR** = nová funkce, **MAJOR** až po
+`1.0.0`. Předvydání = tag se suffixem (`vX.Y.Z-beta`) → Release se označí jako
+*pre-release* automaticky.

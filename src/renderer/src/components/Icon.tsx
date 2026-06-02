@@ -19,6 +19,7 @@ export type IconName =
   | 'trash'
   | 'gear'
   | 'pencil'
+  | 'keyboard'
 
 const PATHS: Record<IconName, ReactNode> = {
   timer: (
@@ -102,6 +103,12 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M4 16h1.8l8.7-8.7-1.8-1.8L4 14.2z" />
       <path d="M13.4 4.6l1.2-1.2a1 1 0 0 1 1.4 0l.6.6a1 1 0 0 1 0 1.4l-1.2 1.2z" />
+    </>
+  ),
+  keyboard: (
+    <>
+      <rect x="2.3" y="5.6" width="15.4" height="8.8" rx="1.7" />
+      <path d="M5 8.2h.01M7.6 8.2h.01M10.2 8.2h.01M12.8 8.2h.01M15 8.2h.01M6.3 10.7h.01M8.9 10.7h.01M11.5 10.7h.01M14 10.7h.01M7.4 12.6h5.2" />
     </>
   ),
   gear: (
