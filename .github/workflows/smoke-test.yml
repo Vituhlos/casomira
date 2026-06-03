@@ -1,0 +1,98 @@
+# Smoke test na macOS 26 — ověří, zda appka nastartuje bez pádu.
+# Spouští se automaticky při push na branch v2 a při PR do master.
+# Lze spustit i ručně: Actions → Smoke test macOS 26 → Run workflow
+name: Smoke test macOS 26
+
+on:
+  push:
+    branches:
+      - v2
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  smoke-macos26:
+    name: Smoke test (macOS 26 arm64)
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Ověří, že better-sqlite3 se zkompiluje pro Electron na tomto macOS
+      - name: Rebuild native modules
+        run: npm run rebuild
+
+      # Vite build (bez DMG — chceme jen .app bundle pro test)
+      - name: Build app
+        run: npm run build
+
+      - name: Package .app (bez DMG)
+        run: npm run dist:mac:dir
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Najdi .app bundle
+        id: find_app
+        run: |
+          APP=$(find release -name "*.app" -maxdepth 3 | grep -v "Helper" | head -n 1)
+          echo "app_path=$APP" >> $GITHUB_OUTPUT
+          echo "Nalezená appka: $APP"
+
+      # Smaž karanténní atribut (jinak by Gatekeeper blokoval i v CI)
+      - name: Odstraň quarantine atribut
+        run: xattr -cr "${{ steps.find_app.outputs.app_path }}"
+
+      # Spusť appku, čekej 8s, ověř že stále běží (= nenastartovala se crash)
+      - name: Spusť appku a zkontroluj startup crash
+        run: |
+          APP="${{ steps.find_app.outputs.app_path }}"
+          echo "Spouštím: $APP/Contents/MacOS/Časomíra"
+
+          "$APP/Contents/MacOS/Časomíra" \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-software-rasterizer \
+            2>&1 &
+          APP_PID=$!
+          echo "PID: $APP_PID"
+
+          sleep 8
+
+          if kill -0 $APP_PID 2>/dev/null; then
+            echo "✅ Appka běží po 8s — žádný startup crash"
+            kill $APP_PID
+            exit 0
+          else
+            wait $APP_PID
+            EXIT_CODE=$?
+            echo "❌ Appka padla při startu (exit code: $EXIT_CODE)"
+            exit 1
+          fi
+
+      # Při pádu zkopíruj DiagnosticReports pro diagnostiku
+      - name: Sbírej crash reporty (při selhání)
+        if: failure()
+        run: |
+          mkdir -p crash-artifacts
+          cp -R ~/Library/Logs/DiagnosticReports crash-artifacts/ 2>/dev/null || true
+          ls -la crash-artifacts/ || echo "(žádné crash reporty)"
+
+      - name: Upload crash reportů
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-macos26
+          path: crash-artifacts/
+          if-no-files-found: warn
