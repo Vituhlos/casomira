@@ -8,13 +8,29 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [0.9.6-beta] – 2026-06-03
 
+Předvydání pro ověření na **macOS 26 (Tahoe)**. Instalátory z tagu `v0.9.6-beta` po
+3. 6. 2026 (druhý build) obsahují opravu startu na Macu — první build stejné verze
+na macOS 26 hned po spuštění padal (exit 133).
+
+### Opraveno
+- **macOS 26 — pád hned po spuštění (exit 133 / SIGTRAP)** — zabalená `.app` spadla
+  dřív, než naběhlo UI. Příčina: bug electron-builder ([#9771](https://github.com/electron-userland/electron-builder/issues/9771)):
+  Helper procesy se přejmenovaly na „Časomíra Helper", ale hlavní Electron binárka
+  dál hledala „Electron Helper" (`Unable to find helper app`). Opraveno hookem
+  `afterPack`, který Helpers po zabalení vrátí na očekávané názvy.
+- **macOS — podpis `.app` a nativní SQLite** — při nepodepsaném buildu se musí
+  použít ad-hoc podpis (`identity: '-'`), jinak se neaplikují entitlements a macOS
+  může odmítnout načtení modulu `better-sqlite3` (stejný typ pádu při startu jako
+  ve verzi 0.9.2, kde už `disable-library-validation` pomohlo).
+
 ### Změněno
-- **Electron 37 → 39** — upgrade Electron runtime kvůli kompatibilitě s macOS 26 (Tahoe).
-  Electron 37 havaroval při startu na macOS 26 (`EXC_BREAKPOINT` v Electron Framework)
-  kvůli nové TPRO (Thread Pointer Read Only) ochraně paměti v macOS 26. Electron 39
-  přináší výrazně novější Chromium (macOS 26 podpora) a zachovává Node.js 22 —
-  nezbytné pro nativní modul `better-sqlite3`, který se s Node.js 24 / V8 13.x
-  nekompiluje (`v8::External` API breaking change).
+- **Electron 37 → 39** — novější Chromium s lepší podporou macOS 26; zároveň zůstává
+  **Node.js 22** v runtime, aby šel zkompilovat `better-sqlite3` (Electron 42+ táhne
+  Node 24 / V8 13.x, s nímž se tato verze better-sqlite3 nekompiluje).
+
+### Přidáno
+- **Automatický smoke test na macOS 26** (GitHub Actions, větev `v2`) — ověří, že
+  zabalená `.app` po startu nepadá; chrání před opakováním regrese macOS buildu.
 
 ## [0.9.5] – 2026-06-03
 
@@ -99,7 +115,8 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.5...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...HEAD
+[0.9.6-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.5...v0.9.6-beta
 [0.9.5]: https://github.com/Vituhlos/casomira/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/Vituhlos/casomira/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/Vituhlos/casomira/compare/v0.9.2...v0.9.3
