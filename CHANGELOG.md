@@ -6,6 +6,30 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.4] – 2026-06-03
+### Změněno
+- **Čistší horní lišta** — odstraněna nadbytečná tlačítka „Stav závodu", „Zásahy"
+  a klávesnice. Klávesové zkratky a přehled zásahů ředitele jsou nově v Nastavení
+  (ozubené kolo). Zkratky dál fungují potichu pro toho, kdo je zná (`?` je vyvolá).
+- **Odebrán dashboard „Stav závodu"** — přehled o kategorii dává levý panel,
+  samostatné okno bylo nadbytečné.
+- **Nekompletní výsledky — bez rušivých prvků** — zrušeno vyskakovací varování
+  při přechodu do další fáze; žádné oranžové pruhy ani podbarvení řádků bez času.
+  U nadpisu jízdy zůstane jemný odznak „nekompletní" — to stačí.
+- **Stopky — klidnější vzhled** — stavy jízd (hotovo / na řadě) jsou teď vizuálně
+  méně křiklavé, sjednoceny s klidným macOS stylem appky.
+
+### Opraveno
+- **Šotolina — správné pořadí jízd ve stopkách** — předvýběr další jízdy teď
+  správně nabídne Finále B před Finále A (B se jede jako první).
+- **Integrita dat při zápisu** — přepočet bodů, zápis výsledků, penalizace
+  a aktualizace závodu jsou nově atomické (databázové transakce). Při pádu appky
+  uprostřed operace data nezůstanou v nekonzistentním stavu.
+- **Chyby načítání jsou teď viditelné** — chyba při komunikaci s databází se ukáže
+  jako hláška místo tiché prázdné obrazovky (výsledky, rošty, stopky).
+- **Logo — limit velikosti** — obrázek nad 500 KB se odmítne s jasnou hláškou,
+  aby nevznikla zbytečně velká databáze.
+
 ## [0.9.3] – 2026-06-02
 ### Přidáno
 - **Klávesové zkratky** hlavního okna pro práci u trati: přepínání fází
@@ -42,7 +66,8 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.3...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.4...HEAD
+[0.9.4]: https://github.com/Vituhlos/casomira/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/Vituhlos/casomira/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/Vituhlos/casomira/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Vituhlos/casomira/compare/v0.9.0...v0.9.1

@@ -3,6 +3,7 @@ import type { Kategorie, RaceType, Ruleset, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn, DevBadge } from '../components/ui'
 import { VYCHOZI_KATEGORIE } from '../data/raceDefaults'
+import { safeCall } from '../lib/api'
 
 function dnesISO(): string {
   const d = new Date()
@@ -49,18 +50,21 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   const [vlastni, setVlastni] = useState('')
   const [uklada, setUklada] = useState(false)
   const [nacita, setNacita] = useState(mode === 'edit')
+  const [confirmOdebrani, setConfirmOdebrani] = useState<string | null>(null)
 
   useEffect(() => {
     if (mode !== 'edit' || !zavod) return
     let live = true
     setNacita(true)
-    void window.api.listKategorie(zavod.id).then((cats) => {
-      if (!live) return
-      setExistujici(cats)
-      setDostupne(sjednotDostupne(zavod.typ, cats.map((c) => c.nazev)))
-      setVybrane(new Set(cats.map((c) => c.nazev)))
-      setNacita(false)
-    })
+    safeCall(
+      window.api.listKategorie(zavod.id).then((cats) => {
+        if (!live) return
+        setExistujici(cats)
+        setDostupne(sjednotDostupne(zavod.typ, cats.map((c) => c.nazev)))
+        setVybrane(new Set(cats.map((c) => c.nazev)))
+        setNacita(false)
+      })
+    )
     return () => {
       live = false
     }
@@ -93,48 +97,37 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   const muzeUlozit =
     nazev.trim() !== '' && datum !== '' && vybraneNazvy.length > 0 && !nacita
 
-  const uloz = async (): Promise<void> => {
-    if (!muzeUlozit || uklada) return
-
-    if (mode === 'edit' && zavod) {
-      const jeVybrana = (katNazev: string): boolean =>
-        vybraneNazvy.some((v) => v.toLocaleLowerCase('cs') === katNazev.toLocaleLowerCase('cs'))
-      const odstranene = existujici.filter((k) => !jeVybrana(k.nazev))
-      const sDaty = odstranene.filter((k) => k.pocet > 0)
-      if (sDaty.length > 0) {
-        const popis = sDaty.map((k) => `${k.nazev} (${k.pocet} jezdců)`).join(', ')
-        const ok = window.confirm(
-          `Odebereš kategorie: ${popis}.\n\nSmažou se včetně startovek, roštů, výsledků a PDF dat v databázi. Pokračovat?`
-        )
-        if (!ok) return
-      }
-    }
-
+  const ulozSkutecne = async (): Promise<void> => {
+    setConfirmOdebrani(null)
     setUklada(true)
     try {
       const kategorie = vybraneNazvy.map((n) => ({ nazev: n, ruleset: rulesetPro(n, typ) }))
       if (mode === 'edit' && zavod) {
-        const z = await window.api.updateZavod({
-          id: zavod.id,
-          nazev,
-          datum,
-          misto,
-          kategorie
-        })
+        const z = await window.api.updateZavod({ id: zavod.id, nazev, datum, misto, kategorie })
         onSaved(z)
       } else {
-        const z = await window.api.createZavod({
-          nazev,
-          datum,
-          misto,
-          typ,
-          kategorie
-        })
+        const z = await window.api.createZavod({ nazev, datum, misto, typ, kategorie })
         onSaved(z)
       }
     } finally {
       setUklada(false)
     }
+  }
+
+  const uloz = (): void => {
+    if (!muzeUlozit || uklada) return
+    if (mode === 'edit' && zavod) {
+      const jeVybrana = (katNazev: string): boolean =>
+        vybraneNazvy.some((v) => v.toLocaleLowerCase('cs') === katNazev.toLocaleLowerCase('cs'))
+      const sDaty = existujici
+        .filter((k) => !jeVybrana(k.nazev))
+        .filter((k) => k.pocet > 0)
+      if (sDaty.length > 0) {
+        setConfirmOdebrani(sDaty.map((k) => `${k.nazev} (${k.pocet} jezdců)`).join(', '))
+        return
+      }
+    }
+    void ulozSkutecne()
   }
 
   const kategorieSekce = (
@@ -195,6 +188,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   )
 
   return (
+    <>
     <Modal
       title={mode === 'edit' ? 'Upravit závod' : 'Nový závod'}
       width={560}
@@ -207,7 +201,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
           <Btn
             variant="primary"
             icon="flag"
-            onClick={() => void uloz()}
+            onClick={uloz}
             disabled={!muzeUlozit || uklada}
           >
             {mode === 'edit' ? 'Uložit' : 'Založit závod'}
@@ -355,6 +349,33 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
         </>
       )}
     </Modal>
+
+    {confirmOdebrani && (
+      <Modal
+        title="Odebrat kategorie s daty?"
+        width={460}
+        onClose={() => setConfirmOdebrani(null)}
+        footer={
+          <>
+            <Btn variant="plain" onClick={() => setConfirmOdebrani(null)}>
+              Zrušit
+            </Btn>
+            <Btn variant="danger" onClick={() => void ulozSkutecne()}>
+              Odebrat a uložit
+            </Btn>
+          </>
+        }
+      >
+        <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
+          Odebereš kategorie: <b>{confirmOdebrani}</b>.
+        </p>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>
+          Smažou se včetně startovek, roštů, výsledků a PDF dat v databázi. Tuto akci nelze
+          vrátit.
+        </p>
+      </Modal>
+    )}
+  </>
   )
 }
 

@@ -430,15 +430,6 @@ export interface CasomiraApi {
   /** Smaže závod včetně všech jeho dat (kategorie, jezdci, rošty, výsledky). */
   deleteZavod(id: number): Promise<void>
   listKategorie(zavodId: number): Promise<Kategorie[]>
-  /** Přehled stavu fází (hotovo/částečně/prázdné) napříč kategoriemi. */
-  getPrehledZavodu(zavodId: number, typ: RaceType): Promise<import('./stav').PrehledZavodu>
-  /** Varování před přechodem do fáze závislé na výsledcích (null = v pořádku). */
-  getUpozorneniFaze(
-    kategorieId: number,
-    kategorieNazev: string,
-    faze: string,
-    ruleset: Ruleset
-  ): Promise<import('./stav').UpozorneniPrechod | null>
   listJezdci(kategorieId: number): Promise<Jezdec[]>
   updateJezdec(uprava: JezdecUprava): Promise<Jezdec>
   addJezdec(kategorieId: number): Promise<Jezdec>
@@ -547,6 +538,10 @@ export interface CasomiraApi {
   nactiMereniAktivniJizdu(): Promise<number | null>
   /** Má aktivní závod rozměřené časy ještě nezapsané do výsledků? */
   mereniMaNezapsane(): Promise<boolean>
+  /** Přihlásí se k události „stopky žádají potvrzení zavření". Vrací odhlášení. */
+  onStopkyRequestConfirm(cb: () => void): () => void
+  /** Potvrdí zavření okna stopek (nebo quit appky) po vlastním modalu. */
+  stopkyZavritPotvrzeno(): Promise<void>
   // Záloha / obnova závodu
   /** Uloží jeden závod do JSON (dialog „kam uložit"). */
   exportZavodBackup(zavodId: number): Promise<import('./backup').BackupExportResult>

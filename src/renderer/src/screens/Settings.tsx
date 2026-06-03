@@ -3,6 +3,7 @@ import type { Kategorie, PdfRootStav } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn } from '../components/ui'
 import { APP_NAME, APP_VERSION, APP_VERSION_LABEL } from '../lib/version'
+import { safeCall } from '../lib/api'
 
 interface SettingsProps {
   kategorie: Kategorie[]
@@ -13,6 +14,7 @@ interface SettingsProps {
   onBackupAll?: () => void
   onRestore?: () => void
   onHotkeys?: () => void
+  onUpravaLog?: () => void
 }
 
 export function Settings({
@@ -23,7 +25,8 @@ export function Settings({
   onBackupZavod,
   onBackupAll,
   onRestore,
-  onHotkeys
+  onHotkeys,
+  onUpravaLog
 }: SettingsProps): React.JSX.Element {
   const [logo, setLogo] = useState<string | null>(null)
   const [root, setRoot] = useState<PdfRootStav | null>(null)
@@ -31,8 +34,8 @@ export function Settings({
   const [probiha, setProbiha] = useState(false)
 
   useEffect(() => {
-    void window.api.getLogo().then(setLogo)
-    void window.api.getPdfRootStav().then(setRoot)
+    safeCall(window.api.getLogo().then(setLogo), onToast)
+    safeCall(window.api.getPdfRootStav().then(setRoot), onToast)
   }, [])
 
   const zmenitSlozku = async (): Promise<void> => {
@@ -285,17 +288,31 @@ export function Settings({
         </Btn>
       </div>
 
-      {onHotkeys && (
+      {(onHotkeys || onUpravaLog) && (
         <>
           <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
-          <SekceNadpis>Klávesové zkratky</SekceNadpis>
-          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
-            Přepínání fází i Rošt/Výsledky, uložení PDF, stopky a další — ať operátor u trati nehoní
-            myš. Modifikátor se přizpůsobí systému (⌘ na macOS, Ctrl na Windows).
-          </p>
-          <Btn variant="bezel" icon="keyboard" onClick={onHotkeys}>
-            Zobrazit zkratky…
-          </Btn>
+          <SekceNadpis>Nástroje</SekceNadpis>
+          {onUpravaLog && (
+            <>
+              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                Přehled ručních zásahů ředitele závodu v aktuální kategorii (penalizace, posuny pořadí).
+              </p>
+              <Btn variant="bezel" onClick={onUpravaLog} style={{ marginBottom: 14 }}>
+                Zásahy ředitele…
+              </Btn>
+            </>
+          )}
+          {onHotkeys && (
+            <>
+              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                Přepínání fází i Rošt/Výsledky, uložení PDF, stopky a další — ať operátor u trati nehoní
+                myš. Modifikátor se přizpůsobí systému (⌘ na macOS, Ctrl na Windows).
+              </p>
+              <Btn variant="bezel" icon="keyboard" onClick={onHotkeys}>
+                Klávesové zkratky…
+              </Btn>
+            </>
+          )}
         </>
       )}
 

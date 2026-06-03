@@ -1,5 +1,16 @@
 import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'node:path'
+
+// Cesta k ikoně appky za běhu (Windows/Linux).
+// macOS ikonu řeší .app bundle (electron-builder) — na darwinu vracíme undefined.
+// prod: extraResources zkopíruje icon.png do process.resourcesPath
+// dev:  ikona leží v build/ relativně k out/main/
+function appIconPath(): string | undefined {
+  if (process.platform === 'darwin') return undefined
+  return app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(__dirname, '../../build/icon.png')
+}
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { registerIpc } from './ipc'
 import { getDb } from './db/connection'
@@ -44,6 +55,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     backgroundColor: '#f4f4f6', // sníží bílé bliknutí při startu
     title: 'Časomíra',
+    icon: appIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

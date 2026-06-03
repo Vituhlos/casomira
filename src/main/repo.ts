@@ -212,10 +212,12 @@ function syncKategorie(zavodId: number, pozadovane: { nazev: string; ruleset: Ru
 }
 
 export function updateZavod(uprava: ZavodUprava): Zavod {
-  getDb()
-    .prepare('UPDATE zavod SET nazev = ?, datum = ?, misto = ? WHERE id = ?')
-    .run(uprava.nazev.trim() || 'Závod', uprava.datum, uprava.misto.trim(), uprava.id)
-  if (uprava.kategorie) syncKategorie(uprava.id, uprava.kategorie)
+  const db = getDb()
+  db.transaction(() => {
+    db.prepare('UPDATE zavod SET nazev = ?, datum = ?, misto = ? WHERE id = ?')
+      .run(uprava.nazev.trim() || 'Závod', uprava.datum, uprava.misto.trim(), uprava.id)
+    if (uprava.kategorie) syncKategorie(uprava.id, uprava.kategorie)
+  })()
   return getZavodById(uprava.id) as Zavod
 }
 
@@ -420,7 +422,7 @@ const JEZDEC_COLS_J =
 const MAX_NA_JIZDU = 8
 
 function koloPoradi(typ: KoloTyp): number {
-  return { Q1: 1, Q2: 2, Q3: 3, SF: 4, F: 5, F_A: 5, F_B: 6 }[typ]
+  return { Q1: 1, Q2: 2, Q3: 3, SF: 4, F: 5, F_B: 5, F_A: 6 }[typ]
 }
 
 function jezdecZRadku(r: Record<string, unknown>): Jezdec {
@@ -996,13 +998,15 @@ function prepoctiJizdu(
     )
   }
   const upd = db.prepare('UPDATE vysledek SET poradi = ?, body = ? WHERE jizda_id = ? AND jezdec_id = ?')
-  for (const v of vysl) {
-    // Ruční override má přednost — uloží se jako finální `body` (klasifikace
-    // čte právě tento sloupec, takže se upravené body promítnou všude).
-    const rucni = override.get(v.jezdec_id)
-    const finalBody = rucni !== null && rucni !== undefined ? rucni : v.body
-    upd.run(v.poradi, finalBody, jizdaId, v.jezdec_id)
-  }
+  db.transaction(() => {
+    for (const v of vysl) {
+      // Ruční override má přednost — uloží se jako finální `body` (klasifikace
+      // čte právě tento sloupec, takže se upravené body promítnou všude).
+      const rucni = override.get(v.jezdec_id)
+      const finalBody = rucni !== null && rucni !== undefined ? rucni : v.body
+      upd.run(v.poradi, finalBody, jizdaId, v.jezdec_id)
+    }
+  })()
 }
 
 function nactiJizdu(db: Db, jizdaId: number, cislo: number): VysledekJizda {
@@ -1082,21 +1086,23 @@ export function getVysledky(kategorieId: number, typ: KoloTyp): VysledekKolo {
     `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
   )
   const selPoz = db.prepare('SELECT jezdec_id FROM rost_pozice WHERE jizda_id = ?')
-  db.transaction(() => {
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, kategorieId))
+
+  // Sync roštu s výsledky + přepočet bodů v jediné transakci — žádný mezistav
+  // kde jsou řádky sesynchronizované ale body ještě nepřepočítané.
+  // prepoctiJizdu uvnitř vytvoří savepoint (better-sqlite3 nested tx).
+  const jizdyData = db.transaction(() => {
     for (const jz of jizdy) {
       clean.run(jz.id, jz.id)
       for (const p of selPoz.all(jz.id) as { jezdec_id: number }[]) ensure.run(jz.id, p.jezdec_id)
     }
-  })()
-
-  const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, kategorieId))
-  return {
-    koloId,
-    jizdy: jizdy.map((jz) => {
+    return jizdy.map((jz) => {
       prepoctiJizdu(db, jz.id, bodyZaPozici, penalizace)
       return nactiJizdu(db, jz.id, jz.cislo)
     })
-  }
+  })()
+
+  return { koloId, jizdy: jizdyData }
 }
 
 export function setVysledek(arg: SetVysledekArg): VysledekJizda {
@@ -1109,27 +1115,28 @@ export function setVysledek(arg: SetVysledekArg): VysledekJizda {
     .get(arg.jizdaId) as { kategorie_id: number; cislo: number } | undefined
   if (!meta) throw new Error('Jízda neexistuje')
 
-  db.prepare(
-    `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
-  ).run(arg.jizdaId, arg.jezdecId)
-
-  if (arg.cas_ms !== undefined) {
-    // Zadání času znamená, že jezdec dojel (stav OK).
-    db.prepare(`UPDATE vysledek SET namereny_cas_ms = ?, stav = 'OK' WHERE jizda_id = ? AND jezdec_id = ?`).run(
-      arg.cas_ms,
-      arg.jizdaId,
-      arg.jezdecId
-    )
-  } else if (arg.stav !== undefined) {
-    // Měníme jen stav. Naměřený čas SCHOVÁVÁME (nezahazujeme) — pro tooltip
-    // a pro návrat zpět na čas (CLAUDE.md §11: namereny_cas_ms se nepřepisuje).
-    // Pro bodování stejně rozhoduje stav, ne čas (viz scoring.ts).
-    db.prepare('UPDATE vysledek SET stav = ? WHERE jizda_id = ? AND jezdec_id = ?').run(
-      arg.stav,
-      arg.jizdaId,
-      arg.jezdecId
-    )
-  }
+  db.transaction(() => {
+    db.prepare(
+      `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
+    ).run(arg.jizdaId, arg.jezdecId)
+    if (arg.cas_ms !== undefined) {
+      // Zadání času znamená, že jezdec dojel (stav OK).
+      db.prepare(`UPDATE vysledek SET namereny_cas_ms = ?, stav = 'OK' WHERE jizda_id = ? AND jezdec_id = ?`).run(
+        arg.cas_ms,
+        arg.jizdaId,
+        arg.jezdecId
+      )
+    } else if (arg.stav !== undefined) {
+      // Měníme jen stav. Naměřený čas SCHOVÁVÁME (nezahazujeme) — pro tooltip
+      // a pro návrat zpět na čas (CLAUDE.md §11: namereny_cas_ms se nepřepisuje).
+      // Pro bodování stejně rozhoduje stav, ne čas (viz scoring.ts).
+      db.prepare('UPDATE vysledek SET stav = ? WHERE jizda_id = ? AND jezdec_id = ?').run(
+        arg.stav,
+        arg.jizdaId,
+        arg.jezdecId
+      )
+    }
+  })()
 
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
   prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
@@ -1341,14 +1348,19 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
     if (r.body !== null) e.heaty.push(r.body)
   }
 
-  const selJ = db.prepare('SELECT st_cislo, prijmeni, jmeno, los FROM jezdec WHERE id = ?')
+  const ids = [...map.keys()]
+  const jezMap = new Map(
+    ids.length === 0
+      ? []
+      : (db
+          .prepare(
+            `SELECT id, st_cislo, prijmeni, jmeno, los FROM jezdec WHERE id IN (${ids.map(() => '?').join(',')})`
+          )
+          .all(...ids) as { id: number; st_cislo: number | null; prijmeni: string; jmeno: string; los: number | null }[]
+        ).map((j) => [j.id, j])
+  )
   const list = [...map.entries()].map(([jezdec_id, e]) => {
-    const j = selJ.get(jezdec_id) as {
-      st_cislo: number | null
-      prijmeni: string
-      jmeno: string
-      los: number | null
-    }
+    const j = jezMap.get(jezdec_id) ?? { st_cislo: null, prijmeni: '', jmeno: '', los: null }
     return {
       jezdec_id,
       st_cislo: j.st_cislo,

@@ -407,3 +407,11 @@ html[data-theme='dark'] .statbtn:hover {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ---- Dashboard stavu závodu ---- */
+.dash-row {
+  transition: background 0.1s ease;
+}
+.dash-row:hover {
+  background: var(--hover);
+}

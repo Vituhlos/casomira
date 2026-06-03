@@ -13,9 +13,6 @@ import type {
   ZavodInfo
 } from '@shared/types'
 import { RestoreBackupModal } from './components/RestoreBackupModal'
-import { PregledStavu } from './components/PregledStavu'
-import { UpozorneniFazeModal } from './components/UpozorneniFazeModal'
-import type { UpozorneniPrechod } from '@shared/stav'
 import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
 import { Segmented } from './components/Segmented'
@@ -38,6 +35,7 @@ import { useTheme } from './hooks/useTheme'
 import { useHotkeys } from './hooks/useHotkeys'
 import { HotkeyHelp } from './components/HotkeyHelp'
 import { isMac, HK_GENERATE_ROST } from './lib/hotkeys'
+import { safeCall } from './lib/api'
 
 // Fáze, které mají vnitřní přepínač Rošt/Výsledky (zkratky R / V a ⌘/Ctrl+G).
 const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final', 'final_a', 'final_b'])
@@ -116,8 +114,6 @@ export function App(): React.JSX.Element {
   const [rootProblem, setRootProblem] = useState<PdfRootStav | null>(null)
   // Zvýší se, když jiné okno změní data → vynutí přenačtení obsahu.
   const [dataNonce, setDataNonce] = useState(0)
-  const [pendingPhase, setPendingPhase] = useState<string | null>(null)
-  const [upozorneniFaze, setUpozorneniFaze] = useState<UpozorneniPrechod | null>(null)
 
   // Krátké oznámení (volitelně s cestou ke složce → tlačítko „Otevřít").
   const oznam = useCallback((text: string, slozka?: string | null): void => {
@@ -136,9 +132,12 @@ export function App(): React.JSX.Element {
 
   // Ověření kořenové složky pro PDF (první spuštění / smazaná složka).
   useEffect(() => {
-    void window.api.getPdfRootStav().then((s) => {
-      if (!s.root || !s.existuje) setRootProblem(s)
-    })
+    safeCall(
+      window.api.getPdfRootStav().then((s) => {
+        if (!s.root || !s.existuje) setRootProblem(s)
+      }),
+      (msg) => oznam(msg)
+    )
   }, [])
 
 
@@ -336,29 +335,10 @@ export function App(): React.JSX.Element {
     if (!phases.some((p) => p.id === phase)) setPhase('start')
   }, [phases, phase])
 
-  const prejitNaFazi = (id: string): void => {
-    setPhase(id)
-    setSubView('rost')
-    setPendingPhase(null)
-    setUpozorneniFaze(null)
-  }
-
   const onTabPhase = (id: string): void => {
     if (id === phase) return
-    if (activeCat == null || !aktivniKategorie) {
-      prejitNaFazi(id)
-      return
-    }
-    void window.api
-      .getUpozorneniFaze(activeCat, catLabel, id, aktivniKategorie.ruleset)
-      .then((warn) => {
-        if (warn) {
-          setPendingPhase(id)
-          setUpozorneniFaze(warn)
-          return
-        }
-        prejitNaFazi(id)
-      })
+    setPhase(id)
+    setSubView('rost')
   }
 
   // Export aktuálního listu. saveAs=false → automaticky do struktury složek.
@@ -402,7 +382,6 @@ export function App(): React.JSX.Element {
     rootProblem !== null ||
     importPreview !== null ||
     smazat !== null ||
-    upozorneniFaze !== null ||
     helpOpen
 
   const gotoPhaseIdx = (i: number): void => {
@@ -542,24 +521,12 @@ export function App(): React.JSX.Element {
               onPdfSaveAs={() => void onPdfSaveAs()}
               onOpenPdfFolder={() => void onOpenPdfFolder()}
               onStopky={() => void window.api.openStopky()}
-              onUpravaLog={
-                activeCat != null ? () => setUpravaLogOtevreno(true) : undefined
-              }
               onSettings={() => setNastaveniOtevreno(true)}
-              onHotkeys={() => setHelpOpen(true)}
             />
             {/* Lišta fází: záložky vystředěné jako kompaktní blok (vodorovný scroll
                 až když se na úzkém okně nevejdou). Seznam fází zužujeme podle
                 typu závodu (RX bez „Klasifikace po Q2"). */}
             <Segmented active={phase} phases={phases} onTab={onTabPhase} />
-            {zavod && (
-              <PregledStavu
-                zavodId={zavod.id}
-                typ={zavod.typ}
-                aktivniKategorieId={activeCat}
-                dataNonce={dataNonce}
-              />
-            )}
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               <div
                 key={dataNonce}
@@ -586,18 +553,6 @@ export function App(): React.JSX.Element {
           zavod={editZavod}
           onCancel={() => setEditZavod(null)}
           onSaved={(z) => void onSavedEdit(z)}
-        />
-      )}
-
-      {upozorneniFaze && pendingPhase && (
-        <UpozorneniFazeModal
-          cilovaFazeLabel={phases.find((p) => p.id === pendingPhase)?.label ?? pendingPhase}
-          upozorneni={upozorneniFaze}
-          onPokracovat={() => prejitNaFazi(pendingPhase)}
-          onZrusit={() => {
-            setPendingPhase(null)
-            setUpozorneniFaze(null)
-          }}
         />
       )}
 
@@ -660,6 +615,14 @@ export function App(): React.JSX.Element {
             setNastaveniOtevreno(false)
             setHelpOpen(true)
           }}
+          onUpravaLog={
+            activeCat != null
+              ? () => {
+                  setNastaveniOtevreno(false)
+                  setUpravaLogOtevreno(true)
+                }
+              : undefined
+          }
         />
       )}
 
@@ -687,10 +650,13 @@ export function App(): React.JSX.Element {
                 variant="primary"
                 icon="import"
                 onClick={() => {
-                  void window.api.choosePdfRoot().then((s) => {
-                    if (s.root && s.existuje) setRootProblem(null)
-                    else if (!s.zruseno) setRootProblem(s)
-                  })
+                  safeCall(
+                    window.api.choosePdfRoot().then((s) => {
+                      if (s.root && s.existuje) setRootProblem(null)
+                      else if (!s.zruseno) setRootProblem(s)
+                    }),
+                    (msg) => oznam(msg)
+                  )
                 }}
               >
                 Vybrat složku

@@ -13,12 +13,10 @@ interface ToolbarProps {
   theme: Theme
   onToggleTheme: () => void
   onStopky?: () => void
-  onPdf?: () => void // automatické uložení do struktury složek
-  onPdfSaveAs?: () => void // „Uložit jako…" (jinam)
-  onOpenPdfFolder?: () => void // otevřít kořenovou složku PDF
-  onUpravaLog?: () => void // přehled zásahů ředitele
+  onPdf?: () => void
+  onPdfSaveAs?: () => void
+  onOpenPdfFolder?: () => void
   onSettings?: () => void
-  onHotkeys?: () => void // přehled klávesových zkratek
 }
 
 export function Toolbar({
@@ -31,9 +29,7 @@ export function Toolbar({
   onPdf,
   onPdfSaveAs,
   onOpenPdfFolder,
-  onUpravaLog,
-  onSettings,
-  onHotkeys
+  onSettings
 }: ToolbarProps): React.JSX.Element {
   const [menu, setMenu] = useState(false)
   const pdfSplitRef = useRef<HTMLDivElement>(null)
@@ -86,14 +82,6 @@ export function Toolbar({
         <span style={{ color: 'var(--text-1)', fontWeight: 590 }}>{phaseLabel}</span>
       </div>
       <div style={{ flex: 1 }} />
-      {onHotkeys && (
-        <Btn
-          variant="bezel"
-          icon="keyboard"
-          onClick={onHotkeys}
-          title="Klávesové zkratky (?)"
-        />
-      )}
       <Btn variant="bezel" icon="gear" onClick={onSettings} title="Nastavení" />
       <Btn
         variant="bezel"
@@ -104,11 +92,6 @@ export function Toolbar({
       <Btn variant="bezel" icon="stopwatch" onClick={onStopky}>
         Stopky
       </Btn>
-      {onUpravaLog && (
-        <Btn variant="bezel" onClick={onUpravaLog} title="Přehled zásahů ředitele v kategorii">
-          Zásahy
-        </Btn>
-      )}
 
       {/* Uložit PDF + šipka — jeden pill (.pdf-split), hover/active na obalu. */}
       <div ref={pdfSplitRef} className="pdf-split">

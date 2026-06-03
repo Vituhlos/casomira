@@ -1,29 +1,21 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { getAktivniZavod, mereniMaNezapsane } from './repo'
 
-const DIALOG = {
-  type: 'warning' as const,
-  title: 'Stopky — nezapsané měření',
-  message: 'Máš rozměřené stopky, které nejsou zapsané do výsledků.',
-  detail:
-    'Data měření zůstanou uložená v aplikaci. Po znovuotevření stopek je najdeš tam, kde jsi skončil. ' +
-    'Nezapomeň je zapsat do výsledků v hlavní aplikaci.',
-  buttons: ['Zůstat', 'Zavřít i tak'],
-  defaultId: 0,
-  cancelId: 0,
-  noLink: true
-}
+// Jaký typ akce čeká na potvrzení uživatele z rendereru.
+// 'window' = zavření okna stopek; 'quit' = ukončení celé appky.
+let confirmPending: 'window' | 'quit' | null = null
 
 let stopkyForceClose = false
 let appForceQuit = false
 
-function potvrdZavreni(parent: BrowserWindow | null): boolean {
+function maNezapsane(): boolean {
   const z = getAktivniZavod()
-  if (!z || !mereniMaNezapsane(z.id)) return true
-  const res = parent
-    ? dialog.showMessageBoxSync(parent, DIALOG)
-    : dialog.showMessageBoxSync(DIALOG)
-  return res === 1
+  return z != null && mereniMaNezapsane(z.id)
+}
+
+function sendConfirmRequest(target: BrowserWindow, action: 'window' | 'quit'): void {
+  confirmPending = action
+  target.webContents.send('stopky:requestConfirm')
 }
 
 /** Guard pro zavření okna stopek. */
@@ -33,11 +25,9 @@ export function attachStopkyCloseGuard(win: BrowserWindow): void {
       stopkyForceClose = false
       return
     }
-    if (!potvrdZavreni(win)) {
-      e.preventDefault()
-      return
-    }
-    stopkyForceClose = false
+    if (!maNezapsane()) return
+    e.preventDefault()
+    sendConfirmRequest(win, 'window')
   })
 }
 
@@ -45,16 +35,38 @@ export function requestStopkyClose(): void {
   stopkyForceClose = true
 }
 
-/** Guard pro ukončení celé aplikace (Ctrl+Q, zavření hlavního okna…). */
+/** Guard pro ukončení celé appky + IPC handler pro odpověď z rendereru. */
 export function registerAppQuitGuard(): void {
+  // Renderer potvrdil zavření: proveď odpovídající akci dle kontextu.
+  ipcMain.handle('stopky:zavritPotvrzeno', () => {
+    const action = confirmPending
+    confirmPending = null
+    if (action === 'window') {
+      stopkyForceClose = true
+      const sw = BrowserWindow.getAllWindows().find(
+        (w) => !w.isDestroyed() && w.getTitle().includes('Stopky')
+      )
+      if (sw && !sw.isDestroyed()) sw.close()
+    } else if (action === 'quit') {
+      appForceQuit = true
+      app.quit()
+    }
+  })
+
   app.on('before-quit', (e) => {
     if (appForceQuit) return
-    const focused = BrowserWindow.getFocusedWindow()
-    const parent = focused && !focused.isDestroyed() ? focused : BrowserWindow.getAllWindows()[0]
-    if (!potvrdZavreni(parent ?? null)) {
-      e.preventDefault()
+    if (!maNezapsane()) return
+    e.preventDefault()
+    // Preferuj stopky okno; jinak hlavní (nebo libovolné dostupné) okno.
+    const all = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed())
+    const sw = all.find((w) => w.getTitle().includes('Stopky'))
+    const target = sw ?? all[0]
+    if (!target) {
+      // Žádné okno není k dispozici — quit rovnou.
+      appForceQuit = true
+      app.quit()
       return
     }
-    appForceQuit = true
+    sendConfirmRequest(target, 'quit')
   })
 }

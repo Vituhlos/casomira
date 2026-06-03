@@ -26,7 +26,6 @@ import {
 import { BackupValidationError } from './backup/import'
 import { exportJeden, exportVse, pdfRootStav, choosePdfRoot } from './pdf'
 import { openStopky, broadcast } from './windows'
-import { prehledZavodu, upozorneniPrechodFaze } from './stavZavodu'
 import type { BackupRestoreArg } from '../shared/backup'
 
 // Z přípony odvodí MIME typ obrázku (pro data URL loga).
@@ -79,19 +78,6 @@ export function registerIpc(): void {
     return res
   })
   ipcMain.handle('kategorie:list', (_e, zavodId: number) => repo.listKategorie(zavodId))
-  ipcMain.handle('stav:prehled', (_e, zavodId: number, typ: import('../shared/types').RaceType) =>
-    prehledZavodu(zavodId, typ)
-  )
-  ipcMain.handle(
-    'stav:upozorneni',
-    (
-      _e,
-      kategorieId: number,
-      nazev: string,
-      faze: string,
-      ruleset: import('../shared/types').Ruleset
-    ) => upozorneniPrechodFaze(kategorieId, nazev, faze, ruleset)
-  )
   ipcMain.handle('jezdci:list', (_e, kategorieId: number) => repo.listJezdci(kategorieId))
   ipcMain.handle('jezdec:update', (_e, uprava: JezdecUprava) => repo.updateJezdec(uprava))
   ipcMain.handle('jezdec:add', (_e, kategorieId: number) => repo.addJezdec(kategorieId))
@@ -181,7 +167,7 @@ export function registerIpc(): void {
     exportVse(BrowserWindow.fromWebContents(e.sender), kategorieIds, repo.getLogo())
   )
 
-  // Stopky (samostatné okno) + měření
+  // Pomocná okna
   ipcMain.handle('stopky:open', () => openStopky())
   ipcMain.handle('mereni:kanaly', () => repo.mereniKanaly())
   ipcMain.handle('mereni:list', (_e, jizdaId: number) => repo.mereniList(jizdaId))
@@ -251,6 +237,10 @@ export function registerIpc(): void {
     if (res.canceled || res.filePaths.length === 0) return null
     const cesta = res.filePaths[0]
     const data = await readFile(cesta)
+    const LIMIT = 500 * 1024 // 500 KB — větší logo zbytečně nafoukne DB
+    if (data.length > LIMIT) {
+      throw new Error(`Obrázek je příliš velký (${Math.round(data.length / 1024)} KB). Maximální velikost je 500 KB.`)
+    }
     const url = `data:${mimeObrazku(cesta)};base64,${data.toString('base64')}`
     repo.setNastaveni('logo', url)
     return url

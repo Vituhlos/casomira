@@ -5,10 +5,12 @@ import './styles/app.css'
 import { App } from './App'
 import { StopkyApp } from './StopkyApp'
 
-// Stejný renderer obsluhuje obě okna. Stopkové okno se pozná podle markeru
-// `#stopky` v adrese (viz main/windows.ts).
-const jeStopky = window.location.hash.replace('#', '') === 'stopky'
+// Stejný renderer obsluhuje všechna okna. Okno se pozná podle hash markeru
+// v adrese (viz main/windows.ts): #stopky, prázdné = hlavní app.
+const hash = window.location.hash.replace('#', '')
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{jeStopky ? <StopkyApp /> : <App />}</StrictMode>
+  <StrictMode>
+    {hash === 'stopky' ? <StopkyApp /> : <App />}
+  </StrictMode>
 )

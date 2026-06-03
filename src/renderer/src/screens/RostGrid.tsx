@@ -5,6 +5,7 @@ import { Btn } from '../components/ui'
 import { Modal } from '../components/Modal'
 import { thStyle, tdStyle } from '../components/table'
 import { HK_GENERATE_ROST } from '../lib/hotkeys'
+import { safeCall } from '../lib/api'
 
 type SlotDuvod = 'duplicitni' | 'nenalezeno' | null
 
@@ -82,9 +83,12 @@ export function RostGrid({
 
   useEffect(() => {
     let live = true
-    void window.api.getRosty(kategorieId, typ).then((r) => {
-      if (live) applyRost(r)
-    })
+    safeCall(
+      window.api.getRosty(kategorieId, typ).then((r) => {
+        if (live) applyRost(r)
+      }),
+      (msg) => { if (live) setZprava(`Nepodařilo se načíst rošt: ${msg}`) }
+    )
     return () => {
       live = false
     }

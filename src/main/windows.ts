@@ -2,9 +2,16 @@
 // které sdílí stejnou databázi přes hlavní proces. Po změně dat (např. zápis
 // měření do výsledků) pošleme všem oknům `app:dataChanged`, ať se obnoví.
 
-import { BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { attachStopkyCloseGuard } from './stopkyClose'
+
+function appIconPath(): string | undefined {
+  if (process.platform === 'darwin') return undefined
+  return app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(__dirname, '../../build/icon.png')
+}
 
 let stopkyWin: BrowserWindow | null = null
 
@@ -36,6 +43,7 @@ export function openStopky(): void {
     title: 'Stopky — Časomíra',
     backgroundColor: '#f4f4f6',
     autoHideMenuBar: true,
+    icon: appIconPath(),
     webPreferences: webPreferences()
   })
   stopkyWin.webContents.setWindowOpenHandler(({ url }) => {

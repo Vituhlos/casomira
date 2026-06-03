@@ -1,9 +1,10 @@
-// Schéma databáze podle CLAUDE.md §11. Vše s IF NOT EXISTS, takže se to dá
-// bezpečně spustit při každém startu. Časy jsou v milisekundách (integer),
-// datum jako text ISO (YYYY-MM-DD).
+// Schéma databáze podle CLAUDE.md §11. Vše s IF NOT EXISTS.
+// Časy jsou v milisekundách (integer), datum jako text ISO (YYYY-MM-DD).
 //
-// Pozn.: tabulka `mereni` se zakládá migrací v6, `zavod_id` migrací v8;
-// `uprava_log` migrací v7.
+// SCHEMA_SQL = baseline pro fresh install (user_version = 0 → migration v1).
+// Starší DB procházejí jednotlivými migracemi v migrate.ts, které dogonují
+// stav na SCHEMA_VERSION. Proto jsou zde i tabulky přidané pozdějšími migracemi
+// (mereni v6, uprava_log v7, zavod_id na mereni v8, mereni_timer v9).
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS zavod (
@@ -85,9 +86,11 @@ CREATE TABLE IF NOT EXISTS zebricek (
 );
 
 -- Vestavěné stopky: jeden řádek = jedno kliknutí v cíli (CLAUDE.md §11/§13).
+-- zavod_id přidán migrací v8 (pro izolaci kanálů při přepnutí závodu).
 CREATE TABLE IF NOT EXISTS mereni (
   id            INTEGER PRIMARY KEY,
   jizda_id      INTEGER NOT NULL REFERENCES jizda(id) ON DELETE CASCADE,
+  zavod_id      INTEGER REFERENCES zavod(id) ON DELETE CASCADE,
   poradi_kliku  INTEGER NOT NULL,
   cas_ms        INTEGER NOT NULL,
   jezdec_id     INTEGER REFERENCES jezdec(id) ON DELETE SET NULL
@@ -121,5 +124,14 @@ CREATE TABLE IF NOT EXISTS uprava_log (
   duvod       TEXT NOT NULL,
   rozhodl     TEXT NOT NULL DEFAULT 'ředitel',
   kdy         TEXT NOT NULL
+);
+
+-- Perzistentní stav časovače stopek (přežije zavření okna/pád) — migrace v9.
+CREATE TABLE IF NOT EXISTS mereni_timer (
+  jizda_id         INTEGER PRIMARY KEY REFERENCES jizda(id) ON DELETE CASCADE,
+  zavod_id         INTEGER NOT NULL REFERENCES zavod(id) ON DELETE CASCADE,
+  running          INTEGER NOT NULL DEFAULT 0,
+  base_ms          INTEGER NOT NULL DEFAULT 0,
+  start_epoch_ms   INTEGER
 );
 `

@@ -31,14 +31,6 @@ const api: CasomiraApi = {
   previewRestoreBackup: () => ipcRenderer.invoke('backup:previewRestore'),
   restoreBackup: (arg: BackupRestoreArg) => ipcRenderer.invoke('backup:restore', arg),
   listKategorie: (zavodId: number) => ipcRenderer.invoke('kategorie:list', zavodId),
-  getPrehledZavodu: (zavodId: number, typ: import('../shared/types').RaceType) =>
-    ipcRenderer.invoke('stav:prehled', zavodId, typ),
-  getUpozorneniFaze: (
-    kategorieId: number,
-    nazev: string,
-    faze: string,
-    ruleset: import('../shared/types').Ruleset
-  ) => ipcRenderer.invoke('stav:upozorneni', kategorieId, nazev, faze, ruleset),
   listJezdci: (kategorieId: number) => ipcRenderer.invoke('jezdci:list', kategorieId),
   updateJezdec: (uprava: JezdecUprava) => ipcRenderer.invoke('jezdec:update', uprava),
   addJezdec: (kategorieId: number) => ipcRenderer.invoke('jezdec:add', kategorieId),
@@ -119,7 +111,13 @@ const api: CasomiraApi = {
   ulozMereniAktivniJizdu: (jizdaId: number | null) =>
     ipcRenderer.invoke('mereni:ulozAktivni', jizdaId),
   nactiMereniAktivniJizdu: () => ipcRenderer.invoke('mereni:nactiAktivni'),
-  mereniMaNezapsane: () => ipcRenderer.invoke('mereni:maNezapsane')
+  mereniMaNezapsane: () => ipcRenderer.invoke('mereni:maNezapsane'),
+  onStopkyRequestConfirm: (cb: () => void) => {
+    const h = (): void => cb()
+    ipcRenderer.on('stopky:requestConfirm', h)
+    return () => ipcRenderer.removeListener('stopky:requestConfirm', h)
+  },
+  stopkyZavritPotvrzeno: () => ipcRenderer.invoke('stopky:zavritPotvrzeno')
 }
 
 contextBridge.exposeInMainWorld('api', api)

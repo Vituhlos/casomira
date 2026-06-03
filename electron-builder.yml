@@ -21,6 +21,12 @@ files:
   - '!*.tsbuildinfo'
   - '!{.env,.env.*}'
 
+# Ikona přístupná za běhu pro BrowserWindow.icon (dev i prod, Windows i Linux).
+# macOS nepotřebuje — ikona jde z .app bundle.
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+
 # Nativní SQLite — nesmí být uvnitř asar (CLAUDE.md + electron-vite guide).
 asarUnpack:
   - node_modules/better-sqlite3/**
@@ -34,12 +40,11 @@ win:
     - nsis
   executableName: Casomira
   artifactName: Casomira-Setup-${version}.${ext}
-  # Ikona appky. electron-builder z jednoho PNG (1024×1024, průhledné pozadí) sám
-  # vyrobí multi-velikostní .ico — embedne ho do .exe (= i ikona okna a v liště)
-  # i do instalátoru. Žádný extra nástroj → funguje i na CI runneru.
+  # Ikona appky. electron-builder z PNG (1024×1024) vyrobí multi-velikostní .ico
+  # a přes rcedit ho embedne do Casomira.exe (= ikona v Průzkumníku i v taskbaru).
+  # Platí i pro NSIS instalátor. Bez certifikátu signing electron-builder přeskočí.
+  # POZOR: signAndEditExecutable nesmí být false — to by zakázalo i embedding ikony.
   icon: build/icon.png
-  # Bez podpisu kódu (vyhne se chybě symlinků winCodeSign na Windows bez dev režimu).
-  signAndEditExecutable: false
 
 nsis:
   oneClick: false

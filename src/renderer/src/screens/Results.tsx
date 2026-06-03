@@ -7,7 +7,8 @@ import { Badge, Medal } from '../components/ui'
 import { Card, Row, tdStyle, thStyle } from '../components/table'
 import { Tooltip } from '../components/Tooltip'
 import { fmtTime, parseTimeLoose } from '../lib/time'
-import { jizdaNekompletni, radekNekompletni } from '../lib/stav'
+import { jizdaNekompletni } from '../lib/stav'
+import { safeCall } from '../lib/api'
 
 interface ResultsProps {
   kategorieId: number
@@ -73,18 +74,23 @@ interface MenuState {
 
 export function Results({ kategorieId, typ, label, extraControls }: ResultsProps): React.JSX.Element {
   const [kolo, setKolo] = useState<VysledekKolo | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [penalizace, setPenalizace] = useState<PenalizaceTarget | null>(null)
 
   const nacti = (): void => {
-    void window.api.getVysledky(kategorieId, typ).then(setKolo)
+    safeCall(window.api.getVysledky(kategorieId, typ).then(setKolo), setLoadError)
   }
 
   useEffect(() => {
     let live = true
-    void window.api.getVysledky(kategorieId, typ).then((k) => {
-      if (live) setKolo(k)
-    })
+    setLoadError(null)
+    safeCall(
+      window.api.getVysledky(kategorieId, typ).then((k) => {
+        if (live) setKolo(k)
+      }),
+      (msg) => { if (live) setLoadError(msg) }
+    )
     const off = window.api.onDataChanged?.(() => {
       if (live) nacti()
     })
@@ -146,6 +152,12 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
         {extraControls}
       </ContentHead>
 
+      {loadError && (
+        <div style={{ padding: '0 22px 14px', color: 'var(--danger, #c0392b)', fontSize: 13 }}>
+          Nepodařilo se načíst výsledky: {loadError}
+        </div>
+      )}
+
       {prazdne && (
         <div style={{ padding: '0 22px 22px', color: 'var(--text-3)', fontSize: 13 }}>
           Nejprve sestav rošty ({label}) — výsledky se zadávají jezdcům z roštu.
@@ -170,9 +182,9 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
                   fontSize: 11,
                   fontWeight: 600,
                   letterSpacing: '0.02em',
-                  color: 'var(--stav-partial)',
-                  background: 'var(--stav-warn-bg)',
-                  border: '0.5px solid color-mix(in srgb, var(--stav-partial) 35%, transparent)'
+                  color: 'var(--text-2)',
+                  background: 'color-mix(in srgb, var(--text-2) 10%, transparent)',
+                  border: '0.5px solid color-mix(in srgb, var(--text-2) 22%, transparent)'
                 }}
               >
                 nekompletní
@@ -182,9 +194,6 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
           <Card
             style={{
               margin: '8px 0 18px',
-              ...(nekompletni
-                ? { boxShadow: 'inset 3px 0 0 var(--stav-partial)' }
-                : {})
             }}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
@@ -228,7 +237,7 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
                     key={r.jezdec_id}
                     i={i}
                     zebra
-                    penalized={maZasahReditele(r) || radekNekompletni(r)}
+                    penalized={maZasahReditele(r)}
                   >
                     <td
                       style={{

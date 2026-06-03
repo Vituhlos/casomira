@@ -3,6 +3,7 @@ import type { VysledekRadek } from '@shared/types'
 import { Modal } from './Modal'
 import { Btn } from './ui'
 import { fmtTime } from '../lib/time'
+import { safeCall } from '../lib/api'
 
 export interface PenalizaceTarget {
   jizdaId: number
@@ -76,9 +77,9 @@ export function PenalizaceDialog({
   useEffect(() => {
     if (druh !== 'BODOVA') return
     let live = true
-    void window.api.getAutoBodyJizdy(target.jizdaId, radek.jezdec_id).then((b) => {
+    safeCall(window.api.getAutoBodyJizdy(target.jizdaId, radek.jezdec_id).then((b) => {
       if (live) setAutoBody(b)
-    })
+    }))
     return () => {
       live = false
     }

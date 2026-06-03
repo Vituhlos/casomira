@@ -7,6 +7,7 @@ import { Icon } from './components/Icon'
 import { Modal } from './components/Modal'
 import { Card, thStyle } from './components/table'
 import { fmtTime, parseTimeLoose } from './lib/time'
+import { safeCall } from './lib/api'
 
 // Jeden „kanál" měření = rozměřená jízda. Běžící hodiny drží okno (epoch-based),
 // kliky jsou v DB (tabulka mereni) → přepínání mezi kanály nic neztratí.
@@ -48,6 +49,7 @@ export function StopkyApp(): React.JSX.Element {
   const [toast, setToast] = useState<string | null>(null)
   const [potvrd, setPotvrd] = useState<{ typ: 'zapis' | 'zahodit'; jizdaId: number; label: string } | null>(null)
   const [aktivniRadek, setAktivniRadek] = useState<number | null>(null) // řádek s fokusem
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [aktRost, setAktRost] = useState<RostSlot[] | null>(null)
   const cisloRefs = useRef<Map<number, HTMLInputElement | null>>(new Map())
 
@@ -158,13 +160,19 @@ export function StopkyApp(): React.JSX.Element {
     return () => clearInterval(t)
   }, [akt?.running, aktivniId])
 
+  // Naslouchá požadavku z main procesu na potvrzení zavření okna / ukončení appky.
+  useEffect(() => window.api.onStopkyRequestConfirm(() => setShowCloseConfirm(true)), [])
+
   // Načti rošt aktivní jízdy pro read-only náhled vedle tabulky časů.
   useEffect(() => {
     if (!akt) { setAktRost(null); return }
     let live = true
-    void window.api.getRostJizda(akt.jizdaId).then((slots) => {
-      if (live) setAktRost(slots)
-    })
+    safeCall(
+      window.api.getRostJizda(akt.jizdaId).then((slots) => {
+        if (live) setAktRost(slots)
+      }),
+      (msg) => { if (live) oznam(`Nepodařilo se načíst rošt: ${msg}`) }
+    )
     return () => { live = false }
   }, [akt?.jizdaId])
 
@@ -411,10 +419,10 @@ export function StopkyApp(): React.JSX.Element {
               {k.running && (
                 <span
                   style={{
-                    width: 7,
-                    height: 7,
+                    width: 6,
+                    height: 6,
                     borderRadius: 99,
-                    background: on ? 'rgba(255,255,255,0.9)' : '#e0443e',
+                    background: on ? 'rgba(255,255,255,0.75)' : 'var(--text-3)',
                     display: 'inline-block',
                     flexShrink: 0
                   }}
@@ -576,11 +584,9 @@ export function StopkyApp(): React.JSX.Element {
                         const active = aktivniRadek === row.id
                         const bg = active
                           ? 'color-mix(in srgb, var(--accent) 14%, var(--card))'
-                          : assigned
-                            ? 'color-mix(in srgb, #34c759 13%, var(--card))'
-                            : i % 2
-                              ? 'var(--card-alt)'
-                              : 'transparent'
+                          : i % 2
+                            ? 'var(--card-alt)'
+                            : 'transparent'
                         return (
                           <tr
                             key={row.id}
@@ -665,6 +671,38 @@ export function StopkyApp(): React.JSX.Element {
         </Modal>
       )}
 
+      {showCloseConfirm && (
+        <Modal
+          title="Stopky — nezapsané měření"
+          width={440}
+          onClose={() => setShowCloseConfirm(false)}
+          footer={
+            <>
+              <Btn variant="plain" onClick={() => setShowCloseConfirm(false)}>
+                Zůstat
+              </Btn>
+              <Btn
+                variant="danger"
+                onClick={() => {
+                  setShowCloseConfirm(false)
+                  void window.api.stopkyZavritPotvrzeno()
+                }}
+              >
+                Zavřít i tak
+              </Btn>
+            </>
+          }
+        >
+          <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
+            Máš rozměřené stopky, které nejsou zapsané do výsledků.
+          </p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>
+            Data měření zůstanou uložená v aplikaci. Po znovuotevření stopek je najdeš tam, kde
+            jsi skončil. Nezapomeň je zapsat do výsledků v hlavní aplikaci.
+          </p>
+        </Modal>
+      )}
+
       {toast && (
         <div
           style={{
@@ -710,13 +748,13 @@ function NoveMereni({
 
   // Při prvním otevření načteme návrh předvýběru (první neodměřená jízda).
   useEffect(() => {
-    void window.api.mereniDalsiJizda().then((d) => {
+    safeCall(window.api.mereniDalsiJizda().then((d) => {
       if (!d) return
       if (kategorie.some((k) => k.id === d.katId)) setKatId(d.katId)
       if ((['Q1', 'Q2', 'Q3', 'SF', 'F', 'F_A', 'F_B'] as KoloTyp[]).includes(d.koloTyp)) {
         setTyp(d.koloTyp)
       }
-    })
+    }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -882,19 +920,17 @@ function NoveMereni({
                           : '0.5px solid var(--hairline)',
                         background: jeNaRade
                           ? 'color-mix(in srgb, var(--accent) 10%, var(--card))'
-                          : jeHotovo
-                            ? 'color-mix(in srgb, #34c759 10%, var(--card))'
-                            : 'var(--card)',
+                          : 'var(--card)',
                         color: jeNaRade
                           ? 'var(--accent)'
                           : jeHotovo
-                            ? 'var(--text-2)'
+                            ? 'var(--text-3)'
                             : 'var(--text-1)',
                         cursor: 'pointer'
                       }}
                     >
                       {jeHotovo && (
-                        <span style={{ color: '#34c759', fontSize: 12, lineHeight: 1 }}>✓</span>
+                        <span style={{ color: 'var(--text-3)', fontSize: 12, lineHeight: 1 }}>✓</span>
                       )}
                       {jeNaRade && !jeHotovo && (
                         <span style={{
@@ -915,7 +951,7 @@ function NoveMereni({
             {jizdy.length > 0 && (
               <div style={{ marginTop: 10, display: 'flex', gap: 14, fontSize: 11.5, color: 'var(--text-3)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ color: '#34c759' }}>✓</span> hotovo
+                  <span style={{ color: 'var(--text-3)' }}>✓</span> hotovo
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{
