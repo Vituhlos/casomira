@@ -3,7 +3,7 @@
 Tento text můžeš poslat časoměřiči spolu s instalátorem. Popisuje **co aplikace umí** a **jak s ní projít typický závod** — bez programátorských detailů.
 
 > **Verze dokumentu:** k aplikaci **0.9.1** (Electron, Windows + Mac).  
-> **Instalace na Mac:** Word `docs/Casomira-instalace-Mac.docx` (nebo [INSTALACE-MAC.md](./INSTALACE-MAC.md)). Na Windows spusť `Casomira-Setup-….exe` z release.
+> **Instalace na Mac:** Word `docs/user/Casomira-instalace-Mac.docx` (nebo [INSTALACE-MAC.md](./INSTALACE-MAC.md)). Na Windows spusť `Casomira-Setup-….exe` z release.
 
 ---
 
@@ -272,4 +272,4 @@ Pošli prosím:
 
 ---
 
-*Tento návod je určený pro testery. Technické sestavení instalátorů: [BUILD.md](./BUILD.md).*
+*Tento návod je určený pro testery. Technické sestavení instalátorů: [docs/dev/BUILD.md](../dev/BUILD.md).*

@@ -16,5 +16,8 @@ Thumbs.db
 # IDE a nástroje (volitelné lokální metadata)
 .code-review-graph/
 
-# Lokální vzorky závodů / archivy (necommitovat)
+# Lokální archivy, instalátory, zálohy (necommitovat)
 bordel/
+# Volitelně: velké reálné Excel/PDF mimo ukázky v fixtures/
+# fixtures/*.xls
+# fixtures/*.xlsx

@@ -5,7 +5,7 @@ Desktopová aplikace pro **časoměřičství autokrosu a rallycrossu** — náh
 Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Pravidla RAC Race (Hobby), RX Cup a Šotolina podle časoměřičské bible, v MVP co nejvěrněji stávajícímu workflow.
 
 <p align="center">
-  <img src="Casomira-macOS/screenshots/04-vysledky-q1.png" alt="Výsledky Q1 — světlý režim" width="720">
+  <img src="reference/Casomira-macOS/screenshots/04-vysledky-q1.png" alt="Výsledky Q1 — světlý režim" width="720">
 </p>
 
 ---
@@ -14,8 +14,8 @@ Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Prav
 
 | Formát | Instalace Mac | Návod k použití |
 |--------|---------------|-----------------|
-| **Word (.docx)** — k poslání testerům | [docs/Casomira-instalace-Mac.docx](./docs/Casomira-instalace-Mac.docx) | [docs/Casomira-navod-pro-testery.docx](./docs/Casomira-navod-pro-testery.docx) |
-| Markdown (zdroj v repu) | [INSTALACE-MAC.md](./INSTALACE-MAC.md) | [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md) |
+| **Word (.docx)** — k poslání testerům | [docs/user/Casomira-instalace-Mac.docx](./docs/user/Casomira-instalace-Mac.docx) | [docs/user/Casomira-navod-pro-testery.docx](./docs/user/Casomira-navod-pro-testery.docx) |
+| Markdown (zdroj v repu) | [docs/user/INSTALACE-MAC.md](./docs/user/INSTALACE-MAC.md) | [docs/user/NAVOD-PRO-TESTERY.md](./docs/user/NAVOD-PRO-TESTERY.md) |
 
 Přegenerovat Word z Markdownu: `npm run docs:word`
 
@@ -28,7 +28,7 @@ Instalátory najdeš u **[GitHub Releases](https://github.com/Vituhlos/casomira/
 | Windows | `Casomira-Setup-x.y.z.exe` — NSIS instalátor (Start menu, odinstalace) |
 | macOS | `Casomira-x.y.z-mac-universal.dmg` (Intel + Apple Silicon) |
 
-Bez release tagu můžeš sestavit lokálně — viz [BUILD.md](./BUILD.md).
+Bez release tagu můžeš sestavit lokálně — viz [docs/dev/BUILD.md](./docs/dev/BUILD.md).
 
 ---
 
@@ -73,7 +73,7 @@ npm run dev
 | `npm run dist:win` | Windows instalátor → `release/` |
 | `npm run dist:mac` | macOS DMG → `release/` |
 
-Podrobný návod k balení a řešení EPERM při buildu: **[BUILD.md](./BUILD.md)**.
+Podrobný návod k balení a řešení EPERM při buildu: **[docs/dev/BUILD.md](./docs/dev/BUILD.md)**.
 
 ---
 
@@ -87,7 +87,7 @@ git tag v0.9.0
 git push origin v0.9.0
 ```
 
-Podrobnosti a ruční spuštění: **[BUILD.md](./BUILD.md)** · workflow: [`.github/workflows/release.yml`](./.github/workflows/release.yml)
+Podrobnosti a ruční spuštění: **[docs/dev/BUILD.md](./docs/dev/BUILD.md)** · workflow: [`.github/workflows/release.yml`](./.github/workflows/release.yml)
 
 ---
 
@@ -95,21 +95,23 @@ Podrobnosti a ruční spuštění: **[BUILD.md](./BUILD.md)** · workflow: [`.gi
 
 Electron · React · Vite · TypeScript · `better-sqlite3` · SheetJS (`xlsx`) · electron-builder (NSIS / DMG)
 
-Vizuální základ vychází z prototypu ve složce [`Casomira-macOS/`](./Casomira-macOS/) (designové tokeny `mac.css`); produkční logika bodování a klasifikace je v `src/main/`.
+Vizuální základ vychází z prototypu ve složce [`reference/Casomira-macOS/`](./reference/Casomira-macOS/) (designové tokeny `mac.css`); produkční logika bodování a klasifikace je v `src/main/`.
 
 ---
 
 ## Struktura repozitáře
 
 ```
-src/
-  main/          # Electron main, SQLite, pravidla, IPC
-  renderer/      # React UI
-  preload/       # Bezpečný most renderer ↔ main
-  shared/        # Sdílené typy
-Casomira-macOS/  # Původní klikací prototyp (reference vzhledu)
-build/           # Ikony pro instalátor (volitelné)
+src/                         # Produkční aplikace
+reference/Casomira-macOS/    # Klikací prototyp (reference vzhledu)
+docs/user/                   # Návody a Word pro testery
+docs/dev/                    # Build, technické plány
+docs/prompts/                # Historické zadání pro AI
+fixtures/                    # Ukázkové soubory pro test importu
+build/                       # Ikony pro instalátor
 ```
+
+Přehled složek: [docs/README.md](./docs/README.md).
 
 ---
 

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog } from 'electron'
+import { app, shell, BrowserWindow, dialog, Menu } from 'electron'
 import { join } from 'node:path'
 
 // Cesta k ikoně appky za běhu (Windows/Linux).
@@ -44,6 +44,52 @@ process.on('uncaughtException', (err) => {
     /* dialog nemusí být k dispozici (např. před app ready) */
   }
 })
+
+// Na macOS je systémový menu bar vždy viditelný. Bez vlastního menu Electron
+// zobrazí výchozí menu s Reload/DevTools — nevhodné v produkci. Edit role musí
+// být zachovány, aby fungovala undo/cut/copy/paste v textových polích (⌘Z/X/C/V).
+function setupMacMenu(): void {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: app.name,
+      submenu: [
+        { role: 'about', label: `O Časomíře` },
+        { type: 'separator' },
+        { role: 'services', label: 'Služby' },
+        { type: 'separator' },
+        { role: 'hide', label: 'Skrýt Časomíru' },
+        { role: 'hideOthers', label: 'Skrýt ostatní' },
+        { role: 'unhide', label: 'Zobrazit vše' },
+        { type: 'separator' },
+        { role: 'quit', label: 'Ukončit Časomíru' }
+      ]
+    },
+    {
+      label: 'Upravit',
+      submenu: [
+        { role: 'undo', label: 'Zpět' },
+        { role: 'redo', label: 'Znovu' },
+        { type: 'separator' },
+        { role: 'cut', label: 'Vyjmout' },
+        { role: 'copy', label: 'Kopírovat' },
+        { role: 'paste', label: 'Vložit' },
+        { role: 'selectAll', label: 'Vybrat vše' }
+      ]
+    },
+    {
+      label: 'Okno',
+      submenu: [
+        { role: 'minimize', label: 'Minimalizovat' },
+        { role: 'zoom', label: 'Přiblížit' },
+        { type: 'separator' },
+        { role: 'front', label: 'Přenést vše dopředu' },
+        { type: 'separator' },
+        { role: 'close', label: 'Zavřít' }
+      ]
+    }
+  ])
+  Menu.setApplicationMenu(menu)
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -100,6 +146,7 @@ app.whenReady().then(() => {
     seed(db)
     logStartup('seed hotový → IPC + okno')
 
+    if (process.platform === 'darwin') setupMacMenu()
     registerIpc()
     registerAppQuitGuard()
     createWindow()

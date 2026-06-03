@@ -6,7 +6,7 @@
 
 Ahoj. Budeme společně stavět desktopovou aplikaci. Kompletní zadání máš v souboru
 `CLAUDE.md` ve složce — **přečti si ho celé jako první**, je to zdroj pravdy pro
-celý projekt. Ve složce je taky `Casomira-macOS/` — hotový vizuální prototyp
+celý projekt. Ve složce je taky `reference/Casomira-macOS/` — hotový vizuální prototyp
 z Claude Design, ze kterého přebíráme VZHLED (hlavně `mac.css`), ale NE bodovou
 logiku (ta je v prototypu zjednodušená a špatná — řiď se pravidly v `CLAUDE.md`).
 
@@ -25,7 +25,7 @@ Postav **kostru aplikace** a první funkční obrazovku. Konkrétně:
    - Vysvětli mi, jaký příkaz mám napsat pro spuštění, až bude hotovo.
 
 2. **Převezmi vzhled z prototypu.**
-   - Zkopíruj `Casomira-macOS/mac.css` jako základ stylů (designové tokeny pro
+   - Zkopíruj `reference/Casomira-macOS/mac.css` jako základ stylů (designové tokeny pro
      světlý i tmavý režim). Toto je zdroj pravdy pro vzhled.
    - Použij stejnou strukturu komponent jako prototyp (sidebar, toolbar,
      segmentový přepínač fází, inset tabulky). Vzhled musí odpovídat schváleným

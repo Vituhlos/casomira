@@ -51,6 +51,10 @@ export function openStopky(): void {
     return { action: 'deny' }
   })
 
+  // Zabránit přepsání titulku z HTML (<title>Časomíra</title>) — titulek „Stopky"
+  // musí zůstat, aby ho stopkyClose.ts (before-quit) správně identifikoval.
+  stopkyWin.on('page-title-updated', (e) => e.preventDefault())
+
   // Stejný renderer jako hlavní okno, jen s markerem `#stopky` v adrese.
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) void stopkyWin.loadURL(`${devUrl}#stopky`)

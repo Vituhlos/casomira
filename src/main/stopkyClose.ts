@@ -38,15 +38,16 @@ export function requestStopkyClose(): void {
 /** Guard pro ukončení celé appky + IPC handler pro odpověď z rendereru. */
 export function registerAppQuitGuard(): void {
   // Renderer potvrdil zavření: proveď odpovídající akci dle kontextu.
-  ipcMain.handle('stopky:zavritPotvrzeno', () => {
+  ipcMain.handle('stopky:zavritPotvrzeno', (event) => {
     const action = confirmPending
     confirmPending = null
     if (action === 'window') {
-      stopkyForceClose = true
-      const sw = BrowserWindow.getAllWindows().find(
-        (w) => !w.isDestroyed() && w.getTitle().includes('Stopky')
-      )
-      if (sw && !sw.isDestroyed()) sw.close()
+      // Použijeme event.sender místo hledání podle titulku — titulek okna se po
+      // načtení HTML přepíše, takže getTitle().includes('Stopky') by selhalo.
+      const thatWin = BrowserWindow.fromWebContents(event.sender)
+      if (!thatWin || thatWin.isDestroyed()) return
+      stopkyForceClose = true  // nastavit těsně před close(), ne dříve
+      thatWin.close()
     } else if (action === 'quit') {
       appForceQuit = true
       app.quit()

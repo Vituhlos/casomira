@@ -6,6 +6,29 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.5] – 2026-06-03
+
+### Opraveno
+- **Zavírání okna stopek s nezapsaným měřením** — modal „Zavřít i tak" zavřel jen
+  sám sebe, okno zůstalo otevřené. Příčina: HTML stránka přepsala titulek okna
+  z „Stopky" na „Časomíra", hledání přes `getTitle()` pak nenašlo okno a příznak
+  `stopkyForceClose` zůstal viset — druhé ❌ pak obešlo guard bez modalu. Opraveno
+  přes `BrowserWindow.fromWebContents(event.sender)` a blokováním přepsání titulku
+  (`page-title-updated`).
+- **macOS — systémové menu** — výchozí Electron menu zobrazovalo položky „Reload"
+  a „Developer Tools" v produkci. Nahrazeno správným menu (Časomíra / Upravit / Okno)
+  bez vývojářských položek; zkratky ⌘C / ⌘V / ⌘Z fungují ve všech textových polích.
+
+### Přidáno
+- **Checklist pro testery na Macu** (`docs/user/CHECKLIST-MAC.md`) — stručný průvodce
+  prvním ověřením na macOS (Gatekeeper, klávesové zkratky ⌘, stopky, PDF, záloha,
+  ukončení, co a kam nahlásit).
+
+### Změněno
+- **Reorganizace souborů repozitáře** — `BUILD.md` → `docs/dev/`, instalační a
+  testerský návod → `docs/user/`, prototyp `Casomira-macOS/` → `reference/`,
+  vzorky → `fixtures/`. Funkčnost appky se nemění.
+
 ## [0.9.4] – 2026-06-03
 ### Změněno
 - **Čistší horní lišta** — odstraněna nadbytečná tlačítka „Stav závodu", „Zásahy"
@@ -66,7 +89,8 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.4...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.5...HEAD
+[0.9.5]: https://github.com/Vituhlos/casomira/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/Vituhlos/casomira/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/Vituhlos/casomira/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/Vituhlos/casomira/compare/v0.9.1...v0.9.2

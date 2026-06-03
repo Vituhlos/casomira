@@ -1,4 +1,4 @@
-# Balení Časomíry pro Windows (NSIS) a macOS (DMG). Viz BUILD.md.
+# Balení Časomíry pro Windows (NSIS) a macOS (DMG). Viz docs/dev/BUILD.md.
 # Release na GitHub řeší .github/workflows/release.yml (ne auto-publish z tagu).
 publish: null
 
@@ -15,7 +15,7 @@ files:
   - package.json
   - '!**/.vscode/*'
   - '!src/**'
-  - '!Casomira-macOS/**'
+  - '!reference/**'
   - '!release/**'
   - '!*.md'
   - '!*.tsbuildinfo'
@@ -55,7 +55,7 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: Časomíra
   uninstallDisplayName: Časomíra
-  # Volitelně: build/icon.ico (512×512 zdroj → viz BUILD.md)
+  # Volitelně: build/icon.ico (512×512 zdroj → viz docs/dev/BUILD.md)
   # installerIcon: build/icon.ico
   # uninstallerIcon: build/icon.ico
 

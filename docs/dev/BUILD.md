@@ -1,6 +1,6 @@
 # Instalátory Časomíry (Windows + Mac)
 
-> Veřejný přehled projektu: [README.md](./README.md)
+> Veřejný přehled projektu: [README.md](../../README.md)
 
 ## Co dostaneš
 

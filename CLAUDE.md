@@ -81,7 +81,7 @@ bronzová) u čísla pozice.
 ## 2d. Existující prototyp z Claude Design (POUŽÍT jako vizuální základ)
 
 K dispozici je **funkční klikací prototyp** (React/JSX bez build kroku, složka
-`Casomira-macOS/`). Slouží jako **vizuální a strukturní základ** — Claude Code
+`reference/Casomira-macOS/`). Slouží jako **vizuální a strukturní základ** — Claude Code
 z něj přebírá vzhled, ne pravidla.
 
 **PŘEVZÍT (skoro 1:1):**
@@ -382,3 +382,63 @@ GitHub Release, jehož **popis se bere přímo z `CHANGELOG.md`**.
 Číslo bump: **PATCH** = opravy/drobnosti, **MINOR** = nová funkce, **MAJOR** až po
 `1.0.0`. Předvydání = tag se suffixem (`vX.Y.Z-beta`) → Release se označí jako
 *pre-release* automaticky.
+
+## Struktura repozitáře (kde co leží)
+
+**Aktuálně (flat):** aplikace v `src/`, konfigurace v kořeni — viz [docs/README.md](docs/README.md).
+
+**Cíl (monorepo, až vznikne archiv):** `apps/desktop` + `apps/archiv` + `packages/shared` — plán
+[docs/dev/plan-monorepo-layout.md](docs/dev/plan-monorepo-layout.md). Přesun až při založení `apps/archiv`, ne předčasně.
+
+```
+src/                    # Produkční aplikace (Electron) — později apps/desktop/src/
+reference/Casomira-macOS/  # Klikací prototyp vzhledu — NE pravidla bodování
+docs/user/              # Návody pro testery (MD + Word), instalace Mac
+docs/dev/               # BUILD, plány (archiv, monorepo, stopky)
+docs/prompts/           # Historické zadání pro scaffold / import
+fixtures/               # Ukázkové .xls / PDF pro test importu
+build/                  # Ikony pro instalátor
+bordel/                 # Lokální jen u tebe (.gitignore) — instalátory, zálohy
+```
+
+Kořen: `CLAUDE.md` (tento soubor), `README.md`, `CHANGELOG.md`, `package.json`.
+Konfigurace AI/MCP: `.cursorrules`, `.cursor/mcp.json`, `.mcp.json`.
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+|------|----------|
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.

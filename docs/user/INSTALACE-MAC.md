@@ -83,7 +83,7 @@ Stačí **jednou**. Další spuštění už půjde obyčejným dvojklikem.
 
 ## Co dál po instalaci
 
-Jak appku používat (závod, kategorie, rošty, časy, PDF, Stopky): soubor **Word** `docs/Casomira-navod-pro-testery.docx` (zdroj: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md))
+Jak appku používat (závod, kategorie, rošty, časy, PDF, Stopky): soubor **Word** [Casomira-navod-pro-testery.docx](./Casomira-navod-pro-testery.docx) (zdroj: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md))
 
 ---
 
