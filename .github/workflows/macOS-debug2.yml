@@ -92,6 +92,12 @@ jobs:
 
           cat "$HOME/Library/Application Support/casomira/startup.log" || true
 
+      - name: Show main log
+        if: always()
+        run: |
+          echo "=== MAIN LOG ==="
+          cat /tmp/casomira-main.log || true
+      
       - name: Show database files
         if: always()
         run: |
