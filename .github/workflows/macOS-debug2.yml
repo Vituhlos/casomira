@@ -1,0 +1,78 @@
+name: macOS Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm ci
+
+      - name: Build app
+        run: npm run dist:mac
+
+      - name: Find app
+        run: |
+          find release -name "*.app"
+
+      - name: Inspect better-sqlite3
+        run: |
+          echo "=== better-sqlite3 ==="
+          find release -name "*better*" || true
+          find release -name "*.node" || true
+
+      - name: Launch app
+        continue-on-error: true
+        run: |
+          APP=$(find release -name "*.app" | head -n 1)
+
+          echo "Launching: $APP"
+
+          export ELECTRON_ENABLE_LOGGING=1
+          export ELECTRON_ENABLE_STACK_DUMPING=1
+
+          "$APP/Contents/MacOS/Časomíra" &
+
+          PID=$!
+
+          echo "PID=$PID"
+
+          sleep 15
+
+          ps -p $PID || true
+
+      - name: Collect diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts
+
+          echo "=== DiagnosticReports ==="
+          ls -lah ~/Library/Logs/DiagnosticReports || true
+
+          echo "=== Application Support ==="
+          ls -lah "$HOME/Library/Application Support" || true
+
+          cp -R ~/Library/Logs/DiagnosticReports artifacts/diagnostics || true
+          cp -R "$HOME/Library/Application Support/Časomíra" artifacts/appsupport || true
+
+          echo "=== Collected files ==="
+          find artifacts -type f || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug-artifacts
+          path: artifacts
+          if-no-files-found: warn
