@@ -68,6 +68,10 @@ mac:
   artifactName: Casomira-${version}-mac-universal.${ext}
   # Nativní moduly (better-sqlite3) v asarUnpack — pro universal obě architektury.
   mergeASARs: true
+  # Ad-hoc podpis (bez Apple Developer účtu). Povinné s hardenedRuntime — jinak
+  # entitlements.plist se do .app neaplikují a better-sqlite3 padá SIGTRAP při startu.
+  # CSC_IDENTITY_AUTO_DISCOVERY=false v CI samo o sobě podpis vypne.
+  identity: '-'
   # Hardened runtime + oprávnění: bez `disable-library-validation` macOS odmítne
   # načíst nativní modul better-sqlite3 a appka spadne hned po startu (SIGTRAP).
   hardenedRuntime: true

@@ -54,6 +54,18 @@ jobs:
       - name: Odstraň quarantine atribut
         run: xattr -cr "${{ steps.find_app.outputs.app_path }}"
 
+      # Ověř ad-hoc podpis + entitlements (bez disable-library-validation = SIGTRAP)
+      - name: Ověř codesign a entitlements
+        run: |
+          APP="${{ steps.find_app.outputs.app_path }}"
+          codesign -dv --verbose=4 "$APP" 2>&1 | head -20
+          codesign -d --entitlements :- "$APP" 2>&1 | grep -E "disable-library-validation|allow-jit" || {
+            echo "❌ V .app chybí očekávaná entitlements (better-sqlite3 spadne)"
+            codesign -d --entitlements :- "$APP" 2>&1 || true
+            exit 1
+          }
+          echo "✅ Entitlements v .app OK"
+
       # Spusť appku, čekej 8s, ověř že stále běží (= nenastartovala se crash)
       - name: Spusť appku a zkontroluj startup crash
         run: |

@@ -78,6 +78,16 @@ npm run dist:mac
 
 Bez Apple Developer účtu může Mac při prvním spuštění ukázat varování — to se řeší později notarizací (není nutné pro závod u tebe doma).
 
+**Mac padá hned po startu (SIGTRAP / exit 133)**
+
+Typicky chybí **ad-hoc podpis s entitlements** u nepodepsaného buildu. V `electron-builder.yml` je `mac.identity: '-'` + `entitlements.mac.plist` (`disable-library-validation` pro `better-sqlite3`). V CI musí být před balením `npm run rebuild`. Ověření:
+
+```bash
+codesign -d --entitlements :- release/mac-arm64/*.app | grep disable-library-validation
+```
+
+Upgrade Electronu (37 → 39) tento problém sám neřeší — jde o macOS hardened runtime, ne o verzi Chromium.
+
 ---
 
 ## Obě platformy najednou (GitHub Actions)
