@@ -10,6 +10,9 @@ directories:
   output: release
   buildResources: build
 
+# macOS 26: Helpers přejmenované bez patch Electron binárky → SIGTRAP (#9771)
+afterPack: scripts/afterPack-mac-helpers.cjs
+
 files:
   - out/**/*
   - package.json

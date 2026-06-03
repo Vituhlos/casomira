@@ -88,6 +88,19 @@ codesign -d --entitlements :- release/mac-arm64/*.app | grep disable-library-val
 
 Upgrade Electronu (37 → 39) tento problém sám neřeší — jde o macOS hardened runtime, ne o verzi Chromium.
 
+**macOS 26: exit 133 hned po startu (Helper apps)**
+
+Na macOS 26 může pád **nesouviset s better-sqlite3**, ale s bugem electron-builder: Helper bundly se přejmenují na `Časomíra Helper`, ale Electron binárka pořád hledá `Electron Helper` → fatální chyba při startu (SIGTRAP / exit 133). Viz [electron-builder#9771](https://github.com/electron-userland/electron-builder/issues/9771).
+
+Workaround v repu: `scripts/afterPack-mac-helpers.cjs` (hook `afterPack` v `electron-builder.yml`).
+
+Ověření z terminálu (místo dvojkliku):
+
+```bash
+"release/mac-arm64/Časomíra.app/Contents/MacOS/Časomíra"
+# očekávaná fatální hláška před fixem: Unable to find helper app
+```
+
 ---
 
 ## Obě platformy najednou (GitHub Actions)
