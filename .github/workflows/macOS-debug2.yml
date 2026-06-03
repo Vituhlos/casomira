@@ -1,4 +1,4 @@
-name: macOS Debug
+name: macOS Debug 2
 
 on:
   workflow_dispatch:
@@ -24,6 +24,7 @@ jobs:
 
       - name: Find app
         run: |
+          echo "=== APPS ==="
           find release -name "*.app"
 
       - name: Inspect better-sqlite3
@@ -31,6 +32,19 @@ jobs:
           echo "=== better-sqlite3 ==="
           find release -name "*better*" || true
           find release -name "*.node" || true
+
+      - name: Check sqlite binary architecture
+        run: |
+          SQLITE=$(find release -name "better_sqlite3.node" | head -n 1)
+
+          echo "=== SQLITE FILE ==="
+          echo "$SQLITE"
+
+          echo "=== FILE INFO ==="
+          file "$SQLITE" || true
+
+          echo "=== LIPO INFO ==="
+          lipo -info "$SQLITE" || true
 
       - name: Launch app
         continue-on-error: true
@@ -50,6 +64,7 @@ jobs:
 
           sleep 15
 
+          echo "=== PROCESS STATUS ==="
           ps -p $PID || true
 
       - name: Collect diagnostics
@@ -63,11 +78,26 @@ jobs:
           echo "=== Application Support ==="
           ls -lah "$HOME/Library/Application Support" || true
 
-          cp -R ~/Library/Logs/DiagnosticReports artifacts/diagnostics || true
-          cp -R "$HOME/Library/Application Support/Časomíra" artifacts/appsupport || true
+          cp -R ~/Library/Logs/DiagnosticReports artifacts/diagnostics 2>/dev/null || true
+
+          cp -R "$HOME/Library/Application Support/casomira" artifacts/casomira 2>/dev/null || true
 
           echo "=== Collected files ==="
           find artifacts -type f || true
+
+      - name: Show startup log
+        if: always()
+        run: |
+          echo "=== STARTUP LOG ==="
+
+          cat "$HOME/Library/Application Support/casomira/startup.log" || true
+
+      - name: Show database files
+        if: always()
+        run: |
+          echo "=== CASOMIRA FILES ==="
+
+          find "$HOME/Library/Application Support/casomira" -type f || true
 
       - name: Upload artifacts
         if: always()
