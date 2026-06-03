@@ -1,0 +1,54 @@
+name: macOS Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm ci
+
+      - name: Build app
+        run: npm run dist:mac
+
+      - name: Find app
+        run: |
+          find release -name "*.app"
+
+      - name: Launch app
+        run: |
+          APP=$(find release -name "*.app" | head -n 1)
+
+          echo "Launching: $APP"
+
+          export ELECTRON_ENABLE_LOGGING=1
+          export ELECTRON_ENABLE_STACK_DUMPING=1
+
+          "$APP/Contents/MacOS/Časomíra" &
+
+          sleep 15
+
+      - name: Diagnostic reports
+        if: always()
+        run: |
+          mkdir -p artifacts
+
+          cp -R ~/Library/Logs/DiagnosticReports artifacts/ || true
+
+      - name: Upload crash logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-crashlogs
+          path: artifacts
