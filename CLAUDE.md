@@ -393,6 +393,7 @@ GitHub Release, jehož **popis se bere přímo z `CHANGELOG.md`**.
 ```
 src/                    # Produkční aplikace (Electron) — později apps/desktop/src/
 reference/Casomira-macOS/  # Klikací prototyp vzhledu — NE pravidla bodování
+docs/design.md          # Design system (UI tokeny, layout) — Stitch / mac.css
 docs/user/              # Návody pro testery (MD + Word), instalace Mac
 docs/dev/               # BUILD, plány (archiv, monorepo, stopky)
 docs/prompts/           # Historické zadání pro scaffold / import
