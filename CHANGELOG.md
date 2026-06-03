@@ -9,12 +9,12 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 ## [0.9.6-beta] – 2026-06-03
 
 ### Změněno
-- **Electron 37 → 42** — upgrade Electron runtime kvůli kompatibilitě s macOS 26 (Tahoe).
+- **Electron 37 → 39** — upgrade Electron runtime kvůli kompatibilitě s macOS 26 (Tahoe).
   Electron 37 havaroval při startu na macOS 26 (`EXC_BREAKPOINT` v Electron Framework)
-  kvůli nové TPRO (Thread Pointer Read Only) ochraně paměti v macOS 26. Electron 42
-  je sestaven s macOS 26 SDK a tuto ochranu respektuje.
-- **@types/node 22 → 24** — typové definice Node.js sladěny s verzí Node.js bundlovanou
-  v Electronu 42 (Node 22 → Node 24).
+  kvůli nové TPRO (Thread Pointer Read Only) ochraně paměti v macOS 26. Electron 39
+  přináší výrazně novější Chromium (macOS 26 podpora) a zachovává Node.js 22 —
+  nezbytné pro nativní modul `better-sqlite3`, který se s Node.js 24 / V8 13.x
+  nekompiluje (`v8::External` API breaking change).
 
 ## [0.9.5] – 2026-06-03
 
