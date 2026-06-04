@@ -1696,7 +1696,7 @@ export function navrhFinale(kategorieId: number): RostNavrh {
   const N = stav.finaleVelikost
   const obsazeno = rostObsazen(db, kategorieId, 'F')
   const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
-  const jizda = (ids: number[]): RostNavrh =>
+  const jizda = (ids: number[], nahradniciIds: number[] = []): RostNavrh =>
     ({
       ok: true,
       chyba: null,
@@ -1704,7 +1704,8 @@ export function navrhFinale(kategorieId: number): RostNavrh {
       jizdy: [{ cislo: 1, jezdci: ids.map((id) => sel.get(id) as Jezdec) }],
       pocetJizd: 1,
       minJizd: 1,
-      maxJizd: 1
+      maxJizd: 1,
+      nahradnici: nahradniciIds.map((id) => sel.get(id) as Jezdec)
     }) as RostNavrh
   const chyba = (msg: string): RostNavrh => ({
     ok: false,
@@ -1740,13 +1741,24 @@ export function navrhFinale(kategorieId: number): RostNavrh {
     const bodyQ3 = new Map(
       getKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3']).map((r) => [r.jezdec_id, r.celkem])
     )
-    return jizda(nasazFinaleZeSF(postup1, postup2, bodyQ3))
+    const finalisteIds = nasazFinaleZeSF(postup1, postup2, bodyQ3)
+    const finalisteSet = new Set(finalisteIds)
+
+    // Náhradníci ze SF: nepostupující seřazení dle pořadí v SF, pak zbytek dle Q3.
+    const sfJezdci = [...h1, ...h2].map((r) => r.jezdec_id)
+    const nepostupujiciSF = sfJezdci.filter((id) => !finalisteSet.has(id))
+    const kvalQ3 = kvalifikovaniPoradi(db, kategorieId)
+    const sfSet = new Set(sfJezdci)
+    const zbyliQ3 = kvalQ3.filter((id) => !finalisteSet.has(id) && !sfSet.has(id))
+    const nahradniciIds = [...new Set([...nepostupujiciSF, ...zbyliQ3])]
+
+    return jizda(finalisteIds, nahradniciIds)
   }
 
   // SF se nekoná → prvních N kvalifikovaných dle Klasifikace po Q3.
   const kval = kvalifikovaniPoradi(db, kategorieId)
   if (kval.length === 0) return chyba('Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.')
-  return jizda(kval.slice(0, N))
+  return jizda(kval.slice(0, N), kval.slice(N))
 }
 
 // ---------------------------------------------------------------------

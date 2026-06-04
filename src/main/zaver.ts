@@ -8,13 +8,14 @@
 
 /**
  * Kvalifikace do SF/finále (RAC, §8): jezdec musí mít aspoň jednu Q jízdu
- * KOMPLETNÍ (dojel s časem) A zároveň do aspoň jedné ODSTARTOVAT.
- * DQ se počítá, jako by nenastoupil (nezvyšuje počet odstartovaných).
- * @param dokoncil  počet Q jízd, které dojel (stav OK s časem)
- * @param odstartoval počet Q jízd, do kterých nastoupil (OK nebo DNF; NE DNS/DQ)
+ * KOMPLETNÍ (dojel s časem) A zároveň aspoň DVĚ jízdy, do kterých reálně nastoupil.
+ * DQ a DNS se nepočítají jako nastoupení — pouze OK a DNF.
+ * Příklady: OK+DNF+DNS ✓, OK+DNS+DNS ✗, OK+DQ+DNS ✗, DNF+DNF+DNS ✗.
+ * @param dokoncil          počet Q jízd se stavem OK a měřeným časem
+ * @param odstartovalBezDq  počet Q jízd se stavem OK nebo DNF (NE DNS/DQ)
  */
-export function jeKvalifikovan(dokoncil: number, odstartoval: number): boolean {
-  return dokoncil >= 1 && odstartoval >= 1
+export function jeKvalifikovan(dokoncil: number, odstartovalBezDq: number): boolean {
+  return dokoncil >= 1 && odstartovalBezDq >= 2
 }
 
 /** Práh počtu kvalifikovaných, od kterého se koná semifinále (RAC). */

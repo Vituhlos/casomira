@@ -437,6 +437,46 @@ export function RostGrid({
                 </div>
               </div>
             ))}
+            {navrh.nahradnici && navrh.nahradnici.length > 0 && (
+              <div
+                style={{
+                  border: '0.5px solid var(--hairline)',
+                  borderRadius: 'var(--r-ctrl)',
+                  overflow: 'hidden'
+                }}
+              >
+                <div
+                  style={{
+                    padding: '7px 12px',
+                    background: 'var(--card-alt)',
+                    fontSize: 12.5,
+                    fontWeight: 620,
+                    borderBottom: '0.5px solid var(--hairline)',
+                    color: 'var(--text-2)'
+                  }}
+                >
+                  Náhradníci{' '}
+                  <span style={{ fontWeight: 400 }}>· {navrh.nahradnici.length}</span>
+                </div>
+                <div style={{ padding: '6px 12px' }}>
+                  {navrh.nahradnici.map((d, i) => (
+                    <div
+                      key={d.id}
+                      style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0', color: 'var(--text-2)' }}
+                    >
+                      <span style={{ color: 'var(--text-4)', width: 18, textAlign: 'right' }}>
+                        N{i + 1}.
+                      </span>
+                      <span className="tnum" style={{ width: 44, fontWeight: 600 }}>
+                        {d.st_cislo}
+                      </span>
+                      <span style={{ fontWeight: 560 }}>{d.prijmeni}</span>
+                      <span>{d.jmeno}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

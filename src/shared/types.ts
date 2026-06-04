@@ -162,6 +162,7 @@ export interface RostNavrh {
   pocetJizd: number // použitý počet jízd
   minJizd: number // nejmenší možný počet (strop 8/jízda)
   maxJizd: number // největší možný počet (1 jezdec/jízda)
+  nahradnici?: Jezdec[] // záloha za finalisty v pořadí (jen u finále)
 }
 
 export interface RostZapisJizda {
