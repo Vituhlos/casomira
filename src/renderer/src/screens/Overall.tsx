@@ -34,6 +34,8 @@ export function Overall({
 
   useEffect(() => {
     void nacti()
+    const off = window.api.onDataChanged?.(() => void nacti())
+    return () => off?.()
   }, [nacti])
 
   const sloupce = SLOUPCE_STANDARD
@@ -43,7 +45,7 @@ export function Overall({
     <div className="screen-enter">
       <ContentHead title="Celkové výsledky" sub={sub}>
         <Btn icon="sort" onClick={() => void nacti()}>
-          Obnovit
+          Přegenerovat
         </Btn>
       </ContentHead>
 
