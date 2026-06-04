@@ -50,17 +50,7 @@ export function Standings({
       </ContentHead>
 
       <Card>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: 64 }} />
-            <col style={{ width: 70 }} />
-            <col style={{ width: wJezdec }} />
-            {ukazLos && <col style={{ width: 56 }} />}
-            {koloTypy.map((t) => (
-              <col key={t} style={{ width: 72 }} />
-            ))}
-            <col style={{ width: 90 }} />
-          </colgroup>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
           <thead>
             <tr>
               <th style={thStyle}>Pořadí</th>

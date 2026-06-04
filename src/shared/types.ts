@@ -369,6 +369,29 @@ export interface KlasifikaceRadek {
 
 // ---- PDF export ----
 
+/** Řádek agregovaných výsledků Q1 nebo Q2 (všechny jízdy → seřazeno dle času → body). */
+export interface QAgregatRadek {
+  jezdec_id: number
+  st_cislo: number | null
+  prijmeni: string
+  jmeno: string
+  znacka: string | null
+  model: string | null
+  cislo_jizdy: number
+  cas_ms: number | null
+  penalizace_ms: number
+  /** Bodová penalizace přenesená z jízdy (delta, záporná = odečet). */
+  delta_z_jizdy: number
+  stav: Stav
+  poradi: number | null
+  /** Automatické body z pořadí + delta_z_jizdy. */
+  body_auto: number | null
+  /** Ruční override na úrovni agregátu (null = použij body_auto). */
+  body_rucni: number | null
+  /** Finální body (body_rucni ?? body_auto). */
+  body: number | null
+}
+
 /** Identifikuje jeden tiskový list (nadpis + sloupce + data). */
 export type ListKey =
   | 'start'
@@ -378,6 +401,8 @@ export type ListKey =
   | 'res_q1'
   | 'res_q2'
   | 'res_q3'
+  | 'res_q1_agg'
+  | 'res_q2_agg'
   | 'class_q2'
   | 'class_q3'
   // STANDARD (RAC/RX) — semifinále + jedno finále:
@@ -463,6 +488,10 @@ export interface CasomiraApi {
   zrusPenalizaci(arg: ZrusPenalizaciArg): Promise<VysledekJizda>
   /** Přehled všech zásahů ředitele v kategorii (audit log). */
   listUpravaLog(kategorieId: number): Promise<UpravaLogRadek[]>
+  // Agregované výsledky jednoho kola (Q1/Q2) — seřazeno dle nejlepšího času, body přiděleny
+  getQAgregat(kategorieId: number, typ: KoloTyp): Promise<QAgregatRadek[]>
+  /** Ruční přepis bodů v agregátu (null = zrušit override, návrat k automatu). */
+  setQAgregatBodyOverride(kategorieId: number, typ: KoloTyp, jezdecId: number, body: number | null): Promise<QAgregatRadek[]>
   // Klasifikace (součet bodů přes uvedená kola)
   getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Promise<KlasifikaceRadek[]>
   // Závěr závodu — semifinále

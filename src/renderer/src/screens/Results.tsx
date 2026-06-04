@@ -14,6 +14,8 @@ interface ResultsProps {
   kategorieId: number
   typ: KoloTyp
   label: string
+  /** Skryje sloupec Body (u Q1/Q2 — bodování je v agregovaném listu). */
+  bezBodovani?: boolean
   /** Další ovládací prvky vpravo v nadpisu (např. přepínač velikosti finále u SF/finále). */
   extraControls?: ReactNode
 }
@@ -72,7 +74,7 @@ interface MenuState {
   y: number
 }
 
-export function Results({ kategorieId, typ, label, extraControls }: ResultsProps): React.JSX.Element {
+export function Results({ kategorieId, typ, label, bezBodovani = false, extraControls }: ResultsProps): React.JSX.Element {
   const [kolo, setKolo] = useState<VysledekKolo | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
@@ -140,7 +142,9 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
 
   const poPenalizaci = (): void => nacti()
 
-  const hlavicky = ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas', 'Body']
+  const hlavicky = bezBodovani
+    ? ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas']
+    : ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas', 'Body']
   const prazdne = (kolo?.jizdy ?? []).every((j) => j.vysledky.length === 0)
 
   return (
@@ -196,23 +200,13 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
               margin: '8px 0 18px',
             }}
           >
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: 60 }} />
-                <col style={{ width: 64 }} />
-                <col style={{ width: 160 }} />
-                <col style={{ width: 130 }} />
-                <col style={{ width: 130 }} />
-                <col style={{ width: 150 }} />
-                <col style={{ width: 176 }} />
-                <col style={{ width: 104 }} />
-              </colgroup>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
               <thead>
                 <tr>
                   {hlavicky.map((h, i) => {
                     // Čas i Body mají vpravo rezervované místo (šipka / křížek),
                     // tak posuneme jejich nadpis o stejně doleva, ať sedí nad hodnotami.
-                    const extra = i === 6 ? 32 : i === 7 ? 21 : 0
+                    const extra = i === 6 ? (bezBodovani ? 0 : 32) : i === 7 ? 21 : 0
                     return (
                       <th
                         key={h}
@@ -227,7 +221,7 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
               <tbody>
                 {jz.vysledky.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)' }}>
+                    <td colSpan={bezBodovani ? 7 : 8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)' }}>
                       Prázdná jízda
                     </td>
                   </tr>
@@ -264,7 +258,7 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
                     <td style={{ ...tdStyle, fontWeight: 590 }}>{r.prijmeni}</td>
                     <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.jmeno}</td>
                     <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.znacka}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-3)' }}>{r.model}</td>
+                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.model}</td>
                     <td style={{ ...tdStyle }}>
                       <div
                         style={{
@@ -313,13 +307,15 @@ export function Results({ kategorieId, typ, label, extraControls }: ResultsProps
                         <Caret onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)} />
                       </div>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>
-                      <BodyCell
-                        body={r.body}
-                        overridden={r.body_rucni != null}
-                        onCommit={(val) => void setBody(jz.id, r.jezdec_id, val)}
-                      />
-                    </td>
+                    {!bezBodovani && (
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        <BodyCell
+                          body={r.body}
+                          overridden={r.body_rucni != null}
+                          onCommit={(val) => void setBody(jz.id, r.jezdec_id, val)}
+                        />
+                      </td>
+                    )}
                   </Row>
                 ))}
               </tbody>

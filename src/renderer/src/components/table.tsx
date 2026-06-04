@@ -10,7 +10,7 @@ export function Card({ children, style }: { children: ReactNode; style?: CSSProp
         background: 'var(--card)',
         border: '0.5px solid var(--hairline)',
         borderRadius: 'var(--r-card)',
-        overflow: 'hidden',
+        overflow: 'clip',
         boxShadow: 'var(--shadow-card)',
         ...style
       }}
@@ -23,7 +23,7 @@ export function Card({ children, style }: { children: ReactNode; style?: CSSProp
 // Styl hlavičky a buňky (sticky hlavička, jemné linky).
 export const thStyle: CSSProperties = {
   position: 'sticky',
-  top: 0,
+  top: 'var(--thead-top, 0px)' as unknown as number,
   zIndex: 1,
   textAlign: 'left',
   padding: '0 14px',

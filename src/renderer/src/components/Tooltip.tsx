@@ -11,7 +11,9 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
   const show = (): void => {
     const r = ref.current?.getBoundingClientRect()
     if (!r) return
-    const x = Math.min(window.innerWidth - 10, Math.max(10, r.left + r.width / 2))
+    // Clamp tak aby tooltip (max 300px, střed = x) nikdy nepřetekl za okraj.
+    const half = 155
+    const x = Math.min(window.innerWidth - half - 8, Math.max(half + 8, r.left + r.width / 2))
     setPos({ x, y: r.top })
   }
   const hide = (): void => setPos(null)
@@ -35,7 +37,8 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
               transform: 'translate(-50%, -100%)',
               zIndex: 1100,
               pointerEvents: 'none',
-              whiteSpace: 'nowrap',
+              maxWidth: 310,
+              whiteSpace: 'normal',
               background: 'var(--window)',
               color: 'var(--text-1)',
               border: '0.5px solid var(--hairline)',

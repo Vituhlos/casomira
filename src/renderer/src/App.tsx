@@ -66,8 +66,10 @@ function listProFazi(phase: string, sub: SubView): ListKey | null {
     case 'overall':
       return phase
     case 'q1':
+      if (sub === 'res_agg') return 'res_q1_agg'
       return sub === 'res' ? 'res_q1' : 'grid_q1'
     case 'q2':
+      if (sub === 'res_agg') return 'res_q2_agg'
       return sub === 'res' ? 'res_q2' : 'grid_q2'
     case 'q3':
       return sub === 'res' ? 'res_q3' : 'grid_q3'

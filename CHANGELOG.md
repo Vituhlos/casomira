@@ -6,6 +6,48 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.7-beta] – 2026-06-04
+
+### Přidáno
+- **Výsledky po Q1 / Výsledky po Q2** — nová záložka v každém kole Q1/Q2 zobrazující
+  souhrnnou klasifikaci všech jízd: nejlepší čas jezdce, celkové body, aktuální pořadí.
+  Body lze upravit přímo v tabulce (inline editace); × resetuje zpět na automatický výpočet.
+- **Bodová penalizace z jízdy se promítá do agregátu** — pole v agregátové tabulce
+  se zvýrazní, pokud jezdec má v dané sérii penalizaci (odlišná barva + tooltip).
+- **PDF export**: listy `Q1_vysledky_po_Q1.pdf` a `Q2_vysledky_po_Q2.pdf`.
+- **DB migrace krok 10**: tabulka `q_agregat_override` pro ruční přepis bodů na úrovni
+  agregátu (nezávislý na penalizacích jednotlivých jízd).
+- Předpisy RAC Race 2026 přidány do repozitáře (`docs/user/Predpisy-RAC-race-2026.pdf`).
+
+### Opraveno
+- **Bodování DNF/DNS/DQ** — základ penalizace se počítal z počtu jezdců, kteří dojeli
+  (`dojeli.length`), místo celkového počtu startujících. Opraveno na `vstupy.length`
+  dle předpisů 2026 §7: „…jako kdyby všichni jezdci byli klasifikováni." Příklad:
+  8 jezdců, 4 dojedou — DNF dostane body za 8. místo (36 b), ne za 4. místo (40 b).
+- **Dvojitý tooltip u úpravy bodů v agregátu** — na vstupním poli byl `title=` atribut
+  i obálkový `<Tooltip>` zároveň; odstraněn `title=`.
+- **Tooltip přetékající za okraj okna** — při krátkém textu (nebo přiblížení k pravému
+  okraji) se tooltip vyrenderoval mimo okno. Opraveno lepším clampem (±155 px od okraje)
+  a `whiteSpace: normal` + `maxWidth: 310px` na tooltip elementu.
+
+### Změněno
+- **Šotolina → STANDARD ruleset** — kategorie Šotolina nyní funguje se stejnými pravidly,
+  rošty a bodováním jako ostatní RAC Race kategorie. DB migrace krok 11 převede stávající
+  záznamy. Speciální Šotolina pipeline (Finále A/B, los tiebreak, fixní skupiny) dočasně
+  deaktivována; kód zůstává pro zpětnou kompatibilitu.
+- **Sticky záložky Rošt/Výsledky** — pruh s přepínačem záložek zůstane přilepený při
+  scrollování (position: sticky).
+- **Sticky záhlaví tabulek** — záhlaví tabulek se přilepí pod pruh záložek při scrollování
+  (CSS proměnná `--thead-top: 32px`).
+- **Kompaktní karty jízd v Roštu** — každá jízda má max šířku 680 px a je centrovaná;
+  odstraněno zbytečné roztažení na celou šířku při větším okně.
+- **Tabulky Results / Standings / QVysledky**: přechod na `table-layout: auto` — šíře
+  sloupců se přizpůsobí obsahu místo pevných procent.
+- **Sloupec Jízda odstraněn z agregátové tabulky** — číslo jízdy je dostupné jako
+  tooltip při najetí myší na čas.
+- **Sjednocení barev sekundárního textu** — buňky Model, Jméno, Vůz v tabulkách
+  používají `var(--text-2)` místo `var(--text-3)` pro lepší čitelnost.
+
 ## [0.9.6-beta] – 2026-06-03
 
 Předvydání pro ověření na **macOS 26 (Tahoe)**. Instalátory z tagu `v0.9.6-beta` po
@@ -115,7 +157,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...HEAD
+[0.9.7-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...v0.9.7-beta
 [0.9.6-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.5...v0.9.6-beta
 [0.9.5]: https://github.com/Vituhlos/casomira/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/Vituhlos/casomira/compare/v0.9.3...v0.9.4

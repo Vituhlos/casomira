@@ -5,7 +5,7 @@ import { SubTabs } from '../components/SubTabs'
 import { Results } from './Results'
 import { RostGrid } from './RostGrid'
 
-export type SubView = 'rost' | 'res'
+export type SubView = 'rost' | 'res' | 'res_agg'
 
 export function Semifinale({
   kategorieId,
@@ -68,7 +68,7 @@ export function Semifinale({
   }
 
   return (
-    <div className="screen-enter">
+    <div className="screen-enter" style={{ '--thead-top': '32px' } as React.CSSProperties}>
       <SubTabs
         tabs={[
           { id: 'rost', label: 'Rošt' },

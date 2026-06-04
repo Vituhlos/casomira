@@ -18,7 +18,17 @@ export function SubTabs<T extends string>({
   onTab
 }: SubTabsProps<T>): React.JSX.Element {
   return (
-    <div className="no-print" style={{ display: 'flex', padding: '0 22px 6px' }}>
+    <div
+      className="no-print"
+      style={{
+        display: 'flex',
+        padding: '0 22px 6px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        background: 'var(--content-bg)'
+      }}
+    >
       <span
         style={{
           display: 'inline-flex',

@@ -69,10 +69,10 @@ export function spocitejJizdu(
     .filter((v) => v.stav === 'OK' && v.cas_ms !== null)
     .sort((a, b) => (a.cas_ms as number) - (b.cas_ms as number))
 
-  // Základ pro penalizace = body POSLEDNÍHO jezdce S ČASEM (CLAUDE.md §5,
-  // upřesněno): DNF/DNS/DQ se počítají od bodů posledního dojetého, ne od
-  // velikosti jízdy. Když ještě nikdo nedojel, ber 1. místo jako rozumný základ.
-  const bodyZaPosledni = bodyZaPozici(Math.max(1, dojeli.length))
+  // Základ pro penalizace = body za POSLEDNÍ místo, kdyby všichni jezdci dojeli
+  // (§7 předpisů: „kdyby všichni jezdci byli klasifikováni"). Poslední místo =
+  // celkový počet jezdců v jízdě, bez ohledu na to, kolik z nich skutečně dojelo.
+  const bodyZaPosledni = bodyZaPozici(Math.max(1, vstupy.length))
 
   // DNF/DNS/DQ → řadí se ZA platné časy (CLAUDE.md: nejdřív kdo dojel).
   const nedojeli = vstupy
@@ -127,12 +127,7 @@ export function aplikujRucniPoradi(
     lineup.splice(insertAt, 0, jezdecId)
   }
 
-  const okWithTime = lineup.filter((id) => {
-    const stav = stavByJezdec.get(id)
-    const cas = casByJezdec.get(id)
-    return stav === 'OK' && cas !== null && cas !== undefined
-  }).length
-  const bodyZaPosledni = bodyZaPozici(Math.max(1, okWithTime))
+  const bodyZaPosledni = bodyZaPozici(Math.max(1, vysl.length))
 
   const out: JizdaVypocet[] = []
   let okRank = 0

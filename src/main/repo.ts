@@ -4,6 +4,7 @@
 import type {
   ImportCommit,
   ImportPreview,
+  QAgregatRadek,
   ImportResult,
   ImportSheetPreview,
   CelkoveRadek,
@@ -160,7 +161,7 @@ export function createZavod(data: NovyZavod): Zavod {
     for (const k of data.kategorie) {
       const nazev = k.nazev.trim()
       if (!nazev) continue
-      insKat.run(zavodId, nazev, k.ruleset === 'SOTOLINA' ? 'SOTOLINA' : 'STANDARD')
+      insKat.run(zavodId, nazev, 'STANDARD')
     }
     return zavodId
   })()
@@ -183,13 +184,7 @@ function syncKategorie(zavodId: number, pozadovane: { nazev: string; ruleset: Ru
     const key = nazev.toLocaleLowerCase('cs')
     if (videne.has(key)) continue
     videne.add(key)
-    const ruleset =
-      zavod.typ === 'RX'
-        ? 'STANDARD'
-        : k.ruleset === 'SOTOLINA'
-          ? 'SOTOLINA'
-          : 'STANDARD'
-    uniq.push({ nazev, ruleset })
+    uniq.push({ nazev, ruleset: 'STANDARD' })
   }
 
   const stavajici = listKategorie(zavodId)
@@ -642,6 +637,29 @@ function ensureSkupiny(db: Db, kategorieId: number, pocet: number): SkupinaInfo[
   return out
 }
 
+// Vrátí jízdy Q1 pro STANDARD kategorii: pole polí jezdců (v pořadí pozice).
+// Používá se pro Q2 seeding — skupiny z Q1 se zachovají, jen obrátí pořadí.
+function q1JizdyStandard(db: Db, kategorieId: number): Jezdec[][] {
+  const rows = db
+    .prepare(
+      `SELECT jz.cislo AS jizda_cislo, rp.pozice AS pozice, ${JEZDEC_COLS_J}
+       FROM jizda jz
+       JOIN kolo k ON k.id = jz.kolo_id
+       JOIN rost_pozice rp ON rp.jizda_id = jz.id
+       JOIN jezdec j ON j.id = rp.jezdec_id
+       WHERE k.kategorie_id = ? AND k.typ = 'Q1'
+       ORDER BY jz.cislo, rp.pozice`
+    )
+    .all(kategorieId) as (Record<string, unknown> & { jizda_cislo: number })[]
+  const mapa = new Map<number, Jezdec[]>()
+  for (const r of rows) {
+    const c = r.jizda_cislo
+    if (!mapa.has(c)) mapa.set(c, [])
+    mapa.get(c)!.push(jezdecZRadku(r))
+  }
+  return [...mapa.entries()].sort((a, b) => a[0] - b[0]).map(([, jezdci]) => jezdci)
+}
+
 // Kdo je v dané skupině podle Q1 roštu (Q1 určuje, kdo s kým jezdí).
 function jezdciVeSkupineQ1(db: Db, kategorieId: number, skupinaId: number): Jezdec[] {
   const rows = db
@@ -786,8 +804,25 @@ export function navrhniRost(
     sorted = [...jezdci].sort((a, b) => porovnejLos(a, b, true))
     reverseGrouping = false
   } else if (typ === 'Q2') {
-    sorted = [...jezdci].sort((a, b) => porovnejLos(a, b, false))
-    reverseGrouping = false
+    // Q2: zachovat skupiny z Q1, obrátit pořadí jízd i jezdců uvnitř každé skupiny.
+    // (Q1 jízda N → Q2 jízda 1, jezdci v ní v obráceném pořadí.)
+    const q1Skupiny = q1JizdyStandard(db, kategorieId)
+    if (q1Skupiny.length === 0) {
+      return {
+        ok: false,
+        chyba: 'Nejdřív nasaď Q1 rošt.',
+        obsazeno,
+        jizdy: [],
+        ...prazdny
+      }
+    }
+    const reversedGroups = [...q1Skupiny].reverse()
+    const jizdy: RostNavrhJizda[] = reversedGroups.map((skupina, i) => ({
+      cislo: i + 1,
+      jezdci: [...skupina].reverse()
+    }))
+    const h = jizdy.length
+    return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd: h, maxJizd: h }
   } else if (typ === 'Q3') {
     const klas = getKlasifikace(kategorieId, ['Q1', 'Q2'])
     const maData = klas.some((r) => r.celkem !== 0)
@@ -1316,6 +1351,139 @@ export function listUpravaLog(kategorieId: number): UpravaLogRadek[] {
        ORDER BY ul.kdy DESC`
     )
     .all(kategorieId) as UpravaLogRadek[]
+}
+
+/**
+ * Agregované výsledky jednoho kola (Q1 nebo Q2): všichni jezdci ze všech jízd
+ * kola spojeni do jedné tabulky, seřazeni podle času a ohodnoceni jako jedna
+ * velká jízda.
+ *
+ * Body = automat z pořadí + delta bodové penalizace z jízdy (body_rucni z vysledek,
+ * uložené přes setBodovaPenalizace). Override na úrovni agregátu (q_agregat_override)
+ * má přednost před automatem.
+ */
+export function getQAgregat(kategorieId: number, typ: KoloTyp): QAgregatRadek[] {
+  const db = getDb()
+
+  const koloRow = db
+    .prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?')
+    .get(kategorieId, typ) as { id: number } | undefined
+  if (!koloRow) return []
+  const koloId = koloRow.id
+
+  // bodova_pen_delta: součet všech aktivních BODOVA_PENALIZACE zásahů v jízdě
+  // (záporná hodnota = odečet bodů). ZRUSENI zásahy filtrujeme tím, že bereme
+  // jen nejnovější záznam pro daný vysledek_id a typ BODOVA_PENALIZACE — pokud
+  // byl zrušen, body_rucni v vysledku je NULL, takže delta je 0.
+  const rows = db
+    .prepare(
+      `SELECT v.jezdec_id, j.st_cislo, j.prijmeni, j.jmeno, j.znacka, j.model,
+              jz.cislo AS cislo_jizdy,
+              v.namereny_cas_ms AS cas_ms,
+              v.penalizace_ms,
+              v.stav,
+              CASE WHEN v.body_rucni IS NOT NULL
+                   AND EXISTS (SELECT 1 FROM uprava_log ul2
+                               WHERE ul2.vysledek_id = v.id
+                               AND ul2.typ = 'BODOVA_PENALIZACE')
+                   THEN (SELECT ul2.hodnota FROM uprava_log ul2
+                         WHERE ul2.vysledek_id = v.id AND ul2.typ = 'BODOVA_PENALIZACE'
+                         ORDER BY ul2.id DESC LIMIT 1)
+                   ELSE 0
+              END AS bodova_pen_delta
+       FROM vysledek v
+       JOIN jizda jz ON jz.id = v.jizda_id
+       JOIN kolo k ON k.id = jz.kolo_id
+       JOIN jezdec j ON j.id = v.jezdec_id
+       WHERE k.kategorie_id = ? AND k.typ = ?
+       ORDER BY jz.cislo, v.jezdec_id`
+    )
+    .all(kategorieId, typ) as {
+      jezdec_id: number
+      st_cislo: number | null
+      prijmeni: string
+      jmeno: string
+      znacka: string | null
+      model: string | null
+      cislo_jizdy: number
+      cas_ms: number | null
+      penalizace_ms: number
+      stav: Stav
+      bodova_pen_delta: number | null
+    }[]
+
+  if (rows.length === 0) return []
+
+  // Načti overrides pro toto kolo
+  const overrides = db
+    .prepare('SELECT jezdec_id, body_rucni FROM q_agregat_override WHERE kolo_id = ?')
+    .all(koloId) as { jezdec_id: number; body_rucni: number }[]
+  const overrideMap = new Map(overrides.map((o) => [o.jezdec_id, o.body_rucni]))
+
+  const ruleset = rulesetKategorie(db, kategorieId)
+  const { bodyZaPozici, penalizace } = nactiBodovani(db, ruleset)
+
+  const vstupy: JizdaVstup[] = rows.map((r) => ({
+    jezdec_id: r.jezdec_id,
+    cas_ms: r.cas_ms !== null ? r.cas_ms + r.penalizace_ms : null,
+    stav: r.stav
+  }))
+  const vypocty = spocitejJizdu(vstupy, bodyZaPozici, penalizace)
+  const vypMap = new Map(vypocty.map((v) => [v.jezdec_id, v]))
+
+  return rows.map((r) => {
+    const v = vypMap.get(r.jezdec_id)
+    const delta = r.bodova_pen_delta ?? 0
+    const body_auto = v?.body != null ? v.body + delta : null
+    const body_rucni = overrideMap.get(r.jezdec_id) ?? null
+    return {
+      jezdec_id: r.jezdec_id,
+      st_cislo: r.st_cislo,
+      prijmeni: r.prijmeni,
+      jmeno: r.jmeno,
+      znacka: r.znacka,
+      model: r.model,
+      cislo_jizdy: r.cislo_jizdy,
+      cas_ms: r.cas_ms,
+      penalizace_ms: r.penalizace_ms,
+      delta_z_jizdy: delta,
+      stav: r.stav,
+      poradi: v?.poradi ?? null,
+      body_auto,
+      body_rucni,
+      body: body_rucni ?? body_auto
+    }
+  }).sort((a, b) => {
+    if (a.poradi == null && b.poradi == null) return 0
+    if (a.poradi == null) return 1
+    if (b.poradi == null) return -1
+    return a.poradi - b.poradi
+  })
+}
+
+/** Ruční přepis bodů v agregátu (null = zrušit override → návrat k automatu). */
+export function setQAgregatBodyOverride(
+  kategorieId: number,
+  typ: KoloTyp,
+  jezdecId: number,
+  body: number | null
+): QAgregatRadek[] {
+  const db = getDb()
+  const koloRow = db
+    .prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?')
+    .get(kategorieId, typ) as { id: number } | undefined
+  if (!koloRow) throw new Error('Kolo nenalezeno')
+
+  if (body === null) {
+    db.prepare('DELETE FROM q_agregat_override WHERE kolo_id = ? AND jezdec_id = ?')
+      .run(koloRow.id, jezdecId)
+  } else {
+    db.prepare(
+      'INSERT INTO q_agregat_override (kolo_id, jezdec_id, body_rucni) VALUES (?, ?, ?) ' +
+      'ON CONFLICT(kolo_id, jezdec_id) DO UPDATE SET body_rucni = excluded.body_rucni'
+    ).run(koloRow.id, jezdecId, body)
+  }
+  return getQAgregat(kategorieId, typ)
 }
 
 // Klasifikace = součet bodů přes jízdy uvedených kol. Tiebreak závisí na

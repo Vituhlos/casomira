@@ -220,6 +220,7 @@ export function RostGrid({
         style={{
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           gap: 16,
           padding: '0 22px 22px'
         }}
@@ -234,7 +235,9 @@ export function RostGrid({
                 border: '0.5px solid var(--hairline)',
                 borderRadius: 'var(--r-card)',
                 overflow: 'hidden',
-                boxShadow: 'var(--shadow-card)'
+                boxShadow: 'var(--shadow-card)',
+                width: '100%',
+                maxWidth: 680
               }}
             >
               <div
@@ -255,8 +258,8 @@ export function RostGrid({
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <colgroup>
-                  <col style={{ width: 56 }} />
-                  <col style={{ width: 92 }} />
+                  <col style={{ width: 52 }} />
+                  <col style={{ width: 88 }} />
                   <col />
                   <col />
                 </colgroup>
@@ -283,7 +286,7 @@ export function RostGrid({
                           style={{
                             ...tdStyle,
                             height: 38,
-                            color: 'var(--text-3)',
+                            color: 'var(--text-2)',
                             fontVariantNumeric: 'tabular-nums',
                             fontSize: 12.5
                           }}
@@ -311,7 +314,7 @@ export function RostGrid({
                             <span style={{ color: 'var(--text-4)' }}>—</span>
                           )}
                         </td>
-                        <td style={{ ...tdStyle, height: 38, color: 'var(--text-3)' }}>
+                        <td style={{ ...tdStyle, height: 38, color: 'var(--text-2)' }}>
                           {d ? (
                             `${d.znacka} ${d.model}`
                           ) : (

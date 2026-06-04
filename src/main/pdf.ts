@@ -33,6 +33,8 @@ const NADPIS: Record<ListKey, string> = {
   res_q1: 'VÝSLEDKY 1. SÉRIE ROZJÍŽDĚK',
   res_q2: 'VÝSLEDKY 2. SÉRIE ROZJÍŽDĚK',
   res_q3: 'VÝSLEDKY 3. SÉRIE ROZJÍŽDĚK',
+  res_q1_agg: 'VÝSLEDKY PO Q1',
+  res_q2_agg: 'VÝSLEDKY PO Q2',
   class_q2: 'VÝSLEDKY PO DVOU SÉRIÍCH',
   class_q3: 'VÝSLEDKY PO TŘECH SÉRIÍCH',
   sf_rost: 'ROŠTY SEMIFINÁLE',
@@ -56,6 +58,8 @@ const SOUBOR: Record<ListKey, string> = {
   res_q1: 'Q1_vysledky',
   res_q2: 'Q2_vysledky',
   res_q3: 'Q3_vysledky',
+  res_q1_agg: 'Q1_vysledky_po_Q1',
+  res_q2_agg: 'Q2_vysledky_po_Q2',
   class_q2: 'Klasifikace_po_Q2',
   class_q3: 'Klasifikace_po_Q3',
   sf_rost: 'Semifinale_rosty',
@@ -307,6 +311,30 @@ function listVysledky(kolo: VysledekKolo): string {
   )
 }
 
+// Agregované výsledky Q1 / Q2: jedna tabulka, všichni jezdci seřazeni dle času,
+// přidán sloupec Jízda (ze které jízdy čas pochází).
+function listQAgregat(radky: import('../shared/types').QAgregatRadek[]): string {
+  if (radky.length === 0) return '<p>Výsledky zatím nejsou zadané.</p>'
+  const sloupce = [...SPORTOVNI_SLOUPCE, 'Čas', 'B.']
+  const hlava = `<thead><tr>${sloupce
+    .map((h, i) => `<th${i >= 6 ? ' class="num"' : ''}>${h}</th>`)
+    .join('')}</tr></thead>`
+  const tbody = radky
+    .map((r) => {
+      const cas = r.stav !== 'OK' ? r.stav : fmtTime(r.cas_ms != null ? r.cas_ms + r.penalizace_ms : null)
+      return (
+        `<tr><td class="center">${r.poradi != null ? r.poradi + '.' : ''}</td>` +
+        `<td class="num">${esc(r.st_cislo ?? '')}</td>` +
+        `<td>${esc(r.prijmeni)}</td><td>${esc(r.jmeno)}</td>` +
+        `<td>${esc(r.znacka ?? '')}</td><td>${esc(r.model ?? '')}</td>` +
+        `<td class="num">${esc(cas)}</td>` +
+        `<td class="num">${esc(r.body ?? '')}</td></tr>`
+      )
+    })
+    .join('')
+  return `<table>${hlava}<tbody>${tbody}</tbody></table>`
+}
+
 // Klasifikace po sériích (Q1·Q2[·Q3]·Cel.). U Šotoliny přibývá sloupec „Los"
 // (CLAUDE.md §7) — slouží jako tiebreak při shodě bodů.
 function listKlasifikace(kategorieId: number, koloTypy: KoloTyp[], ukazLos: boolean): string {
@@ -407,6 +435,12 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
       break
     case 'res_q3':
       telo = listVysledky(repo.getVysledky(kategorieId, 'Q3'))
+      break
+    case 'res_q1_agg':
+      telo = listQAgregat(repo.getQAgregat(kategorieId, 'Q1'))
+      break
+    case 'res_q2_agg':
+      telo = listQAgregat(repo.getQAgregat(kategorieId, 'Q2'))
       break
     case 'class_q2':
       telo = listKlasifikace(kategorieId, ['Q1', 'Q2'], jeSotolina)

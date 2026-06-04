@@ -141,6 +141,12 @@ export function registerIpc(): void {
     return v
   })
   ipcMain.handle('uprava:list', (_e, kategorieId: number) => repo.listUpravaLog(kategorieId))
+  ipcMain.handle('qagregat:get', (_e, kategorieId: number, typ: KoloTyp) =>
+    repo.getQAgregat(kategorieId, typ)
+  )
+  ipcMain.handle('qagregat:setBody', (_e, kategorieId: number, typ: KoloTyp, jezdecId: number, body: number | null) =>
+    repo.setQAgregatBodyOverride(kategorieId, typ, jezdecId, body)
+  )
   ipcMain.handle('klasifikace:get', (_e, kategorieId: number, koloTypy: KoloTyp[]) =>
     repo.getKlasifikace(kategorieId, koloTypy)
   )

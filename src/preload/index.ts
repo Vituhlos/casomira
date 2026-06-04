@@ -59,6 +59,10 @@ const api: CasomiraApi = {
   zrusPenalizaci: (arg: ZrusPenalizaciArg) =>
     ipcRenderer.invoke('vysledky:zrusPenalizaci', arg),
   listUpravaLog: (kategorieId: number) => ipcRenderer.invoke('uprava:list', kategorieId),
+  getQAgregat: (kategorieId: number, typ: KoloTyp) =>
+    ipcRenderer.invoke('qagregat:get', kategorieId, typ),
+  setQAgregatBodyOverride: (kategorieId: number, typ: KoloTyp, jezdecId: number, body: number | null) =>
+    ipcRenderer.invoke('qagregat:setBody', kategorieId, typ, jezdecId, body),
   getKlasifikace: (kategorieId: number, koloTypy: KoloTyp[]) =>
     ipcRenderer.invoke('klasifikace:get', kategorieId, koloTypy),
   getZaverStav: (kategorieId: number) => ipcRenderer.invoke('zaver:stav', kategorieId),

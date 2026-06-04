@@ -3,7 +3,7 @@ import { SCHEMA_SQL } from './schema'
 
 // Číslo poslední migrace. Každý krok zvýší SCHEMA_VERSION o 1.
 // user_version se nastavuje ihned po každém kroku — restart pokračuje od správného místa.
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 11
 const LATEST = SCHEMA_VERSION
 
 function step(db: Database.Database, targetVersion: number, fn: () => void): void {
@@ -136,6 +136,36 @@ export function migrate(db: Database.Database): void {
       db.exec('CREATE INDEX IF NOT EXISTS ix_mereni_timer_zavod ON mereni_timer(zavod_id)')
     })
     version = 9
+  }
+
+  if (version < 10) {
+    // Override bodů na úrovni agregátu Q1/Q2 (nová tabulka, CLAUDE.md §13/fáze2).
+    // Uchová ruční přepis bodů pro celý agregát — nezávislý na vysledek.body_rucni
+    // v jízdě (to zůstává pro penalizace ředitele na úrovni jízdy).
+    step(db, 10, () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS q_agregat_override (
+          id        INTEGER PRIMARY KEY,
+          kolo_id   INTEGER NOT NULL REFERENCES kolo(id) ON DELETE CASCADE,
+          jezdec_id INTEGER NOT NULL REFERENCES jezdec(id) ON DELETE CASCADE,
+          body_rucni INTEGER NOT NULL,
+          UNIQUE(kolo_id, jezdec_id)
+        )
+      `)
+      db.exec('CREATE INDEX IF NOT EXISTS ix_qagg_kolo ON q_agregat_override(kolo_id)')
+    })
+    version = 10
+  }
+
+  if (version < 11) {
+    // Šotolina přechází na STANDARD ruleset — stejná pravidla jako ostatní kategorie
+    // RAC Race (bodování 50/45/42..., penalizace offset, pipeline SF/Finále).
+    // Existující SOTOLINA kategorie konvertujeme; kód pro SOTOLINA pipeline zůstává
+    // v repo.ts pro zpětnou kompatibilitu, ale nové kategorie SOTOLINA nezíská.
+    step(db, 11, () => {
+      db.exec(`UPDATE kategorie SET ruleset = 'STANDARD' WHERE ruleset = 'SOTOLINA'`)
+    })
+    version = 11
   }
 
   // Pojistka: synchronizuj user_version s LATEST pro případ, že bylo přidáno

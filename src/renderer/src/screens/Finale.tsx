@@ -39,7 +39,7 @@ export function Finale({
   )
 
   return (
-    <div className="screen-enter">
+    <div className="screen-enter" style={{ '--thead-top': '32px' } as React.CSSProperties}>
       <SubTabs
         tabs={[
           { id: 'rost', label: 'Rošt' },
