@@ -2,8 +2,8 @@
 // Odpovídají datovému modelu z CLAUDE.md §11.
 
 export type RaceType = 'RAC' | 'RX'
-export type Ruleset = 'STANDARD' | 'SOTOLINA'
-export type KoloTyp = 'Q1' | 'Q2' | 'Q3' | 'SF' | 'F' | 'F_A' | 'F_B'
+export type Ruleset = 'STANDARD'
+export type KoloTyp = 'Q1' | 'Q2' | 'Q3' | 'SF' | 'F'
 export type Stav = 'OK' | 'DNF' | 'DNS' | 'DQ'
 
 export interface Zavod {
@@ -179,33 +179,19 @@ export interface CelkoveRadek {
   prijmeni: string
   jmeno: string
   pq: number | null // pořadí po Q3
-  // STANDARD (RAC/RX):
   psf: number | null // pořadí v semifinále
   pf: number | null // pořadí ve finále
-  // SOTOLINA — pořadí ve Finále A / Finále B (jinde null/undefined):
-  pfa?: number | null
-  pfb?: number | null
   bq: number // body z kvalifikace (po Q3)
 }
 
 /** Stav závěru závodu pro kategorii (semifinále / finále). */
 export interface ZaverStav {
-  /** Ruleset kategorie — UI podle něj rozhoduje, zda jet SF/Finále, nebo Finále A/B. */
-  ruleset: Ruleset
   kvalifikovani: number // počet kvalifikovaných jezdců
-  // STANDARD (RAC/RX) — semifinále/finále:
   prahSF: number // od kolika se koná SF (12)
   sfSeKona: boolean // kvalifikovaných >= prahSF
   sfHotovo: boolean // SF rošt je vygenerován
   finaleHotovo: boolean // finále je nasazeno
   finaleVelikost: number // 8 nebo 10
-  // SOTOLINA — Finále A / Finále B (CLAUDE.md §8):
-  finaleAHotovo?: boolean
-  finaleBHotovo?: boolean
-  /** Počet jezdců, kteří spadnou do Finále A (max 10). */
-  pocetDoA?: number
-  /** Počet jezdců, kteří spadnou do Finále B (od 11. místa). */
-  pocetDoB?: number
 }
 
 /** Jeden řádek výsledku jízdy (s vypočteným pořadím a body). */
@@ -412,11 +398,6 @@ export type ListKey =
   | 'sf_res'
   | 'final_rost'
   | 'final_res'
-  // SOTOLINA — místo SF jedou dvě finále (B před A):
-  | 'final_b_rost'
-  | 'final_b_res'
-  | 'final_a_rost'
-  | 'final_a_res'
   | 'overall'
 
 export interface ExportPdfResult {
@@ -504,9 +485,7 @@ export interface CasomiraApi {
   /** Navrhne nasazení finále (z postupujících SF, nebo z Q3 když SF nebylo). */
   navrhFinale(kategorieId: number): Promise<RostNavrh>
   /** Šotolina — návrh Finále A (10 nejlepších po Q3; pokud B hotovo, 6 z Q3 + 4 z B). */
-  navrhFinaleA(kategorieId: number): Promise<RostNavrh>
   /** Šotolina — návrh Finále B (od 11. místa po Q3, max 4 jezdci postupují do A). */
-  navrhFinaleB(kategorieId: number): Promise<RostNavrh>
   /** Celkové výsledky závodu (pořadí řízené finále, body z kvalifikace). */
   getCelkove(kategorieId: number): Promise<CelkoveRadek[]>
   // PDF export

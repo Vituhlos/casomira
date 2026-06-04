@@ -41,10 +41,6 @@ const NADPIS: Record<ListKey, string> = {
   sf_res: 'VÝSLEDKY SEMIFINÁLE',
   final_rost: 'ROŠTY FINÁLE',
   final_res: 'VÝSLEDKY FINÁLE',
-  final_b_rost: 'ROŠT FINÁLE B',
-  final_b_res: 'VÝSLEDKY FINÁLE B',
-  final_a_rost: 'ROŠT FINÁLE A',
-  final_a_res: 'VÝSLEDKY FINÁLE A',
   overall: 'CELKOVÉ VÝSLEDKY'
 }
 
@@ -66,10 +62,6 @@ const SOUBOR: Record<ListKey, string> = {
   sf_res: 'Semifinale_vysledky',
   final_rost: 'Finale_rosty',
   final_res: 'Finale_vysledky',
-  final_b_rost: 'Finale_B_rost',
-  final_b_res: 'Finale_B_vysledky',
-  final_a_rost: 'Finale_A_rost',
-  final_a_res: 'Finale_A_vysledky',
   overall: 'Celkove_vysledky'
 }
 
@@ -417,7 +409,6 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
   if (!zavod) throw new Error('Závod nenalezen.')
 
   const nadpis = NADPIS[listKey]
-  const jeSotolina = kat.ruleset === 'SOTOLINA'
   let telo: string
   let pocet: number | undefined
 
@@ -453,10 +444,10 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
       telo = listQAgregat(repo.getQAgregat(kategorieId, 'Q2'))
       break
     case 'class_q2':
-      telo = listKlasifikace(kategorieId, ['Q1', 'Q2'], jeSotolina)
+      telo = listKlasifikace(kategorieId, ['Q1', 'Q2'], false)
       break
     case 'class_q3':
-      telo = listKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'], jeSotolina)
+      telo = listKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'], false)
       break
     case 'sf_rost':
       telo = listRosty(repo.getRosty(kategorieId, 'SF'), false)
@@ -471,18 +462,6 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
     }
     case 'final_res':
       telo = listVysledky(repo.getVysledky(kategorieId, 'F'))
-      break
-    case 'final_b_rost':
-      telo = listRosty(repo.getRosty(kategorieId, 'F_B'), false)
-      break
-    case 'final_b_res':
-      telo = listVysledky(repo.getVysledky(kategorieId, 'F_B'))
-      break
-    case 'final_a_rost':
-      telo = listRosty(repo.getRosty(kategorieId, 'F_A'), false)
-      break
-    case 'final_a_res':
-      telo = listVysledky(repo.getVysledky(kategorieId, 'F_A'))
       break
     case 'overall':
       telo = listCelkove(kategorieId)
@@ -638,24 +617,6 @@ const PORADI_STANDARD: ListKey[] = [
   'overall'
 ]
 
-// Pipeline pro Šotolinu (CLAUDE.md §3c): bez semifinále, místo Finále jedou
-// Finále B → Finále A. „Klasifikace po Q2" se exportuje vždy (nese sloupec Los).
-const PORADI_SOTOLINA: ListKey[] = [
-  'start',
-  'grid_q1',
-  'res_q1',
-  'grid_q2',
-  'res_q2',
-  'class_q2',
-  'grid_q3',
-  'res_q3',
-  'class_q3',
-  'final_b_rost',
-  'final_b_res',
-  'final_a_rost',
-  'final_a_res',
-  'overall'
-]
 
 export async function exportVse(
   parentWin: BrowserWindow | null,
@@ -674,25 +635,11 @@ export async function exportVse(
         const kat = repo.getKategorieById(katId)
         const zavod = kat ? repo.getZavodById(kat.zavod_id) : null
         const jeRX = zavod?.typ === 'RX'
-        const jeSotolina = kat?.ruleset === 'SOTOLINA'
         const stav = repo.getZaverStav(katId)
 
-        // Pipeline + skipy podle pravidel:
-        //   STANDARD: RX vynechává class_q2; SF jen když se koná.
-        //   SOTOLINA: vždy class_q2 (kvůli sloupci Los); F-B jen pokud > 10 kvalifikovaných.
-        const poradi = jeSotolina ? PORADI_SOTOLINA : PORADI_STANDARD
-        for (const key of poradi) {
-          if (jeSotolina) {
-            if ((key === 'final_b_rost' || key === 'final_b_res') && (stav.pocetDoB ?? 0) === 0) {
-              continue
-            }
-            if ((key === 'final_a_rost' || key === 'final_a_res') && (stav.pocetDoA ?? 0) === 0) {
-              continue
-            }
-          } else {
-            if (jeRX && key === 'class_q2') continue
-            if ((key === 'sf_rost' || key === 'sf_res') && !stav.sfSeKona) continue
-          }
+        for (const key of PORADI_STANDARD) {
+          if (jeRX && key === 'class_q2') continue
+          if ((key === 'sf_rost' || key === 'sf_res') && !stav.sfSeKona) continue
           const s = sestav(katId, key, logo)
           const slozka = cilovaSlozka(root, s.zavodNazev, s.katNazev)
           await mkdir(slozka, { recursive: true })

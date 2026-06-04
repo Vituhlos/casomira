@@ -45,7 +45,6 @@ import { parseSheets } from './excel'
 import { aplikujRucniPoradi, spocitejJizdu, tiebreakPerKolo, type JizdaVstup, type Penalizace } from './scoring'
 import {
   celkovePoradi,
-  celkovePoradiSotolina,
   jeKvalifikovan,
   nasazFinaleZeSF,
   nasazSF,
@@ -418,7 +417,7 @@ const JEZDEC_COLS_J =
 const MAX_NA_JIZDU = 8
 
 function koloPoradi(typ: KoloTyp): number {
-  return { Q1: 1, Q2: 2, Q3: 3, SF: 4, F: 5, F_B: 5, F_A: 6 }[typ]
+  return { Q1: 1, Q2: 2, Q3: 3, SF: 4, F: 5 }[typ] ?? 5
 }
 
 function jezdecZRadku(r: Record<string, unknown>): Jezdec {
@@ -485,7 +484,7 @@ export function getRosty(kategorieId: number, typ: KoloTyp): RostKolo {
 
   // Kolik pozic ukázat na jízdu: Q/SF mají strop 8, finále podle nastavené
   // velikosti finále (8 nebo 10) — ať jsou u finále o 10 vidět i pozice 9 a 10.
-  const jeFinale = typ === 'F' || typ === 'F_A' || typ === 'F_B'
+  const jeFinale = typ === 'F'
   const cap = jeFinale
     ? (
         db.prepare('SELECT finale_velikost FROM kategorie WHERE id = ?').get(kategorieId) as {
@@ -677,101 +676,7 @@ function jezdciVeSkupineQ1(db: Db, kategorieId: number, skupinaId: number): Jezd
   return rows.map(jezdecZRadku)
 }
 
-// Návrh roštu pro kategorii s ruleset SOTOLINA. Jede ve fixních skupinách.
-function navrhniRostSotolina(
-  db: Db,
-  kategorieId: number,
-  typ: KoloTyp,
-  jezdci: Jezdec[],
-  obsazeno: boolean,
-  pozadovanyPocet?: number
-): RostNavrh {
-  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
-  const n = jezdci.length
-
-  if (typ === 'Q1') {
-    // Q1 dle losu (bezlosí na konec). Bloky = budoucí skupiny — v DB se
-    // skupiny vytvoří/propojí až při zápisu roštu.
-    const sorted = [...jezdci].sort((a, b) => porovnejLos(a, b, true))
-    const minJizd = Math.max(1, Math.ceil(n / MAX_NA_JIZDU))
-    const maxJizd = Math.max(1, n)
-    const h = Math.min(maxJizd, Math.max(minJizd, pozadovanyPocet ?? pocetJizd(n)))
-    const sizes = rovneVelikosti(n, h)
-    const bloky: Jezdec[][] = []
-    let idx = 0
-    for (const s of sizes) {
-      bloky.push(sorted.slice(idx, idx + s))
-      idx += s
-    }
-    const jizdy: RostNavrhJizda[] = bloky.map((b, i) => ({ cislo: i + 1, jezdci: b }))
-    return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd, maxJizd }
-  }
-
-  if (typ !== 'Q2' && typ !== 'Q3') {
-    return { ok: false, chyba: 'Generování zatím jen pro Q1–Q3.', obsazeno, jizdy: [], ...prazdny }
-  }
-
-  // Q2/Q3 vyžadují nasazené Q1 (z něj vznikly skupiny).
-  const skupiny = listSkupiny(db, kategorieId)
-  if (skupiny.length === 0) {
-    return {
-      ok: false,
-      chyba: 'Nejdřív nasaď Q1 — Šotolina jezdí ve fixních skupinách (Q1 je tvoří).',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-  const podleSkupin = new Map<number, Jezdec[]>()
-  for (const s of skupiny) podleSkupin.set(s.id, jezdciVeSkupineQ1(db, kategorieId, s.id))
-  const maZasazene = [...podleSkupin.values()].some((arr) => arr.length > 0)
-  if (!maZasazene) {
-    return {
-      ok: false,
-      chyba: 'Q1 rošt je prázdný — nejdřív rozsaď jezdce do skupin v Q1.',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-
-  const h = skupiny.length
-
-  if (typ === 'Q2') {
-    // V rámci skupiny obrácený los (jako STANDARD Q2, jen po skupinách).
-    const jizdy: RostNavrhJizda[] = skupiny.map((s, i) => ({
-      cislo: i + 1,
-      jezdci: [...(podleSkupin.get(s.id) ?? [])].sort((a, b) => porovnejLos(a, b, false))
-    }))
-    return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd: h, maxJizd: h }
-  }
-
-  // typ === 'Q3': v rámci skupiny dle součtu bodů Q1+Q2 (sestupně).
-  const klas = getKlasifikace(kategorieId, ['Q1', 'Q2'])
-  const body = new Map(klas.map((r) => [r.jezdec_id, r.celkem]))
-  const maData = [...body.values()].some((b) => b !== 0)
-  if (!maData) {
-    return {
-      ok: false,
-      chyba: 'Nejdřív zadej výsledky Q1 a Q2 — klasifikace po Q2 je zatím prázdná.',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-  const jizdy: RostNavrhJizda[] = skupiny.map((s, i) => {
-    const sorted = [...(podleSkupin.get(s.id) ?? [])].sort((a, b) => {
-      const ba = body.get(a.id) ?? 0
-      const bb = body.get(b.id) ?? 0
-      if (ba !== bb) return bb - ba
-      return porovnejLos(a, b, true)
-    })
-    return { cislo: i + 1, jezdci: sorted }
-  })
-  return { ok: true, chyba: null, obsazeno, jizdy, pocetJizd: h, minJizd: h, maxJizd: h }
-}
-
-// Navrhne rošt podle pravidel §6 (RAC Race / RX Cup / Šotolina).
+// Navrhne rošt podle pravidel §6 (RAC Race / RX Cup).
 // Bez zápisu — vrací jen náhled.
 export function navrhniRost(
   kategorieId: number,
@@ -791,11 +696,6 @@ export function navrhniRost(
     }
   }
   const obsazeno = rostObsazen(db, kategorieId, typ)
-
-  // Šotolinová kategorie má vlastní seeding ve fixních skupinách.
-  if (rulesetKategorie(db, kategorieId) === 'SOTOLINA') {
-    return navrhniRostSotolina(db, kategorieId, typ, jezdci, obsazeno, pozadovanyPocet)
-  }
 
   // 1) Seřazení podle kritéria daného kolem.
   let sorted: Jezdec[]
@@ -876,14 +776,10 @@ export function navrhniRost(
 
 // Zapíše vygenerovaný rošt: srovná počet jízd na požadovaný, vymaže staré
 // rozsazení a uloží nové. (Počet jízd si tak operátor může ručně nastavit.)
-// Pro Šotolinu navíc propojí jízdy Q1–Q3 s fixními skupinami (A, B, C…).
 export function zapisRost(kategorieId: number, typ: KoloTyp, jizdy: RostZapisJizda[]): RostKolo {
   const db = getDb()
   const koloId = ensureKolo(db, kategorieId, typ)
   const potreba = Math.max(1, jizdy.length)
-  const ruleset = rulesetKategorie(db, kategorieId)
-  const propojSkupiny =
-    ruleset === 'SOTOLINA' && (typ === 'Q1' || typ === 'Q2' || typ === 'Q3')
 
   db.transaction(() => {
     const mam = (
@@ -906,16 +802,6 @@ export function zapisRost(kategorieId: number, typ: KoloTyp, jizdy: RostZapisJiz
       if (jizdaId === undefined) continue
       // finále má až 10 míst v jedné jízdě, proto neořezáváme na 8
       jz.jezdecIds.slice(0, 16).forEach((jid, i) => insP.run(jizdaId, i + 1, jid))
-    }
-
-    // Šotolina: propojit jízdy se skupinami (fixní skupiny napříč Q1–Q3).
-    // Jízda 1 ↔ skupina A, jízda 2 ↔ skupina B, … Pořadí jízd dle čísla.
-    if (propojSkupiny) {
-      const skupiny = ensureSkupiny(db, kategorieId, jizdyDb.length)
-      const upd = db.prepare('UPDATE jizda SET skupina_id = ? WHERE id = ?')
-      jizdyDb.forEach((jz, i) => {
-        if (i < skupiny.length) upd.run(skupiny[i].id, jz.id)
-      })
     }
   })()
 
@@ -1487,14 +1373,11 @@ export function setQAgregatBodyOverride(
   return getQAgregat(kategorieId, typ)
 }
 
-// Klasifikace = součet bodů přes jízdy uvedených kol. Tiebreak závisí na
-// ruleset kategorie (CLAUDE.md §7):
-//   STANDARD (RAC / RX): lepší (vyšší) výsledek v jakékoli jízdě.
-//   SOTOLINA:            pouze los do 1. jízdy (nižší los = lepší pořadí).
+// Klasifikace = součet bodů přes jízdy uvedených kol. Tiebreak: lepší (vyšší)
+// výsledek v jakékoli jízdě (RAC / RX — CLAUDE.md §7).
 export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): KlasifikaceRadek[] {
   if (koloTypy.length === 0) return []
   const db = getDb()
-  const ruleset = rulesetKategorie(db, kategorieId)
   const ph = koloTypy.map(() => '?').join(',')
   const rows = db
     .prepare(
@@ -1542,9 +1425,7 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
 
   list.sort((a, b) => {
     if (a.celkem !== b.celkem) return b.celkem - a.celkem
-    return ruleset === 'SOTOLINA'
-      ? tiebreakLos(a.los, b.los)
-      : tiebreakPerKolo(a.perKolo, b.perKolo, koloTypy)
+    return tiebreakPerKolo(a.perKolo, b.perKolo, koloTypy)
   })
 
   return list.map((r, i) => ({
@@ -1559,14 +1440,6 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
   }))
 }
 
-
-// SOTOLINA tiebreak: jen los do 1. jízdy (nižší los = lepší pozice na startu
-// Q1 = výš v klasifikaci). Bezlosí spadnou až za jezdce s losem.
-function tiebreakLos(a: number | null, b: number | null): number {
-  const va = a ?? Number.POSITIVE_INFINITY
-  const vb = b ?? Number.POSITIVE_INFINITY
-  return va - vb
-}
 
 // =====================================================================
 // Závěr závodu — semifinále
@@ -1593,13 +1466,8 @@ function kvalifikovaniPoradi(db: Db, kategorieId: number): number[] {
     .map((r) => r.jezdec_id)
 }
 
-// Šotolinová finálová pravidla (CLAUDE.md §8).
-const SOTOLINA_VELIKOST_A = 10
-const SOTOLINA_POSTUP_Z_B = 4
-
 export function getZaverStav(kategorieId: number): ZaverStav {
   const db = getDb()
-  const ruleset = rulesetKategorie(db, kategorieId)
   const kval = kvalifikovaniPoradi(db, kategorieId)
   const finaleVelikost = (
     db.prepare('SELECT finale_velikost FROM kategorie WHERE id = ?').get(kategorieId) as {
@@ -1617,28 +1485,7 @@ export function getZaverStav(kategorieId: number): ZaverStav {
     }).n > 0
   }
 
-  if (ruleset === 'SOTOLINA') {
-    // Šotolina nemá semifinále — má Finále A (10 nejlepších po Q3) a Finále B
-    // (od 11. místa po Q3). Velikost finále je u Šotoliny fixní (A = 10).
-    const pocetDoA = Math.min(SOTOLINA_VELIKOST_A, kval.length)
-    const pocetDoB = Math.max(0, kval.length - SOTOLINA_VELIKOST_A)
-    return {
-      ruleset,
-      kvalifikovani: kval.length,
-      prahSF: 0,
-      sfSeKona: false,
-      sfHotovo: false,
-      finaleHotovo: maJizdy('F_A'), // pro kompatibilitu (zda je hlavní finále hotové)
-      finaleVelikost: SOTOLINA_VELIKOST_A,
-      finaleAHotovo: maJizdy('F_A'),
-      finaleBHotovo: maJizdy('F_B'),
-      pocetDoA,
-      pocetDoB
-    }
-  }
-
   return {
-    ruleset,
     kvalifikovani: kval.length,
     prahSF: PRAH_SF,
     sfSeKona: kval.length >= PRAH_SF,
@@ -1764,143 +1611,9 @@ export function navrhFinale(kategorieId: number): RostNavrh {
   return jizda(kval.slice(0, N), kval.slice(N))
 }
 
-// ---------------------------------------------------------------------
-// Šotolina — Finále A / Finále B (CLAUDE.md §3c, §8)
-// ---------------------------------------------------------------------
-
-// Vrátí pořadí jezdců v dané jízdě (řazení dle poradi). Null = bez pořadí.
-function poradiJednoJizda(
-  db: Db,
-  kategorieId: number,
-  typ: KoloTyp
-): { jezdec_id: number; poradi: number | null }[] {
-  const k = db.prepare('SELECT id FROM kolo WHERE kategorie_id = ? AND typ = ?').get(
-    kategorieId,
-    typ
-  ) as { id: number } | undefined
-  if (!k) return []
-  const jz = db.prepare('SELECT id FROM jizda WHERE kolo_id = ? ORDER BY cislo LIMIT 1').get(
-    k.id
-  ) as { id: number } | undefined
-  if (!jz) return []
-  return db
-    .prepare(
-      'SELECT jezdec_id, poradi FROM vysledek WHERE jizda_id = ? ORDER BY (poradi IS NULL), poradi'
-    )
-    .all(jz.id) as { jezdec_id: number; poradi: number | null }[]
-}
-
-// Návrh Finále B (od 11. místa po Q3). Jen pro SOTOLINA. Max 10 jezdců/jízda.
-export function navrhFinaleB(kategorieId: number): RostNavrh {
-  const db = getDb()
-  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
-  const obsazeno = rostObsazen(db, kategorieId, 'F_B')
-
-  if (rulesetKategorie(db, kategorieId) !== 'SOTOLINA') {
-    return {
-      ok: false,
-      chyba: 'Finále B se jede jen v Šotolině.',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-
-  const kval = kvalifikovaniPoradi(db, kategorieId)
-  if (kval.length === 0) {
-    return {
-      ok: false,
-      chyba: 'Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-  const doB = kval.slice(SOTOLINA_VELIKOST_A) // pozice 11+ po Q3
-  if (doB.length === 0) {
-    return {
-      ok: false,
-      chyba: `Méně než ${SOTOLINA_VELIKOST_A + 1} kvalifikovaných — Finále B se nekoná. Jeď rovnou Finále A.`,
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-
-  const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
-  return {
-    ok: true,
-    chyba: null,
-    obsazeno,
-    jizdy: [{ cislo: 1, jezdci: doB.map((id) => sel.get(id) as Jezdec) }],
-    pocetJizd: 1,
-    minJizd: 1,
-    maxJizd: 1
-  }
-}
-
-// Návrh Finále A (10 nejlepších po Q3). Pokud je B hotové a má výsledky,
-// poslední 4 pozice se nahradí 4 nejlepšími z Finále B (postup z B).
-export function navrhFinaleA(kategorieId: number): RostNavrh {
-  const db = getDb()
-  const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
-  const obsazeno = rostObsazen(db, kategorieId, 'F_A')
-
-  if (rulesetKategorie(db, kategorieId) !== 'SOTOLINA') {
-    return {
-      ok: false,
-      chyba: 'Toto Finále A se používá jen v Šotolině.',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-
-  const kval = kvalifikovaniPoradi(db, kategorieId)
-  if (kval.length === 0) {
-    return {
-      ok: false,
-      chyba: 'Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.',
-      obsazeno,
-      jizdy: [],
-      ...prazdny
-    }
-  }
-
-  // Default: 10 nejlepších po Q3 (méně, pokud je málo kvalifikovaných).
-  const top10 = kval.slice(0, SOTOLINA_VELIKOST_A)
-  let finalisteA = top10
-
-  // Pokud B existuje a má výsledky, posledních 4 z A vyměníme za 4 nejlepší z B.
-  const fbRes = poradiJednoJizda(db, kategorieId, 'F_B').filter((r) => r.poradi !== null)
-  if (fbRes.length > 0 && top10.length === SOTOLINA_VELIKOST_A) {
-    const postup = fbRes
-      .slice(0, SOTOLINA_POSTUP_Z_B)
-      .map((r) => r.jezdec_id)
-      .filter((id) => !top10.includes(id))
-    if (postup.length > 0) {
-      const zachovej = top10.slice(0, SOTOLINA_VELIKOST_A - postup.length)
-      finalisteA = [...zachovej, ...postup]
-    }
-  }
-
-  const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
-  return {
-    ok: true,
-    chyba: null,
-    obsazeno,
-    jizdy: [{ cislo: 1, jezdci: finalisteA.map((id) => sel.get(id) as Jezdec) }],
-    pocetJizd: 1,
-    minJizd: 1,
-    maxJizd: 1
-  }
-}
-
 // Celkové výsledky (§9). Pořadí řídí finále, body se nepřičítají (BQ = body po Q3).
-// Pro SOTOLINA: pořadí dle Finále A → nepostupující z B → zbytek z Klasifikace po Q3.
 export function getCelkove(kategorieId: number): CelkoveRadek[] {
   const db = getDb()
-  const ruleset = rulesetKategorie(db, kategorieId)
   const klas = getKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'])
 
   // Pořadí jezdců v daném kole (jezdec_id → poradi), jen pokud kolo existuje.
@@ -1918,38 +1631,6 @@ export function getCelkove(kategorieId: number): CelkoveRadek[] {
       .all(k.id) as { jezdec_id: number; poradi: number | null }[]
     for (const r of rows) if (r.poradi !== null) m.set(r.jezdec_id, r.poradi)
     return m
-  }
-
-  if (ruleset === 'SOTOLINA') {
-    const pfaMap = poradiKola('F_A')
-    const pfbMap = poradiKola('F_B')
-    const vstupy = klas.map((r, i) => ({
-      jezdec_id: r.jezdec_id,
-      pq: i + 1,
-      pfa: pfaMap.get(r.jezdec_id) ?? null,
-      pfb: pfbMap.get(r.jezdec_id) ?? null,
-      bq: r.celkem
-    }))
-    const info = new Map(klas.map((r) => [r.jezdec_id, r]))
-    const byId = new Map(vstupy.map((v) => [v.jezdec_id, v]))
-
-    return celkovePoradiSotolina(vstupy).map((id, i) => {
-      const v = byId.get(id)!
-      const j = info.get(id)!
-      return {
-        poradi: i + 1,
-        jezdec_id: id,
-        st_cislo: j.st_cislo,
-        prijmeni: j.prijmeni,
-        jmeno: j.jmeno,
-        pq: v.pq,
-        psf: null,
-        pf: null,
-        pfa: v.pfa,
-        pfb: v.pfb,
-        bq: v.bq
-      }
-    })
   }
 
   // STANDARD (RAC / RX)

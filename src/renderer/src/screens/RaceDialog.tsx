@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Kategorie, RaceType, Ruleset, Zavod } from '@shared/types'
+import type { Kategorie, RaceType, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn, DevBadge } from '../components/ui'
 import { VYCHOZI_KATEGORIE } from '../data/raceDefaults'
@@ -11,16 +11,9 @@ function dnesISO(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-const SOTOLINA_NAZEV = 'Šotolina'
-
 function chipsProTyp(typ: RaceType): string[] {
   if (typ === 'RX') return VYCHOZI_KATEGORIE.RX
-  return [...VYCHOZI_KATEGORIE.RAC, SOTOLINA_NAZEV]
-}
-
-function rulesetPro(nazev: string, typ: RaceType): Ruleset {
-  if (typ === 'RX') return 'STANDARD'
-  return nazev === SOTOLINA_NAZEV ? 'SOTOLINA' : 'STANDARD'
+  return [...VYCHOZI_KATEGORIE.RAC, 'Šotolina']
 }
 
 function sjednotDostupne(typ: RaceType, nazvyZKategorie: string[]): string[] {
@@ -101,7 +94,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
     setConfirmOdebrani(null)
     setUklada(true)
     try {
-      const kategorie = vybraneNazvy.map((n) => ({ nazev: n, ruleset: rulesetPro(n, typ) }))
+      const kategorie = vybraneNazvy.map((n) => ({ nazev: n, ruleset: 'STANDARD' as const }))
       if (mode === 'edit' && zavod) {
         const z = await window.api.updateZavod({ id: zavod.id, nazev, datum, misto, kategorie })
         onSaved(z)
@@ -295,13 +288,9 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
           )}
           <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
             Nabídka je dle typu závodu — klikni na kategorie, které chceš.{' '}
-            {typ === 'RAC' ? (
+            {typ === 'RAC' ? null : (
               <>
-                <b>Šotolina</b> jede dle svých pravidel (body 14→1, finále A/B).{' '}
-              </>
-            ) : (
-              <>
-                <b>RX Cup</b> nemá šotolinové kategorie.{' '}
+                <b>RX Cup</b> nemá kategorii Šotolina.{' '}
               </>
             )}
             Vlastní kategorii přidáš polem výše.

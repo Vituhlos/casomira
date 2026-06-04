@@ -158,8 +158,6 @@ export function registerIpc(): void {
   )
   ipcMain.handle('zaver:navrhSF', (_e, kategorieId: number) => repo.navrhSF(kategorieId))
   ipcMain.handle('zaver:navrhFinale', (_e, kategorieId: number) => repo.navrhFinale(kategorieId))
-  ipcMain.handle('zaver:navrhFinaleA', (_e, kategorieId: number) => repo.navrhFinaleA(kategorieId))
-  ipcMain.handle('zaver:navrhFinaleB', (_e, kategorieId: number) => repo.navrhFinaleB(kategorieId))
   ipcMain.handle('zaver:celkove', (_e, kategorieId: number) => repo.getCelkove(kategorieId))
 
   // PDF export jednoho listu. saveAs=false → automaticky do struktury složek;

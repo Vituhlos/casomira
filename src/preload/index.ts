@@ -70,8 +70,6 @@ const api: CasomiraApi = {
     ipcRenderer.invoke('zaver:finaleVelikost', kategorieId, velikost),
   navrhSF: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhSF', kategorieId),
   navrhFinale: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhFinale', kategorieId),
-  navrhFinaleA: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhFinaleA', kategorieId),
-  navrhFinaleB: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhFinaleB', kategorieId),
   getCelkove: (kategorieId: number) => ipcRenderer.invoke('zaver:celkove', kategorieId),
   exportPdf: (kategorieId: number, listKey: ListKey, saveAs?: boolean) =>
     ipcRenderer.invoke('pdf:export', kategorieId, listKey, saveAs),

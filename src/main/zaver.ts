@@ -1,9 +1,7 @@
 // zaver.ts — ČISTÁ logika závěru závodu (kvalifikace, nasazení SF/finále,
 // celkové pořadí). Žádná databáze — repo dodá data a tyto funkce zavolá.
 //
-// Zatím varianta RAC Race. Pro RX Cup / Šotolinu (finále A/B) se sem doplní
-// větvení podle formátu/ruleset — proto je logika oddělená od dat.
-//
+// Platí pro RAC Race i RX Cup (STANDARD ruleset).
 // Pravidla: CLAUDE.md §8 (kvalifikace, SF), §9 (celkově).
 
 /**
@@ -104,38 +102,3 @@ export function celkovePoradi(vstupy: CelkovyVstup[]): number[] {
   return [...finaliste, ...sfNepostoupili, ...zbytek].map((v) => v.jezdec_id)
 }
 
-// =====================================================================
-// Šotolina — Finále A/B (CLAUDE.md §3c, §8)
-// =====================================================================
-
-export interface CelkovyVstupSotolina {
-  jezdec_id: number
-  pq: number | null // pořadí po Q3
-  pfa: number | null // pořadí ve Finále A
-  pfb: number | null // pořadí ve Finále B
-  bq: number // body po Q3 (NEpřičítá se, jen tiebreak)
-}
-
-/**
- * Celkové pořadí Šotoliny (§9 + §3c): NEsčítá body. Pořadí řídí finále:
- *   1) jezdci ve Finále A podle pořadí v A (1.–10.),
- *   2) zbylí jezdci z Finále B podle pořadí v B (kdo nepostoupil do A),
- *   3) zbytek podle Klasifikace po Q3.
- */
-export function celkovePoradiSotolina(vstupy: CelkovyVstupSotolina[]): number[] {
-  const finaleA = vstupy
-    .filter((v) => v.pfa !== null)
-    .sort((a, b) => (a.pfa as number) - (b.pfa as number))
-  const aSet = new Set(finaleA.map((v) => v.jezdec_id))
-
-  const finaleBzbylo = vstupy
-    .filter((v) => v.pfb !== null && !aSet.has(v.jezdec_id))
-    .sort((a, b) => (a.pfb as number) - (b.pfb as number))
-  const bSet = new Set(vstupy.filter((v) => v.pfb !== null).map((v) => v.jezdec_id))
-
-  const zbytek = vstupy
-    .filter((v) => !aSet.has(v.jezdec_id) && !bSet.has(v.jezdec_id))
-    .sort((a, b) => (a.pq ?? Number.POSITIVE_INFINITY) - (b.pq ?? Number.POSITIVE_INFINITY))
-
-  return [...finaleA, ...finaleBzbylo, ...zbytek].map((v) => v.jezdec_id)
-}

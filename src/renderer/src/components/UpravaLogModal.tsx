@@ -9,9 +9,7 @@ const KOLA_LABEL: Record<KoloTyp, string> = {
   Q2: 'Q2',
   Q3: 'Q3',
   SF: 'Semifinále',
-  F: 'Finále',
-  F_A: 'Finále A',
-  F_B: 'Finále B'
+  F: 'Finále'
 }
 
 const TYP_LABEL: Record<UpravaTyp, string> = {
