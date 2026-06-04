@@ -6,7 +6,7 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
-## [0.9.8] – 2026-06-04
+## [0.9.8-beta] – 2026-06-04
 
 ### Přidáno
 - **Sportity integrace** — publikování výsledkových listů přímo do Sportity kanálu
@@ -182,8 +182,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.8...HEAD
-[0.9.8]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...v0.9.8
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.8-beta...HEAD
+[0.9.8-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...v0.9.8-beta
 [0.9.7-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...v0.9.7-beta
 [0.9.6-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.5...v0.9.6-beta
 [0.9.5]: https://github.com/Vituhlos/casomira/compare/v0.9.4...v0.9.5
