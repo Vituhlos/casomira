@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Kategorie, PdfRootStav } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn } from '../components/ui'
+import { TiskovyPresetModal } from '../components/TiskovyPresetModal'
 import { APP_NAME, APP_VERSION, APP_VERSION_LABEL } from '../lib/version'
 import { safeCall } from '../lib/api'
 
@@ -32,6 +33,7 @@ export function Settings({
   const [root, setRoot] = useState<PdfRootStav | null>(null)
   const [vybrane, setVybrane] = useState<Set<number>>(new Set(kategorie.map((k) => k.id)))
   const [probiha, setProbiha] = useState(false)
+  const [ukazPreset, setUkazPreset] = useState(false)
 
   useEffect(() => {
     safeCall(window.api.getLogo().then(setLogo), onToast)
@@ -86,6 +88,7 @@ export function Settings({
   }
 
   return (
+    <>
     <Modal
       title="Nastavení"
       width={520}
@@ -225,6 +228,18 @@ export function Settings({
         Sem se ukládají PDF do struktury <b>závod / kategorie</b>. „Uložit PDF" ukládá automaticky
         bez ptaní; „Uložit jako…" (šipka u tlačítka) umožní výjimku jinam.
       </p>
+
+      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+
+      {/* ---- Závodní tisk ---- */}
+      <SekceNadpis>Závodní tisk</SekceNadpis>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+        Rychlý tisk standardní sady listů na výchozí tiskárnu: startovka 1×, rošty Q1–Q3 a finále 4×,
+        výsledky finále 1×.
+      </p>
+      <Btn variant="bezel" icon="pdf" onClick={() => setUkazPreset(true)}>
+        Závodní tisk…
+      </Btn>
 
       <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
 
@@ -368,6 +383,15 @@ export function Settings({
         </span>
       </div>
     </Modal>
+
+    {ukazPreset && (
+      <TiskovyPresetModal
+        kategorie={kategorie}
+        onClose={() => setUkazPreset(false)}
+        onToast={onToast}
+      />
+    )}
+  </>
   )
 }
 

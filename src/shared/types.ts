@@ -423,6 +423,13 @@ export interface ExportVseResult {
   chyba?: string
 }
 
+export interface PrintPresetResult {
+  ok: boolean
+  vytisteno: number // počet odeslaných tiskových úloh (kopie × listy)
+  preskoceno: number // listy přeskočené (chybějící data)
+  chyba?: string
+}
+
 /** Tvar API, které preload most vystaví do okna jako `window.api`. */
 export interface CasomiraApi {
   getAktivniZavod(): Promise<Zavod | null>
@@ -494,6 +501,8 @@ export interface CasomiraApi {
   exportPdf(kategorieId: number, listKey: ListKey, saveAs?: boolean): Promise<ExportPdfResult>
   /** Vyexportuje všechny listy vybraných kategorií do struktury pod kořenovou složkou. */
   exportPdfVse(kategorieIds: number[]): Promise<ExportVseResult>
+  /** Závodní tisk — vytiskne preset listů (startovka 1×, rošty 4×, výsledky finále 1×). */
+  printPreset(kategorieIds: number[]): Promise<PrintPresetResult>
   // Kořenová složka pro PDF
   /** Vrátí nastavenou kořenovou složku a zda existuje. */
   getPdfRootStav(): Promise<PdfRootStav>

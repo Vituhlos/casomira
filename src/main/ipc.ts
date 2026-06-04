@@ -24,7 +24,7 @@ import {
   restoreBackup
 } from './backup/actions'
 import { BackupValidationError } from './backup/import'
-import { exportJeden, exportVse, pdfRootStav, choosePdfRoot } from './pdf'
+import { exportJeden, exportVse, pdfRootStav, choosePdfRoot, printPreset } from './pdf'
 import { openStopky, broadcast } from './windows'
 import type { BackupRestoreArg } from '../shared/backup'
 
@@ -169,6 +169,10 @@ export function registerIpc(): void {
   // Hromadný export: všechny listy vybraných kategorií do struktury pod kořenem.
   ipcMain.handle('pdf:exportVse', (e, kategorieIds: number[]) =>
     exportVse(BrowserWindow.fromWebContents(e.sender), kategorieIds, repo.getLogo())
+  )
+
+  ipcMain.handle('pdf:printPreset', (_e, kategorieIds: number[]) =>
+    printPreset(kategorieIds, repo.getLogo())
   )
 
   // Pomocná okna

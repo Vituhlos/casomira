@@ -15,6 +15,7 @@ import type {
   KoloTyp,
   ListKey,
   PdfRootStav,
+  PrintPresetResult,
   RostKolo,
   VysledekKolo
 } from '../shared/types'
@@ -497,6 +498,19 @@ async function withTiskoveOkno<T>(fn: (win: BrowserWindow) => Promise<T>): Promi
   }
 }
 
+async function nactiHtml(win: BrowserWindow, html: string): Promise<void> {
+  const tmp = join(
+    app.getPath('temp'),
+    `casomira-print-${Date.now()}-${Math.random().toString(36).slice(2)}.html`
+  )
+  await writeFile(tmp, html, 'utf8')
+  try {
+    await win.loadFile(tmp)
+  } finally {
+    void unlink(tmp).catch(() => {})
+  }
+}
+
 async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
   const tmp = join(
     app.getPath('temp'),
@@ -505,6 +519,7 @@ async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
   await writeFile(tmp, html, 'utf8')
   try {
     await win.loadFile(tmp)
+    void unlink(tmp).catch(() => {})
     const data = await win.webContents.printToPDF({
       pageSize: 'A4',
       landscape: false,
@@ -512,8 +527,9 @@ async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
       preferCSSPageSize: true
     })
     return Buffer.from(data)
-  } finally {
+  } catch (e) {
     void unlink(tmp).catch(() => {})
+    throw e
   }
 }
 
@@ -617,6 +633,54 @@ const PORADI_STANDARD: ListKey[] = [
   'overall'
 ]
 
+
+// ---------------------------------------------------------------------------
+// Tiskový preset — závodní tisk (startovka 1×, rošty 4×, výsledky finále 1×)
+// ---------------------------------------------------------------------------
+
+export const TISKOVY_PRESET: { listKey: ListKey; nazev: string; kopii: number }[] = [
+  { listKey: 'start', nazev: 'Startovní listina', kopii: 1 },
+  { listKey: 'grid_q1', nazev: 'Rošty Q1', kopii: 4 },
+  { listKey: 'grid_q2', nazev: 'Rošty Q2', kopii: 4 },
+  { listKey: 'grid_q3', nazev: 'Rošty Q3', kopii: 4 },
+  { listKey: 'final_rost', nazev: 'Rošty finále', kopii: 4 },
+  { listKey: 'final_res', nazev: 'Výsledky finále', kopii: 1 },
+]
+
+export async function printPreset(
+  kategorieIds: number[],
+  logo: string | null
+): Promise<PrintPresetResult> {
+  if (kategorieIds.length === 0) return { ok: false, vytisteno: 0, preskoceno: 0, chyba: 'Není vybraná žádná kategorie.' }
+  let vytisteno = 0
+  let preskoceno = 0
+  try {
+    await withTiskoveOkno(async (win) => {
+      for (const katId of kategorieIds) {
+        for (const item of TISKOVY_PRESET) {
+          let s: Sestaveno
+          try {
+            s = sestav(katId, item.listKey, logo)
+          } catch {
+            preskoceno++
+            continue
+          }
+          await nactiHtml(win, s.html)
+          await new Promise<void>((resolve, reject) => {
+            win.webContents.print({ silent: true, copies: item.kopii }, (success, errorType) => {
+              if (!success) reject(new Error(errorType ?? 'Tisk selhal'))
+              else resolve()
+            })
+          })
+          vytisteno += item.kopii
+        }
+      }
+    })
+    return { ok: true, vytisteno, preskoceno }
+  } catch (e) {
+    return { ok: false, vytisteno, preskoceno, chyba: e instanceof Error ? e.message : 'Tisk se nezdařil.' }
+  }
+}
 
 export async function exportVse(
   parentWin: BrowserWindow | null,
