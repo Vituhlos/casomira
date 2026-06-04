@@ -254,7 +254,7 @@ export function SportityModal({
           )}
         </div>
         {testResult && (
-          <div style={{ fontSize: 12.5, color: testResult.ok ? 'var(--success, #34a853)' : 'var(--error, #c93636)', marginBottom: 8 }}>
+          <div style={{ fontSize: 12.5, color: testResult.ok ? '#1a7a35' : '#c93636', marginBottom: 8 }}>
             {testResult.ok ? '✓ ' : '✗ '}{testResult.message}
           </div>
         )}
@@ -277,48 +277,43 @@ export function SportityModal({
               </Btn>
             </div>
             {events.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
-                <select
-                  value={`${selectedPassword}|${selectedEventId}`}
-                  onChange={(e) => {
-                    const [pw, evId] = e.target.value.split('|')
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Kanál:</div>
+                <PickerList
+                  items={events.map((ev) => ({ id: `${ev.password}|${ev.id}`, label: ev.name, sub: ev.password }))}
+                  selected={`${selectedPassword}|${selectedEventId}`}
+                  onSelect={(val) => {
+                    const [pw, evId] = val.split('|')
                     setSelectedPassword(pw)
                     setSelectedEventId(evId ?? '')
                     setFolders([])
                     setSelectedFolderId('')
                   }}
-                  style={selectStyle}
-                >
-                  {events.map((ev) => (
-                    <option key={`${ev.password}|${ev.id}`} value={`${ev.password}|${ev.id}`}>
-                      {ev.name}
-                    </option>
-                  ))}
-                </select>
-                <Btn variant="bezel" onClick={() => void loadFolders()} disabled={loadingFolders || !selectedPassword}>
-                  {loadingFolders ? 'Načítám složky…' : 'Načíst složky'}
-                </Btn>
+                />
+                <div style={{ marginTop: 8 }}>
+                  <Btn variant="bezel" onClick={() => void loadFolders()} disabled={loadingFolders || !selectedPassword}>
+                    {loadingFolders ? 'Načítám složky…' : 'Načíst složky'}
+                  </Btn>
+                </div>
               </div>
             )}
             {folders.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <select
-                  value={selectedFolderId}
-                  onChange={(e) => setSelectedFolderId(e.target.value)}
-                  style={{ ...selectStyle, flex: 1 }}
-                >
-                  <option value="">— vyber složku Výsledky —</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-                <Btn
-                  variant="primary"
-                  onClick={() => void saveZavodMap()}
-                  disabled={savingZavodMap || !selectedFolderId}
-                >
-                  {savingZavodMap ? 'Ukládám…' : 'Uložit mapování'}
-                </Btn>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Složka Výsledků:</div>
+                <PickerList
+                  items={folders.map((f) => ({ id: f.id, label: f.name, sub: f.parentId ? 'podsložka' : undefined }))}
+                  selected={selectedFolderId}
+                  onSelect={setSelectedFolderId}
+                />
+                <div style={{ marginTop: 8 }}>
+                  <Btn
+                    variant="primary"
+                    onClick={() => void saveZavodMap()}
+                    disabled={savingZavodMap || !selectedFolderId}
+                  >
+                    {savingZavodMap ? 'Ukládám…' : 'Uložit mapování'}
+                  </Btn>
+                </div>
               </div>
             )}
             <Hairline />
@@ -372,8 +367,11 @@ export function SportityModal({
                   <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 540 }}>{k.nazev}</span>
                     {res && (
-                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                        {res.created}↑ {res.updated}↻ {res.skipped}⏭ {res.failed > 0 && <span style={{ color: 'var(--error, #c93636)' }}>{res.failed}✗</span>}
+                      <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                        {res.created > 0 && `nových ${res.created} · `}
+                        {res.updated > 0 && `aktualizováno ${res.updated} · `}
+                        {res.skipped > 0 && `přeskočeno ${res.skipped}`}
+                        {res.failed > 0 && <span style={{ color: '#c93636' }}>{` · chyby ${res.failed}`}</span>}
                       </span>
                     )}
                     <Btn
@@ -409,7 +407,7 @@ export function SportityModal({
                     color: 'var(--text-2)'
                   }}
                 >
-                  <span style={{ color: entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? 'var(--success, #34a853)' : 'var(--error, #c93636)', fontSize: 11 }}>
+                  <span style={{ color: entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? '#1a7a35' : '#c93636', fontSize: 11 }}>
                     {entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? '✓' : '✗'}
                   </span>
                   <span style={{ flex: 1 }}>
@@ -453,21 +451,47 @@ const inputStyle: React.CSSProperties = {
   height: 30,
   padding: '0 10px',
   fontSize: 12.5,
-  border: '0.5px solid var(--hairline)',
+  border: '0.5px solid var(--ctrl-stroke)',
   borderRadius: 'var(--r-ctrl)',
-  background: 'var(--input-bg, var(--panel))',
+  background: 'var(--ctrl-bg)',
   color: 'var(--text-1)',
   outline: 'none',
   minWidth: 0
 }
 
-const selectStyle: React.CSSProperties = {
-  height: 30,
-  padding: '0 8px',
-  fontSize: 12.5,
-  border: '0.5px solid var(--hairline)',
-  borderRadius: 'var(--r-ctrl)',
-  background: 'var(--input-bg, var(--panel))',
-  color: 'var(--text-1)',
-  outline: 'none'
+function PickerList({
+  items,
+  selected,
+  onSelect
+}: {
+  items: { id: string; label: string; sub?: string }[]
+  selected: string
+  onSelect: (id: string) => void
+}): React.JSX.Element {
+  return (
+    <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', maxHeight: 160, overflowY: 'auto' }}>
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          onClick={() => onSelect(item.id)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '6px 12px', fontSize: 13, cursor: 'pointer',
+            borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
+            background: selected === item.id
+              ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
+              : i % 2 === 0 ? 'transparent' : 'var(--card-alt)',
+            color: selected === item.id ? 'var(--accent)' : 'var(--text-1)'
+          }}
+        >
+          <span style={{ flex: 1, fontWeight: selected === item.id ? 600 : 430 }}>{item.label}</span>
+          {item.sub && (
+            <span style={{ fontSize: 11.5, color: selected === item.id ? 'var(--accent-text)' : 'var(--text-3)' }}>
+              {item.sub}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
