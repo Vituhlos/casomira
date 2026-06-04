@@ -21,6 +21,7 @@
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "dist": "npm run build && electron-builder --config electron-builder.yml",
     "dist:win": "npm run build && electron-builder --win --config electron-builder.yml --publish never",
@@ -46,6 +47,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "typescript": "^6.0.3",
-    "vite": "^7.3.3"
+    "vite": "^7.3.3",
+    "vitest": "^4.1.8"
   }
 }

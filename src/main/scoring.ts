@@ -101,6 +101,25 @@ export function spocitejJizdu(
 }
 
 /**
+ * STANDARD tiebreak pro klasifikaci (CLAUDE.md §7): při shodě celkových bodů
+ * rozhoduje poslední uvedené kolo, pak předposlední atd.
+ * Např. pro koloTypy=['Q1','Q2','Q3'] porovná Q3 → Q2 → Q1.
+ * Vrací záporné číslo pokud a > b (a má být výš), kladné pokud b > a.
+ */
+export function tiebreakPerKolo(
+  a: Record<string, number>,
+  b: Record<string, number>,
+  koloTypy: string[]
+): number {
+  for (let i = koloTypy.length - 1; i >= 0; i--) {
+    const av = a[koloTypy[i]] ?? 0
+    const bv = b[koloTypy[i]] ?? 0
+    if (av !== bv) return bv - av
+  }
+  return 0
+}
+
+/**
  * Přepočte pořadí po ručním posunu (`rucni_poradi`) — ostatní jezdci se posunou,
  * body dojetých z žebříčku dle nového pořadí OK; DNF/DNS/DQ penalizace od posledního dojetého.
  */

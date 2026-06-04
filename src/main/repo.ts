@@ -37,11 +37,12 @@ import type {
   ZaverStav,
   Zavod,
   ZavodInfo,
-  ZavodUprava
+  ZavodUprava,
+  Stav
 } from '../shared/types'
 import { getDb } from './db/connection'
 import { parseSheets } from './excel'
-import { aplikujRucniPoradi, spocitejJizdu, type JizdaVstup, type Penalizace } from './scoring'
+import { aplikujRucniPoradi, spocitejJizdu, tiebreakPerKolo, type JizdaVstup, type Penalizace } from './scoring'
 import {
   celkovePoradi,
   celkovePoradiSotolina,
@@ -1503,17 +1504,16 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
     )
     .all(kategorieId, ...koloTypy) as { jezdec_id: number; typ: string; body: number | null }[]
 
-  const map = new Map<number, { perKolo: Record<string, number>; celkem: number; heaty: number[] }>()
+  const map = new Map<number, { perKolo: Record<string, number>; celkem: number }>()
   for (const r of rows) {
     let e = map.get(r.jezdec_id)
     if (!e) {
-      e = { perKolo: {}, celkem: 0, heaty: [] }
+      e = { perKolo: {}, celkem: 0 }
       map.set(r.jezdec_id, e)
     }
     const b = r.body ?? 0
     e.perKolo[r.typ] = (e.perKolo[r.typ] ?? 0) + b
     e.celkem += b
-    if (r.body !== null) e.heaty.push(r.body)
   }
 
   const ids = [...map.keys()]
@@ -1536,14 +1536,15 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
       jmeno: j.jmeno,
       los: j.los,
       perKolo: e.perKolo,
-      celkem: e.celkem,
-      heaty: e.heaty.sort((a, b) => b - a)
+      celkem: e.celkem
     }
   })
 
   list.sort((a, b) => {
     if (a.celkem !== b.celkem) return b.celkem - a.celkem
-    return ruleset === 'SOTOLINA' ? tiebreakLos(a.los, b.los) : tiebreakHeaty(a.heaty, b.heaty)
+    return ruleset === 'SOTOLINA'
+      ? tiebreakLos(a.los, b.los)
+      : tiebreakPerKolo(a.perKolo, b.perKolo, koloTypy)
   })
 
   return list.map((r, i) => ({
@@ -1558,17 +1559,6 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
   }))
 }
 
-// STANDARD tiebreak: lepší (vyšší) výsledek v jakékoli jízdě je výš. Porovná
-// sestupně seřazené seznamy bodů z jednotlivých jízd lexikograficky.
-function tiebreakHeaty(a: number[], b: number[]): number {
-  const n = Math.max(a.length, b.length)
-  for (let i = 0; i < n; i++) {
-    const x = a[i] ?? -Infinity
-    const y = b[i] ?? -Infinity
-    if (x !== y) return y - x
-  }
-  return 0
-}
 
 // SOTOLINA tiebreak: jen los do 1. jízdy (nižší los = lepší pozice na startu
 // Q1 = výš v klasifikaci). Bezlosí spadnou až za jezdce s losem.
