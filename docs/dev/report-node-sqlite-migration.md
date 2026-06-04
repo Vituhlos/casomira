@@ -1,7 +1,9 @@
 # Report: Migrace better-sqlite3 → node:sqlite
 
-> Analýza proveditelnosti — zpracoval Claude Code, 2026-06-04.
-> **Žádné kódy změněny.** Čeká se na rozhodnutí.
+> Analýza proveditelnosti — zpracoval Claude Code, 2026-06-04.  
+> **Krok 1 hotový** na větvi `experiment/node-sqlite`: wrapper + testy — viz
+> [node-sqlite-transaction-wrapper.md](./node-sqlite-transaction-wrapper.md).  
+> Zbytek migrace (connection, repo, Electron 42) zatím neproveden.
 
 ---
 
@@ -140,35 +142,19 @@ const jizdyData = db.transaction(() => {
 V better-sqlite3 toto funguje automaticky přes **SQLite SAVEPOINT**. V node:sqlite
 by se volání `BEGIN` uvnitř aktivní transakce zhroutilo s chybou.
 
-### Navržené řešení: wrapper s SAVEPOINT
+### Řešení: wrapper s SAVEPOINT ✅ (implementováno)
 
-Klíčová vlastnost SQLite: `SAVEPOINT` funguje **jak uvnitř, tak vně transakce**.
-Wrapper, který vždy používá SAVEPOINT, přirozeně řeší oba případy:
+Implementace: `src/main/db/transaction.ts` — pojmenování přes **hloubku vnoření**
+(`casomira_sp_0`, `casomira_sp_1`, …), ne jednoduchý globální čítač.
 
-```typescript
-// Nový soubor: src/main/db/transaction.ts (~20 řádků)
-import type { DatabaseSync } from 'node:sqlite'
+**Dokumentace a testy:** [node-sqlite-transaction-wrapper.md](./node-sqlite-transaction-wrapper.md)
 
-let spCounter = 0
-
-export function runInTransaction<T>(db: DatabaseSync, fn: () => T): T {
-  const sp = `sp${++spCounter}`
-  db.exec(`SAVEPOINT ${sp}`)
-  try {
-    const result = fn()
-    db.exec(`RELEASE SAVEPOINT ${sp}`)
-    return result
-  } catch (e) {
-    db.exec(`ROLLBACK TO SAVEPOINT ${sp}`)
-    db.exec(`RELEASE SAVEPOINT ${sp}`)
-    throw e
-  }
-}
+```bash
+npx tsx src/main/db/transaction.test.ts   # 13× PASS (commit, rollback, vnořené, sekvenční)
 ```
 
-Pak se všechna `db.transaction(() => { ... })()` nahradí za
-`runInTransaction(db, () => { ... })` — mechanická záměna.
-SAVEPOINT sémantikou zachovává atomicitu i v nested případech.
+Další krok: všechna `db.transaction(() => { ... })()` nahradit za
+`runInTransaction(db, () => { ... })` — mechanická záměna až po schválení.
 
 ---
 
@@ -237,7 +223,7 @@ Datová vrstva je dobře oddělená.
 Migrace je technicky proveditelná a rizika jsou zvládnutelná, ale integrita dat
 závisí na správném SAVEPOINT wrapperu. Doporučené pořadí kroků:
 
-1. Napsat `src/main/db/transaction.ts` (wrapper s SAVEPOINT) + unit test nested případu
+1. ~~Napsat `src/main/db/transaction.ts` + unit testy~~ ✅ viz [node-sqlite-transaction-wrapper.md](./node-sqlite-transaction-wrapper.md)
 2. Zaměnit import v `connection.ts`, ověřit WAL + foreign keys přes `exec`
 3. Opravit `pragma()` → 5 míst v `connection.ts` a `migrate.ts`
 4. Mechanicky nahradit všechna `db.transaction()()` → `runInTransaction(db, () => {})`
