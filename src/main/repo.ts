@@ -1696,17 +1696,20 @@ export function navrhFinale(kategorieId: number): RostNavrh {
   const N = stav.finaleVelikost
   const obsazeno = rostObsazen(db, kategorieId, 'F')
   const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
-  const jizda = (ids: number[], nahradniciIds: number[] = []): RostNavrh =>
-    ({
+  const MAX_NAHRADNICI = 5
+  const jizda = (ids: number[], nahradniciIds: number[] = []): RostNavrh => {
+    const vsichni = [...ids, ...nahradniciIds.slice(0, MAX_NAHRADNICI)]
+    return {
       ok: true,
       chyba: null,
       obsazeno,
-      jizdy: [{ cislo: 1, jezdci: ids.map((id) => sel.get(id) as Jezdec) }],
+      jizdy: [{ cislo: 1, jezdci: vsichni.map((id) => sel.get(id) as Jezdec) }],
       pocetJizd: 1,
       minJizd: 1,
       maxJizd: 1,
-      nahradnici: nahradniciIds.map((id) => sel.get(id) as Jezdec)
-    }) as RostNavrh
+      finaleVelikost: N
+    }
+  }
   const chyba = (msg: string): RostNavrh => ({
     ok: false,
     chyba: msg,

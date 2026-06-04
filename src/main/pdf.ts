@@ -253,28 +253,38 @@ function listStart(kategorieId: number): { telo: string; pocet: number } {
 }
 
 // Rošty (Q / SF / F): svislé štítky jízd + tabulka rozsazení.
-function listRosty(rost: RostKolo, nahradnici: boolean): string {
+// finaleVelikost: pokud je číslo, sloty 1..N = FINÁLE, N+1.. = NÁHRADNÍCI (se jmény).
+function listRosty(rost: RostKolo, finaleVelikost: number | false): string {
   const hlava = `<thead><tr>${SPORTOVNI_SLOUPCE.map((h) => `<th>${h}</th>`).join('')}</tr></thead>`
   const bloky = rost.jizdy
     .map((jz) => {
-      const obsazene = jz.sloty.filter((s) => s.jezdec)
-      if (obsazene.length === 0) return ''
-      const radky = obsazene.map((s) => radekJezdce(`${s.pozice}.`, s.jezdec)).join('')
+      const sloty = finaleVelikost !== false
+        ? jz.sloty.filter((s) => s.pozice <= finaleVelikost)
+        : jz.sloty
+      const obsazene = sloty.filter((s) => s.jezdec)
+      if (obsazene.length === 0 && finaleVelikost === false) return ''
+      const radky = sloty.map((s) => radekJezdce(`${s.pozice}.`, s.jezdec)).join('')
+      const stitek = rost.jizdy.length > 1 ? `<div class="jizda-stitek">${jz.cislo}. JÍZDA</div>` : ''
       return `
       <div class="jizda-blok">
-        <div class="jizda-stitek">${jz.cislo}. JÍZDA</div>
+        ${stitek}
         <table>${hlava}<tbody>${radky}</tbody></table>
       </div>`
     })
     .join('')
 
-  const nahr = nahradnici
-    ? `
+  let nahr = ''
+  if (finaleVelikost !== false) {
+    const nahrSloty = rost.jizdy[0]?.sloty.filter((s) => s.pozice > finaleVelikost) ?? []
+    const radkyNahr = nahrSloty.length > 0
+      ? nahrSloty.map((s, i) => radekJezdce(`${i + 1}.`, s.jezdec)).join('')
+      : `${radekJezdce('1.', null)}${radekJezdce('2.', null)}`
+    nahr = `
     <div class="nahradnici">
       <div class="sekce-nadpis">NÁHRADNÍCI</div>
-      <table>${hlava}<tbody>${radekJezdce('1.', null)}${radekJezdce('2.', null)}</tbody></table>
+      <table>${hlava}<tbody>${radkyNahr}</tbody></table>
     </div>`
-    : ''
+  }
 
   return (bloky || '<p>Rošt zatím není vytvořený.</p>') + nahr
 }
@@ -454,9 +464,11 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
     case 'sf_res':
       telo = listVysledky(repo.getVysledky(kategorieId, 'SF'))
       break
-    case 'final_rost':
-      telo = listRosty(repo.getRosty(kategorieId, 'F'), true)
+    case 'final_rost': {
+      const fv = (repo.getZaverStav(kategorieId) as { finaleVelikost: number }).finaleVelikost
+      telo = listRosty(repo.getRosty(kategorieId, 'F'), fv)
       break
+    }
     case 'final_res':
       telo = listVysledky(repo.getVysledky(kategorieId, 'F'))
       break

@@ -61,6 +61,7 @@ export function Finale({
           previewText="Pořadí na startu finále (1. = pole position). Po nasazení můžeš ručně upravit."
           jizdaTitle={(c, total) => (total <= 1 ? 'STARTOVNÍ ROŠT' : `${c}. JÍZDA`)}
           onChanged={() => void nactiStav()}
+          finaleVelikost={stav.finaleVelikost}
         />
       ) : (
         <Results kategorieId={kategorieId} typ="F" label="Finále" extraControls={toggle} />
