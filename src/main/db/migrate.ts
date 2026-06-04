@@ -3,7 +3,7 @@ import { SCHEMA_SQL } from './schema'
 
 // Číslo poslední migrace. Každý krok zvýší SCHEMA_VERSION o 1.
 // user_version se nastavuje ihned po každém kroku — restart pokračuje od správného místa.
-export const SCHEMA_VERSION = 11
+export const SCHEMA_VERSION = 12
 const LATEST = SCHEMA_VERSION
 
 function step(db: Database.Database, targetVersion: number, fn: () => void): void {
@@ -166,6 +166,46 @@ export function migrate(db: Database.Database): void {
       db.exec(`UPDATE kategorie SET ruleset = 'STANDARD' WHERE ruleset = 'SOTOLINA'`)
     })
     version = 11
+  }
+
+  if (version < 12) {
+    step(db, 12, () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sportity_zavod_map (
+          zavod_id INTEGER PRIMARY KEY REFERENCES zavod(id) ON DELETE CASCADE,
+          channel_password TEXT NOT NULL,
+          event_id TEXT,
+          results_folder_id TEXT NOT NULL,
+          results_folder_name TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sportity_kategorie_map (
+          kategorie_id INTEGER PRIMARY KEY REFERENCES kategorie(id) ON DELETE CASCADE,
+          folder_id TEXT NOT NULL,
+          folder_name TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sportity_document_map (
+          id INTEGER PRIMARY KEY,
+          kategorie_id INTEGER NOT NULL REFERENCES kategorie(id) ON DELETE CASCADE,
+          list_key TEXT NOT NULL,
+          document_id TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          UNIQUE(kategorie_id, list_key)
+        );
+        CREATE TABLE IF NOT EXISTS sportity_publish_log (
+          id INTEGER PRIMARY KEY,
+          zavod_id INTEGER REFERENCES zavod(id) ON DELETE SET NULL,
+          kategorie_id INTEGER REFERENCES kategorie(id) ON DELETE SET NULL,
+          list_key TEXT,
+          action TEXT NOT NULL,
+          status TEXT NOT NULL,
+          message TEXT,
+          created_at TEXT NOT NULL
+        );
+      `)
+    })
+    version = 12
   }
 
   // Pojistka: synchronizuj user_version s LATEST pro případ, že bylo přidáno

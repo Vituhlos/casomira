@@ -26,6 +26,7 @@ import {
 import { BackupValidationError } from './backup/import'
 import { exportJeden, exportVse, pdfRootStav, choosePdfRoot, printPreset } from './pdf'
 import { openStopky, broadcast } from './windows'
+import * as sportity from './sportity/service'
 import type { BackupRestoreArg } from '../shared/backup'
 
 // Z přípony odvodí MIME typ obrázku (pro data URL loga).
@@ -253,4 +254,52 @@ export function registerIpc(): void {
     repo.setNastaveni('logo', url)
     return url
   })
+
+  // Sportity integrace
+  ipcMain.handle('sportity:settings', () => ({
+    apiKeySet: sportity.hasApiKey(),
+    apiKeyHint: sportity.getApiKeyHint()
+  }))
+  ipcMain.handle('sportity:apiKey:save', (_e, key: string) => sportity.setApiKey(key))
+  ipcMain.handle('sportity:apiKey:clear', () => sportity.clearApiKey())
+  ipcMain.handle('sportity:test', () => sportity.testConnection())
+  ipcMain.handle('sportity:events', () => sportity.listEvents())
+  ipcMain.handle('sportity:documents', (_e, password: string, eventId?: string | null) =>
+    sportity.listDocuments(password, eventId)
+  )
+  ipcMain.handle('sportity:zavodMap:get', (_e, zavodId: number) =>
+    repo.getSportityZavodMap(zavodId)
+  )
+  ipcMain.handle(
+    'sportity:zavodMap:save',
+    (
+      _e,
+      zavodId: number,
+      channelPassword: string,
+      eventId: string | null,
+      resultsFolderId: string,
+      resultsFolderName: string
+    ) => repo.setSportityZavodMap(zavodId, channelPassword, eventId, resultsFolderId, resultsFolderName)
+  )
+  ipcMain.handle('sportity:kategorieMap:get', (_e, zavodId: number) =>
+    repo.getKategorieMapForZavod(zavodId)
+  )
+  ipcMain.handle(
+    'sportity:kategorieMap:save',
+    (_e, kategorieId: number, folderId: string, folderName: string) =>
+      repo.setSportityKategorieMap(kategorieId, folderId, folderName)
+  )
+  ipcMain.handle('sportity:kategorieMap:clear', (_e, kategorieId: number) =>
+    repo.clearSportityKategorieMap(kategorieId)
+  )
+  ipcMain.handle('sportity:autoMap', (_e, zavodId: number) =>
+    sportity.autoMapCategories(zavodId)
+  )
+  ipcMain.handle('sportity:publish:list', (_e, kategorieId: number, listKey: string) =>
+    sportity.publishList(kategorieId, listKey)
+  )
+  ipcMain.handle('sportity:publish:category', (_e, kategorieId: number) =>
+    sportity.publishCategory(kategorieId)
+  )
+  ipcMain.handle('sportity:log', (_e, zavodId: number) => repo.getSportityPublishLog(zavodId))
 }

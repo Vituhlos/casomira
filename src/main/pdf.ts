@@ -537,6 +537,15 @@ async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
 // Kořenová složka pro PDF
 // ---------------------------------------------------------------------------
 
+export async function generatePdfBuffer(
+  kategorieId: number,
+  listKey: ListKey,
+  logo: string | null
+): Promise<Buffer> {
+  const s = sestav(kategorieId, listKey, logo)
+  return withTiskoveOkno((win) => tiskni(win, s.html))
+}
+
 export function pdfRootStav(): PdfRootStav {
   const root = repo.getPdfRoot()
   return { root, existuje: !!root && existsSync(root) }

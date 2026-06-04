@@ -120,7 +120,44 @@ const api: CasomiraApi = {
     ipcRenderer.on('stopky:requestConfirm', h)
     return () => ipcRenderer.removeListener('stopky:requestConfirm', h)
   },
-  stopkyZavritPotvrzeno: () => ipcRenderer.invoke('stopky:zavritPotvrzeno')
+  stopkyZavritPotvrzeno: () => ipcRenderer.invoke('stopky:zavritPotvrzeno'),
+  // Sportity integrace
+  getSportitySettings: () => ipcRenderer.invoke('sportity:settings'),
+  saveSportityApiKey: (key: string) => ipcRenderer.invoke('sportity:apiKey:save', key),
+  clearSportityApiKey: () => ipcRenderer.invoke('sportity:apiKey:clear'),
+  testSportityConnection: () => ipcRenderer.invoke('sportity:test'),
+  sportityListEvents: () => ipcRenderer.invoke('sportity:events'),
+  sportityListDocuments: (password: string, eventId?: string | null) =>
+    ipcRenderer.invoke('sportity:documents', password, eventId),
+  getSportityZavodMap: (zavodId: number) => ipcRenderer.invoke('sportity:zavodMap:get', zavodId),
+  saveSportityZavodMap: (
+    zavodId: number,
+    channelPassword: string,
+    eventId: string | null,
+    resultsFolderId: string,
+    resultsFolderName: string
+  ) =>
+    ipcRenderer.invoke(
+      'sportity:zavodMap:save',
+      zavodId,
+      channelPassword,
+      eventId,
+      resultsFolderId,
+      resultsFolderName
+    ),
+  getSportityKategorieMap: (zavodId: number) =>
+    ipcRenderer.invoke('sportity:kategorieMap:get', zavodId),
+  saveSportityKategorieMap: (kategorieId: number, folderId: string, folderName: string) =>
+    ipcRenderer.invoke('sportity:kategorieMap:save', kategorieId, folderId, folderName),
+  clearSportityKategorieMap: (kategorieId: number) =>
+    ipcRenderer.invoke('sportity:kategorieMap:clear', kategorieId),
+  sportityAutoMapCategories: (zavodId: number) =>
+    ipcRenderer.invoke('sportity:autoMap', zavodId),
+  sportityPublishList: (kategorieId: number, listKey: string) =>
+    ipcRenderer.invoke('sportity:publish:list', kategorieId, listKey),
+  sportityPublishCategory: (kategorieId: number) =>
+    ipcRenderer.invoke('sportity:publish:category', kategorieId),
+  getSportityPublishLog: (zavodId: number) => ipcRenderer.invoke('sportity:log', zavodId)
 }
 
 contextBridge.exposeInMainWorld('api', api)

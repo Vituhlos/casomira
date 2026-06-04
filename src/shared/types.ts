@@ -430,6 +430,73 @@ export interface PrintPresetResult {
   chyba?: string
 }
 
+// ---------------------------------------------------------------------------
+// Sportity integrace
+// ---------------------------------------------------------------------------
+
+export interface SportitySettingsView {
+  apiKeySet: boolean
+  apiKeyHint: string | null
+}
+
+export interface SportityEventView {
+  id: string
+  name: string
+  password: string
+}
+
+export interface SportityNodeView {
+  id: string
+  name: string
+  type: 'Folder' | 'PDF' | 'Text' | 'Image' | 'Link'
+  parentId: string | null
+}
+
+export interface SportityZavodMapView {
+  channelPassword: string
+  eventId: string | null
+  resultsFolderId: string
+  resultsFolderName: string
+}
+
+export interface SportityKategorieMapView {
+  kategorieId: number
+  kategorieNazev: string
+  folderId: string | null
+  folderName: string | null
+}
+
+export interface SportityConnectionResult {
+  ok: boolean
+  message: string
+}
+
+export interface SportityPublishItemResult {
+  listKey: string
+  nazev: string
+  status: 'created' | 'updated' | 'skipped' | 'failed'
+  message?: string
+}
+
+export interface SportityPublishResult {
+  ok: boolean
+  created: number
+  updated: number
+  skipped: number
+  failed: number
+  items: SportityPublishItemResult[]
+}
+
+export interface SportityPublishLogEntry {
+  id: number
+  kategorieNazev: string | null
+  listKey: string | null
+  action: string
+  status: string
+  message: string | null
+  createdAt: string
+}
+
 /** Tvar API, které preload most vystaví do okna jako `window.api`. */
 export interface CasomiraApi {
   getAktivniZavod(): Promise<Zavod | null>
@@ -570,4 +637,20 @@ export interface CasomiraApi {
   previewRestoreBackup(): Promise<import('./backup').BackupPreviewResponse>
   /** Provede obnovu dle volby uživatele (nový / přepsat). */
   restoreBackup(arg: import('./backup').BackupRestoreArg): Promise<import('./backup').BackupRestoreResult>
+  // Sportity integrace
+  getSportitySettings(): Promise<SportitySettingsView>
+  saveSportityApiKey(apiKey: string): Promise<void>
+  clearSportityApiKey(): Promise<void>
+  testSportityConnection(): Promise<SportityConnectionResult>
+  sportityListEvents(): Promise<SportityEventView[]>
+  sportityListDocuments(password: string, eventId?: string | null): Promise<SportityNodeView[]>
+  getSportityZavodMap(zavodId: number): Promise<SportityZavodMapView | null>
+  saveSportityZavodMap(zavodId: number, channelPassword: string, eventId: string | null, resultsFolderId: string, resultsFolderName: string): Promise<void>
+  getSportityKategorieMap(zavodId: number): Promise<SportityKategorieMapView[]>
+  saveSportityKategorieMap(kategorieId: number, folderId: string, folderName: string): Promise<void>
+  clearSportityKategorieMap(kategorieId: number): Promise<void>
+  sportityAutoMapCategories(zavodId: number): Promise<SportityKategorieMapView[]>
+  sportityPublishList(kategorieId: number, listKey: string): Promise<SportityPublishResult>
+  sportityPublishCategory(kategorieId: number): Promise<SportityPublishResult>
+  getSportityPublishLog(zavodId: number): Promise<SportityPublishLogEntry[]>
 }

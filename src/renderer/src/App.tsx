@@ -598,6 +598,8 @@ export function App(): React.JSX.Element {
                 }
               : undefined
           }
+          zavodId={zavod?.id}
+          zavod={zavod ?? undefined}
         />
       )}
 

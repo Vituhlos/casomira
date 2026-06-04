@@ -2084,3 +2084,180 @@ export function mereniNactiAktivniJizdu(zavodId: number): number | null {
   const n = Number(v)
   return Number.isFinite(n) ? n : null
 }
+
+// ---- Sportity integrace ----
+
+export function getSportityZavodMap(
+  zavodId: number
+): { channelPassword: string; eventId: string | null; resultsFolderId: string; resultsFolderName: string } | null {
+  const row = getDb()
+    .prepare('SELECT channel_password, event_id, results_folder_id, results_folder_name FROM sportity_zavod_map WHERE zavod_id = ?')
+    .get(zavodId) as { channel_password: string; event_id: string | null; results_folder_id: string; results_folder_name: string } | undefined
+  if (!row) return null
+  return {
+    channelPassword: row.channel_password,
+    eventId: row.event_id,
+    resultsFolderId: row.results_folder_id,
+    resultsFolderName: row.results_folder_name
+  }
+}
+
+export function setSportityZavodMap(
+  zavodId: number,
+  channelPassword: string,
+  eventId: string | null,
+  resultsFolderId: string,
+  resultsFolderName: string
+): void {
+  getDb()
+    .prepare(
+      `INSERT INTO sportity_zavod_map (zavod_id, channel_password, event_id, results_folder_id, results_folder_name, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(zavod_id) DO UPDATE SET
+         channel_password = excluded.channel_password,
+         event_id = excluded.event_id,
+         results_folder_id = excluded.results_folder_id,
+         results_folder_name = excluded.results_folder_name,
+         updated_at = excluded.updated_at`
+    )
+    .run(zavodId, channelPassword, eventId, resultsFolderId, resultsFolderName, new Date().toISOString())
+}
+
+export function getSportityKategorieMap(
+  kategorieId: number
+): { folderId: string; folderName: string } | null {
+  const row = getDb()
+    .prepare('SELECT folder_id, folder_name FROM sportity_kategorie_map WHERE kategorie_id = ?')
+    .get(kategorieId) as { folder_id: string; folder_name: string } | undefined
+  if (!row) return null
+  return { folderId: row.folder_id, folderName: row.folder_name }
+}
+
+export function setSportityKategorieMap(
+  kategorieId: number,
+  folderId: string,
+  folderName: string
+): void {
+  getDb()
+    .prepare(
+      `INSERT INTO sportity_kategorie_map (kategorie_id, folder_id, folder_name, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(kategorie_id) DO UPDATE SET
+         folder_id = excluded.folder_id,
+         folder_name = excluded.folder_name,
+         updated_at = excluded.updated_at`
+    )
+    .run(kategorieId, folderId, folderName, new Date().toISOString())
+}
+
+export function clearSportityKategorieMap(kategorieId: number): void {
+  getDb().prepare('DELETE FROM sportity_kategorie_map WHERE kategorie_id = ?').run(kategorieId)
+}
+
+export function getKategorieMapForZavod(
+  zavodId: number
+): Array<{ kategorieId: number; kategorieNazev: string; folderId: string | null; folderName: string | null }> {
+  return (
+    getDb()
+      .prepare(
+        `SELECT k.id AS kategorie_id, k.nazev AS kategorie_nazev,
+                m.folder_id, m.folder_name
+         FROM kategorie k
+         LEFT JOIN sportity_kategorie_map m ON m.kategorie_id = k.id
+         WHERE k.zavod_id = ?
+         ORDER BY k.id`
+      )
+      .all(zavodId) as Array<{
+        kategorie_id: number
+        kategorie_nazev: string
+        folder_id: string | null
+        folder_name: string | null
+      }>
+  ).map((r) => ({
+    kategorieId: r.kategorie_id,
+    kategorieNazev: r.kategorie_nazev,
+    folderId: r.folder_id,
+    folderName: r.folder_name
+  }))
+}
+
+export function getSportityDocumentId(kategorieId: number, listKey: string): string | null {
+  const row = getDb()
+    .prepare('SELECT document_id FROM sportity_document_map WHERE kategorie_id = ? AND list_key = ?')
+    .get(kategorieId, listKey) as { document_id: string } | undefined
+  return row?.document_id ?? null
+}
+
+export function setSportityDocumentId(
+  kategorieId: number,
+  listKey: string,
+  documentId: string
+): void {
+  getDb()
+    .prepare(
+      `INSERT INTO sportity_document_map (kategorie_id, list_key, document_id, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(kategorie_id, list_key) DO UPDATE SET
+         document_id = excluded.document_id,
+         updated_at = excluded.updated_at`
+    )
+    .run(kategorieId, listKey, documentId, new Date().toISOString())
+}
+
+export function addSportityPublishLog(
+  zavodId: number | null,
+  kategorieId: number | null,
+  listKey: string | null,
+  action: string,
+  status: string,
+  message?: string
+): void {
+  getDb()
+    .prepare(
+      `INSERT INTO sportity_publish_log (zavod_id, kategorie_id, list_key, action, status, message, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(zavodId, kategorieId, listKey, action, status, message ?? null, new Date().toISOString())
+}
+
+export function getSportityPublishLog(
+  zavodId: number,
+  limit = 50
+): Array<{
+  id: number
+  kategorieNazev: string | null
+  listKey: string | null
+  action: string
+  status: string
+  message: string | null
+  createdAt: string
+}> {
+  return (
+    getDb()
+      .prepare(
+        `SELECT l.id, k.nazev AS kategorie_nazev, l.list_key, l.action, l.status, l.message, l.created_at
+         FROM sportity_publish_log l
+         LEFT JOIN kategorie k ON k.id = l.kategorie_id
+         WHERE l.zavod_id = ?
+         ORDER BY l.id DESC
+         LIMIT ?`
+      )
+      .all(zavodId, limit) as Array<{
+        id: number
+        kategorie_nazev: string | null
+        list_key: string | null
+        action: string
+        status: string
+        message: string | null
+        created_at: string
+      }>
+  ).map((r) => ({
+    id: r.id,
+    kategorieNazev: r.kategorie_nazev,
+    listKey: r.list_key,
+    action: r.action,
+    status: r.status,
+    message: r.message,
+    createdAt: r.created_at
+  }))
+}
