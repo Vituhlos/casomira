@@ -15,6 +15,7 @@ import type {
   KoloTyp,
   ListKey,
   PdfRootStav,
+  PrintPresetResult,
   RostKolo,
   VysledekKolo
 } from '../shared/types'
@@ -41,10 +42,6 @@ const NADPIS: Record<ListKey, string> = {
   sf_res: 'VÝSLEDKY SEMIFINÁLE',
   final_rost: 'ROŠTY FINÁLE',
   final_res: 'VÝSLEDKY FINÁLE',
-  final_b_rost: 'ROŠT FINÁLE B',
-  final_b_res: 'VÝSLEDKY FINÁLE B',
-  final_a_rost: 'ROŠT FINÁLE A',
-  final_a_res: 'VÝSLEDKY FINÁLE A',
   overall: 'CELKOVÉ VÝSLEDKY'
 }
 
@@ -66,10 +63,6 @@ const SOUBOR: Record<ListKey, string> = {
   sf_res: 'Semifinale_vysledky',
   final_rost: 'Finale_rosty',
   final_res: 'Finale_vysledky',
-  final_b_rost: 'Finale_B_rost',
-  final_b_res: 'Finale_B_vysledky',
-  final_a_rost: 'Finale_A_rost',
-  final_a_res: 'Finale_A_vysledky',
   overall: 'Celkove_vysledky'
 }
 
@@ -253,28 +246,38 @@ function listStart(kategorieId: number): { telo: string; pocet: number } {
 }
 
 // Rošty (Q / SF / F): svislé štítky jízd + tabulka rozsazení.
-function listRosty(rost: RostKolo, nahradnici: boolean): string {
+// finaleVelikost: pokud je číslo, sloty 1..N = FINÁLE, N+1.. = NÁHRADNÍCI (se jmény).
+function listRosty(rost: RostKolo, finaleVelikost: number | false): string {
   const hlava = `<thead><tr>${SPORTOVNI_SLOUPCE.map((h) => `<th>${h}</th>`).join('')}</tr></thead>`
   const bloky = rost.jizdy
     .map((jz) => {
-      const obsazene = jz.sloty.filter((s) => s.jezdec)
-      if (obsazene.length === 0) return ''
-      const radky = obsazene.map((s) => radekJezdce(`${s.pozice}.`, s.jezdec)).join('')
+      const sloty = finaleVelikost !== false
+        ? jz.sloty.filter((s) => s.pozice <= finaleVelikost)
+        : jz.sloty
+      const obsazene = sloty.filter((s) => s.jezdec)
+      if (obsazene.length === 0 && finaleVelikost === false) return ''
+      const radky = sloty.map((s) => radekJezdce(`${s.pozice}.`, s.jezdec)).join('')
+      const stitek = rost.jizdy.length > 1 ? `<div class="jizda-stitek">${jz.cislo}. JÍZDA</div>` : ''
       return `
       <div class="jizda-blok">
-        <div class="jizda-stitek">${jz.cislo}. JÍZDA</div>
+        ${stitek}
         <table>${hlava}<tbody>${radky}</tbody></table>
       </div>`
     })
     .join('')
 
-  const nahr = nahradnici
-    ? `
+  let nahr = ''
+  if (finaleVelikost !== false) {
+    const nahrSloty = rost.jizdy[0]?.sloty.filter((s) => s.pozice > finaleVelikost) ?? []
+    const radkyNahr = nahrSloty.length > 0
+      ? nahrSloty.map((s, i) => radekJezdce(`${i + 1}.`, s.jezdec)).join('')
+      : `${radekJezdce('1.', null)}${radekJezdce('2.', null)}`
+    nahr = `
     <div class="nahradnici">
       <div class="sekce-nadpis">NÁHRADNÍCI</div>
-      <table>${hlava}<tbody>${radekJezdce('1.', null)}${radekJezdce('2.', null)}</tbody></table>
+      <table>${hlava}<tbody>${radkyNahr}</tbody></table>
     </div>`
-    : ''
+  }
 
   return (bloky || '<p>Rošt zatím není vytvořený.</p>') + nahr
 }
@@ -407,7 +410,6 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
   if (!zavod) throw new Error('Závod nenalezen.')
 
   const nadpis = NADPIS[listKey]
-  const jeSotolina = kat.ruleset === 'SOTOLINA'
   let telo: string
   let pocet: number | undefined
 
@@ -443,10 +445,10 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
       telo = listQAgregat(repo.getQAgregat(kategorieId, 'Q2'))
       break
     case 'class_q2':
-      telo = listKlasifikace(kategorieId, ['Q1', 'Q2'], jeSotolina)
+      telo = listKlasifikace(kategorieId, ['Q1', 'Q2'], false)
       break
     case 'class_q3':
-      telo = listKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'], jeSotolina)
+      telo = listKlasifikace(kategorieId, ['Q1', 'Q2', 'Q3'], false)
       break
     case 'sf_rost':
       telo = listRosty(repo.getRosty(kategorieId, 'SF'), false)
@@ -454,23 +456,13 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
     case 'sf_res':
       telo = listVysledky(repo.getVysledky(kategorieId, 'SF'))
       break
-    case 'final_rost':
-      telo = listRosty(repo.getRosty(kategorieId, 'F'), true)
+    case 'final_rost': {
+      const fv = (repo.getZaverStav(kategorieId) as { finaleVelikost: number }).finaleVelikost
+      telo = listRosty(repo.getRosty(kategorieId, 'F'), fv)
       break
+    }
     case 'final_res':
       telo = listVysledky(repo.getVysledky(kategorieId, 'F'))
-      break
-    case 'final_b_rost':
-      telo = listRosty(repo.getRosty(kategorieId, 'F_B'), false)
-      break
-    case 'final_b_res':
-      telo = listVysledky(repo.getVysledky(kategorieId, 'F_B'))
-      break
-    case 'final_a_rost':
-      telo = listRosty(repo.getRosty(kategorieId, 'F_A'), false)
-      break
-    case 'final_a_res':
-      telo = listVysledky(repo.getVysledky(kategorieId, 'F_A'))
       break
     case 'overall':
       telo = listCelkove(kategorieId)
@@ -506,6 +498,19 @@ async function withTiskoveOkno<T>(fn: (win: BrowserWindow) => Promise<T>): Promi
   }
 }
 
+async function nactiHtml(win: BrowserWindow, html: string): Promise<void> {
+  const tmp = join(
+    app.getPath('temp'),
+    `casomira-print-${Date.now()}-${Math.random().toString(36).slice(2)}.html`
+  )
+  await writeFile(tmp, html, 'utf8')
+  try {
+    await win.loadFile(tmp)
+  } finally {
+    void unlink(tmp).catch(() => {})
+  }
+}
+
 async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
   const tmp = join(
     app.getPath('temp'),
@@ -514,6 +519,7 @@ async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
   await writeFile(tmp, html, 'utf8')
   try {
     await win.loadFile(tmp)
+    void unlink(tmp).catch(() => {})
     const data = await win.webContents.printToPDF({
       pageSize: 'A4',
       landscape: false,
@@ -521,14 +527,24 @@ async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
       preferCSSPageSize: true
     })
     return Buffer.from(data)
-  } finally {
+  } catch (e) {
     void unlink(tmp).catch(() => {})
+    throw e
   }
 }
 
 // ---------------------------------------------------------------------------
 // Kořenová složka pro PDF
 // ---------------------------------------------------------------------------
+
+export async function generatePdfBuffer(
+  kategorieId: number,
+  listKey: ListKey,
+  logo: string | null
+): Promise<Buffer> {
+  const s = sestav(kategorieId, listKey, logo)
+  return withTiskoveOkno((win) => tiskni(win, s.html))
+}
 
 export function pdfRootStav(): PdfRootStav {
   const root = repo.getPdfRoot()
@@ -626,24 +642,54 @@ const PORADI_STANDARD: ListKey[] = [
   'overall'
 ]
 
-// Pipeline pro Šotolinu (CLAUDE.md §3c): bez semifinále, místo Finále jedou
-// Finále B → Finále A. „Klasifikace po Q2" se exportuje vždy (nese sloupec Los).
-const PORADI_SOTOLINA: ListKey[] = [
-  'start',
-  'grid_q1',
-  'res_q1',
-  'grid_q2',
-  'res_q2',
-  'class_q2',
-  'grid_q3',
-  'res_q3',
-  'class_q3',
-  'final_b_rost',
-  'final_b_res',
-  'final_a_rost',
-  'final_a_res',
-  'overall'
+
+// ---------------------------------------------------------------------------
+// Tiskový preset — závodní tisk (startovka 1×, rošty 4×, výsledky finále 1×)
+// ---------------------------------------------------------------------------
+
+export const TISKOVY_PRESET: { listKey: ListKey; nazev: string; kopii: number }[] = [
+  { listKey: 'start', nazev: 'Startovní listina', kopii: 1 },
+  { listKey: 'grid_q1', nazev: 'Rošty Q1', kopii: 4 },
+  { listKey: 'grid_q2', nazev: 'Rošty Q2', kopii: 4 },
+  { listKey: 'grid_q3', nazev: 'Rošty Q3', kopii: 4 },
+  { listKey: 'final_rost', nazev: 'Rošty finále', kopii: 4 },
+  { listKey: 'final_res', nazev: 'Výsledky finále', kopii: 1 },
 ]
+
+export async function printPreset(
+  kategorieIds: number[],
+  logo: string | null
+): Promise<PrintPresetResult> {
+  if (kategorieIds.length === 0) return { ok: false, vytisteno: 0, preskoceno: 0, chyba: 'Není vybraná žádná kategorie.' }
+  let vytisteno = 0
+  let preskoceno = 0
+  try {
+    await withTiskoveOkno(async (win) => {
+      for (const katId of kategorieIds) {
+        for (const item of TISKOVY_PRESET) {
+          let s: Sestaveno
+          try {
+            s = sestav(katId, item.listKey, logo)
+          } catch {
+            preskoceno++
+            continue
+          }
+          await nactiHtml(win, s.html)
+          await new Promise<void>((resolve, reject) => {
+            win.webContents.print({ silent: true, copies: item.kopii }, (success, errorType) => {
+              if (!success) reject(new Error(errorType ?? 'Tisk selhal'))
+              else resolve()
+            })
+          })
+          vytisteno += item.kopii
+        }
+      }
+    })
+    return { ok: true, vytisteno, preskoceno }
+  } catch (e) {
+    return { ok: false, vytisteno, preskoceno, chyba: e instanceof Error ? e.message : 'Tisk se nezdařil.' }
+  }
+}
 
 export async function exportVse(
   parentWin: BrowserWindow | null,
@@ -662,25 +708,11 @@ export async function exportVse(
         const kat = repo.getKategorieById(katId)
         const zavod = kat ? repo.getZavodById(kat.zavod_id) : null
         const jeRX = zavod?.typ === 'RX'
-        const jeSotolina = kat?.ruleset === 'SOTOLINA'
         const stav = repo.getZaverStav(katId)
 
-        // Pipeline + skipy podle pravidel:
-        //   STANDARD: RX vynechává class_q2; SF jen když se koná.
-        //   SOTOLINA: vždy class_q2 (kvůli sloupci Los); F-B jen pokud > 10 kvalifikovaných.
-        const poradi = jeSotolina ? PORADI_SOTOLINA : PORADI_STANDARD
-        for (const key of poradi) {
-          if (jeSotolina) {
-            if ((key === 'final_b_rost' || key === 'final_b_res') && (stav.pocetDoB ?? 0) === 0) {
-              continue
-            }
-            if ((key === 'final_a_rost' || key === 'final_a_res') && (stav.pocetDoA ?? 0) === 0) {
-              continue
-            }
-          } else {
-            if (jeRX && key === 'class_q2') continue
-            if ((key === 'sf_rost' || key === 'sf_res') && !stav.sfSeKona) continue
-          }
+        for (const key of PORADI_STANDARD) {
+          if (jeRX && key === 'class_q2') continue
+          if ((key === 'sf_rost' || key === 'sf_res') && !stav.sfSeKona) continue
           const s = sestav(katId, key, logo)
           const slozka = cilovaSlozka(root, s.zavodNazev, s.katNazev)
           await mkdir(slozka, { recursive: true })

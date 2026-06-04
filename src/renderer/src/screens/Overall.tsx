@@ -20,21 +20,11 @@ const SLOUPCE_STANDARD: SloupecDef[] = [
   { hlavicka: 'BQ', popis: 'Body z kvalifikace (po Q3)', hodnota: (r) => r.bq, zarovnani: 'right', format: 'cislo' }
 ]
 
-// Sloupce SOTOLINA: PQ / PFB / PFA / BQ (semifinále se nejede).
-const SLOUPCE_SOTOLINA: SloupecDef[] = [
-  { hlavicka: 'PQ', popis: 'Pořadí po Q3', hodnota: (r) => r.pq, zarovnani: 'right', format: 'poradi' },
-  { hlavicka: 'PFB', popis: 'Pořadí ve Finále B', hodnota: (r) => r.pfb ?? null, zarovnani: 'right', format: 'poradi' },
-  { hlavicka: 'PFA', popis: 'Pořadí ve Finále A', hodnota: (r) => r.pfa ?? null, zarovnani: 'right', format: 'poradi' },
-  { hlavicka: 'BQ', popis: 'Body z kvalifikace (po Q3)', hodnota: (r) => r.bq, zarovnani: 'right', format: 'cislo' }
-]
 
 export function Overall({
-  kategorieId,
-  jeSotolina = false
+  kategorieId
 }: {
   kategorieId: number
-  /** Šotolina: ukáže PFA/PFB místo PSF/PF a vysvětlivku v podtitulku. */
-  jeSotolina?: boolean
 }): React.JSX.Element {
   const [radky, setRadky] = useState<CelkoveRadek[]>([])
 
@@ -44,18 +34,18 @@ export function Overall({
 
   useEffect(() => {
     void nacti()
+    const off = window.api.onDataChanged?.(() => void nacti())
+    return () => off?.()
   }, [nacti])
 
-  const sloupce = jeSotolina ? SLOUPCE_SOTOLINA : SLOUPCE_STANDARD
-  const sub = jeSotolina
-    ? 'Pořadí řídí Finále A (vítěz = 1.), pak nepostoupivší z Finále B, pak zbytek po Q3'
-    : 'Pořadí řídí finále (vítěz finále = 1.) · body jen z kvalifikace, SF/F je nepřičítají'
+  const sloupce = SLOUPCE_STANDARD
+  const sub = 'Pořadí řídí finále (vítěz finále = 1.) · body jen z kvalifikace, SF/F je nepřičítají'
 
   return (
     <div className="screen-enter">
       <ContentHead title="Celkové výsledky" sub={sub}>
         <Btn icon="sort" onClick={() => void nacti()}>
-          Obnovit
+          Přegenerovat
         </Btn>
       </ContentHead>
 

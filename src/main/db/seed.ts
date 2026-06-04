@@ -8,11 +8,6 @@ function standardBody(pozice: number): number {
   return Math.max(0, 44 - pozice) // 4→40, 5→39, … , 44→0
 }
 
-// Žebříček SOTOLINA: 1=14 … 14=1.
-function sotolinaBody(pozice: number): number {
-  return Math.max(0, 15 - pozice)
-}
-
 // Testovací jezdci kategorie N1600 (převzato z prototypu).
 // [st_cislo, prijmeni, jmeno, znacka, model, los]
 const N1600: [number, string, string, string, string, number][] = [
@@ -34,7 +29,7 @@ const N1600: [number, string, string, string, string, number][] = [
   [5, 'Král', 'Michal', 'Citroën', 'C2', 43]
 ]
 
-const KATEGORIE: [string, 'STANDARD' | 'SOTOLINA'][] = [
+const KATEGORIE: [string, 'STANDARD'][] = [
   ['Junior', 'STANDARD'],
   ['N1400', 'STANDARD'],
   ['N1600', 'STANDARD'],
@@ -45,7 +40,7 @@ const KATEGORIE: [string, 'STANDARD' | 'SOTOLINA'][] = [
   ['Škoda Cup', 'STANDARD'],
   ['Cross Cup', 'STANDARD'],
   ['Dámský pohár', 'STANDARD'],
-  ['Šotolina', 'SOTOLINA']
+  ['Šotolina', 'STANDARD']
 ]
 
 // Naplní prázdnou databázi výchozími daty. Pokud už závod existuje, nedělá nic.
@@ -71,18 +66,12 @@ export function seed(db: Database.Database): void {
     // Žebříčky bodů
     const insZeb = db.prepare('INSERT INTO zebricek (ruleset, poradi, body) VALUES (?, ?, ?)')
     for (let p = 1; p <= 40; p++) insZeb.run('STANDARD', p, standardBody(p))
-    for (let p = 1; p <= 14; p++) insZeb.run('SOTOLINA', p, sotolinaBody(p))
 
     // Pravidla (penalizace + prahy dle CLAUDE.md §5, §8)
     db.prepare(
       `INSERT INTO pravidla
        (ruleset, max_na_jizdu, sf_prah, sf_max, dnf_offset, dns_offset, dq_offset, dnf_body, dns_body, dq_body)
        VALUES ('STANDARD', 8, 12, 16, -1, -5, -10, NULL, NULL, NULL)`
-    ).run()
-    db.prepare(
-      `INSERT INTO pravidla
-       (ruleset, max_na_jizdu, sf_prah, sf_max, dnf_offset, dns_offset, dq_offset, dnf_body, dns_body, dq_body)
-       VALUES ('SOTOLINA', 8, NULL, NULL, NULL, NULL, NULL, 0, 0, -20)`
     ).run()
 
     // Jezdci N1600

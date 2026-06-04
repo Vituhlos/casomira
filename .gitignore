@@ -21,3 +21,4 @@ bordel/
 # Volitelně: velké reálné Excel/PDF mimo ukázky v fixtures/
 # fixtures/*.xls
 # fixtures/*.xlsx
+.claude/worktrees/

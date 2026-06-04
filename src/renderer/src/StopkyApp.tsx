@@ -21,17 +21,12 @@ interface Kanal {
 }
 
 // Všechna kola napříč rulesety — používá se jako popisová mapa.
-const KOLA_LABEL: Record<KoloTyp, string> = {
-  Q1: 'Q1', Q2: 'Q2', Q3: 'Q3', SF: 'SF', F: 'Finále', F_A: 'F–A', F_B: 'F–B'
+const KOLA_LABEL: Partial<Record<KoloTyp, string>> = {
+  Q1: 'Q1', Q2: 'Q2', Q3: 'Q3', SF: 'SF', F: 'Finále'
 }
 
-// Která kola má smysl měřit u dané kategorie — podle ruleset (CLAUDE.md §3):
-//   STANDARD (RAC/RX): Q1, Q2, Q3, SF, F (žádná A/B finále).
-//   SOTOLINA:          Q1, Q2, Q3, F-B, F-A (žádné SF/F).
-function kolaProRuleset(ruleset: 'STANDARD' | 'SOTOLINA' | undefined): KoloTyp[] {
-  if (ruleset === 'SOTOLINA') return ['Q1', 'Q2', 'Q3', 'F_B', 'F_A']
-  return ['Q1', 'Q2', 'Q3', 'SF', 'F']
-}
+// Všechny kategorie měří stejná kola: Q1, Q2, Q3, SF, F.
+const MERENA_KOLA: KoloTyp[] = ['Q1', 'Q2', 'Q3', 'SF', 'F']
 
 function elapsed(k: Kanal, t: number): number {
   return k.running && k.startEpoch != null ? k.baseMs + (t - k.startEpoch) : k.baseMs
@@ -744,14 +739,14 @@ function NoveMereni({
 
   const aktKat = kategorie.find((k) => k.id === katId) ?? null
   // Lišta kol podle ruleset vybrané kategorie (Šotolina ukáže F-A/F-B, ne SF/F).
-  const KOLA = kolaProRuleset(aktKat?.ruleset)
+  const KOLA = MERENA_KOLA
 
   // Při prvním otevření načteme návrh předvýběru (první neodměřená jízda).
   useEffect(() => {
     safeCall(window.api.mereniDalsiJizda().then((d) => {
       if (!d) return
       if (kategorie.some((k) => k.id === d.katId)) setKatId(d.katId)
-      if ((['Q1', 'Q2', 'Q3', 'SF', 'F', 'F_A', 'F_B'] as KoloTyp[]).includes(d.koloTyp)) {
+      if (MERENA_KOLA.includes(d.koloTyp)) {
         setTyp(d.koloTyp)
       }
     }))

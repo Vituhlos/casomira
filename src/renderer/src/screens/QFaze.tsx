@@ -23,7 +23,7 @@ export function QFaze({
 }): React.JSX.Element {
   const jeKvalifikacniQ = typ === 'Q1' || typ === 'Q2'
 
-  const tabs = jeKvalifikacniQ
+  const tabs: { id: SubView; label: string }[] = jeKvalifikacniQ
     ? [
         { id: 'rost', label: 'Rošt' },
         { id: 'res', label: 'Výsledky' },

@@ -24,7 +24,6 @@ import { QFaze } from './screens/QFaze'
 import { Standings } from './screens/Standings'
 import { Semifinale, type SubView } from './screens/Semifinale'
 import { Finale } from './screens/Finale'
-import { FinaleAB } from './screens/FinaleAB'
 import { Overall } from './screens/Overall'
 import { Settings } from './screens/Settings'
 import { UpravaLogModal } from './components/UpravaLogModal'
@@ -38,7 +37,7 @@ import { isMac, HK_GENERATE_ROST } from './lib/hotkeys'
 import { safeCall } from './lib/api'
 
 // Fáze, které mají vnitřní přepínač Rošt/Výsledky (zkratky R / V a ⌘/Ctrl+G).
-const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final', 'final_a', 'final_b'])
+const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final'])
 
 function czDate(iso: string): string {
   const parts = iso.split('-').map(Number)
@@ -77,10 +76,6 @@ function listProFazi(phase: string, sub: SubView): ListKey | null {
       return sub === 'res' ? 'sf_res' : 'sf_rost'
     case 'final':
       return sub === 'res' ? 'final_res' : 'final_rost'
-    case 'final_b':
-      return sub === 'res' ? 'final_b_res' : 'final_b_rost'
-    case 'final_a':
-      return sub === 'res' ? 'final_a_res' : 'final_a_rost'
     default:
       return null
   }
@@ -323,11 +318,7 @@ export function App(): React.JSX.Element {
   //   SOTOLINA: místo SF/Finále jede Finále B → Finále A (CLAUDE.md §3c).
   const aktivniKategorie = kategorie.find((c) => c.id === activeCat) ?? null
   const catLabel = aktivniKategorie?.nazev ?? ''
-  const jeSotolina = aktivniKategorie?.ruleset === 'SOTOLINA'
-  const phases = phasesForCategory(
-    zavod?.typ ?? 'RAC',
-    aktivniKategorie?.ruleset ?? 'STANDARD'
-  )
+  const phases = phasesForCategory(zavod?.typ ?? 'RAC')
   const phaseLabel = phases.find((p) => p.id === phase)?.label ?? ''
   const contentMaxW = contentMaxWidth(phase)
 
@@ -437,33 +428,15 @@ export function App(): React.JSX.Element {
         return <Semifinale kategorieId={activeCat} sub={subView} onSub={setSubView} />
       case 'final':
         return <Finale kategorieId={activeCat} sub={subView} onSub={setSubView} />
-      case 'final_b':
-        return (
-          <FinaleAB
-            kategorieId={activeCat}
-            varianta="B"
-            sub={subView}
-            onSub={setSubView}
-          />
-        )
-      case 'final_a':
-        return (
-          <FinaleAB
-            kategorieId={activeCat}
-            varianta="A"
-            sub={subView}
-            onSub={setSubView}
-          />
-        )
       case 'overall':
-        return <Overall kategorieId={activeCat} jeSotolina={jeSotolina} />
+        return <Overall kategorieId={activeCat} />
       case 'class_q2':
         return (
           <Standings
             kategorieId={activeCat}
             koloTypy={['Q1', 'Q2']}
             title="Klasifikace po Q2"
-            ukazLos={jeSotolina}
+            ukazLos={false}
           />
         )
       case 'class_q3':
@@ -472,7 +445,7 @@ export function App(): React.JSX.Element {
             kategorieId={activeCat}
             koloTypy={['Q1', 'Q2', 'Q3']}
             title="Klasifikace po Q3"
-            ukazLos={jeSotolina}
+            ukazLos={false}
           />
         )
       default:
@@ -625,6 +598,8 @@ export function App(): React.JSX.Element {
                 }
               : undefined
           }
+          zavodId={zavod?.id}
+          zavod={zavod ?? undefined}
         />
       )}
 

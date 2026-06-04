@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Kategorie, PdfRootStav } from '@shared/types'
+import type { Kategorie, PdfRootStav, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn } from '../components/ui'
+import { TiskovyPresetModal } from '../components/TiskovyPresetModal'
+import { SportityModal } from '../components/SportityModal'
 import { APP_NAME, APP_VERSION, APP_VERSION_LABEL } from '../lib/version'
 import { safeCall } from '../lib/api'
 
@@ -15,6 +17,8 @@ interface SettingsProps {
   onRestore?: () => void
   onHotkeys?: () => void
   onUpravaLog?: () => void
+  zavodId?: number
+  zavod?: Zavod
 }
 
 export function Settings({
@@ -26,12 +30,16 @@ export function Settings({
   onBackupAll,
   onRestore,
   onHotkeys,
-  onUpravaLog
+  onUpravaLog,
+  zavodId,
+  zavod
 }: SettingsProps): React.JSX.Element {
   const [logo, setLogo] = useState<string | null>(null)
   const [root, setRoot] = useState<PdfRootStav | null>(null)
   const [vybrane, setVybrane] = useState<Set<number>>(new Set(kategorie.map((k) => k.id)))
   const [probiha, setProbiha] = useState(false)
+  const [ukazPreset, setUkazPreset] = useState(false)
+  const [ukazSportity, setUkazSportity] = useState(false)
 
   useEffect(() => {
     safeCall(window.api.getLogo().then(setLogo), onToast)
@@ -86,6 +94,7 @@ export function Settings({
   }
 
   return (
+    <>
     <Modal
       title="Nastavení"
       width={520}
@@ -228,6 +237,18 @@ export function Settings({
 
       <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
 
+      {/* ---- Závodní tisk ---- */}
+      <SekceNadpis>Závodní tisk</SekceNadpis>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+        Rychlý tisk standardní sady listů na výchozí tiskárnu: startovka 1×, rošty Q1–Q3 a finále 4×,
+        výsledky finále 1×.
+      </p>
+      <Btn variant="bezel" icon="pdf" onClick={() => setUkazPreset(true)}>
+        Závodní tisk…
+      </Btn>
+
+      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+
       {/* ---- Hromadný export ---- */}
       <SekceNadpis>Hromadný export do PDF</SekceNadpis>
       <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
@@ -318,6 +339,21 @@ export function Settings({
 
       <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
 
+      {/* ---- Sportity ---- */}
+      <SekceNadpis>Sportity</SekceNadpis>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+        Publikování PDF výsledků přímo do aplikace Sportity (live výsledky pro diváky).
+      </p>
+      {zavodId && zavod ? (
+        <Btn variant="bezel" onClick={() => setUkazSportity(true)}>
+          Nastavit Sportity…
+        </Btn>
+      ) : (
+        <span style={{ fontSize: 12.5, color: 'var(--text-4)' }}>Nejprve otevřete závod.</span>
+      )}
+
+      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+
       {/* ---- O aplikaci ---- */}
       <SekceNadpis>O aplikaci</SekceNadpis>
       <div
@@ -368,6 +404,25 @@ export function Settings({
         </span>
       </div>
     </Modal>
+
+    {ukazPreset && (
+      <TiskovyPresetModal
+        kategorie={kategorie}
+        onClose={() => setUkazPreset(false)}
+        onToast={onToast}
+      />
+    )}
+
+    {ukazSportity && zavodId != null && zavod != null && (
+      <SportityModal
+        zavodId={zavodId}
+        zavod={zavod}
+        kategorie={kategorie}
+        onClose={() => setUkazSportity(false)}
+        onToast={onToast}
+      />
+    )}
+  </>
   )
 }
 

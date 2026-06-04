@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy soubor, odpojen z routingu (issue 007). Zachován pro archiv.
 // Obrazovka Finále A nebo Finále B pro Šotolinu (CLAUDE.md §3c, §8).
 // Šotolina nemá semifinále — místo toho:
 //   Finále B = od 11. místa po Q3,
