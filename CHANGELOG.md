@@ -6,6 +6,31 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.8] – 2026-06-04
+
+### Přidáno
+- **Sportity integrace** — publikování výsledkových listů přímo do Sportity kanálu
+  bez ručního nahrávání. V Nastavení: zadání API klíče, výběr závodu a složky s výsledky,
+  automatické párování kategorií podle názvu, publikování jednoho listu nebo celé kategorie
+  najednou. Historie posledních akcí s časovými razítky a stavem (ok / chyba).
+- **Závodní tiskový preset** — jedno tlačítko v Nastavení vytiskne předdefinovanou sadu
+  listů rovnou na tiskárnu (bez PDF dialogu): startovní listina 1×, rošty Q1/Q2/Q3/Finále
+  4×, výsledky Finále 1×. Funguje pro více kategorií najednou.
+- **Přegenerovat celkové výsledky** — tlačítko na obrazovce Celkově nyní jasně popisuje
+  akci; celkové výsledky se navíc automaticky přepočítají při každé změně dat v kategorii.
+
+### Opraveno
+- **Kvalifikační podmínka do SF/finále** — jezdec se počítal jako kvalifikovaný i tehdy,
+  když měl v obou jízdách DQ. Opraveno dle pravidel: DQ v jízdě = jako kdyby nenastoupil;
+  jezdec musí mít alespoň jednu kompletní jízdu A zároveň alespoň jednu odstartovanou.
+- **Tiebreak klasifikace** — při shodném počtu bodů po Q3 se dříve porovnávala jen
+  poslední jízda. Opraveno na správné porovnání napříč všemi jízdami dle pravidel.
+
+### Změněno
+- **Náhradníci ve finále automaticky do roštu** — jezdci doporučení jako náhradníci
+  (z klasifikace po Q3) jsou nyní automaticky zapsáni do roštů finále bez nutnosti
+  ručního doplnění.
+
 ## [0.9.7-beta] – 2026-06-04
 
 ### Přidáno
@@ -157,7 +182,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.8...HEAD
+[0.9.8]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...v0.9.8
 [0.9.7-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...v0.9.7-beta
 [0.9.6-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.5...v0.9.6-beta
 [0.9.5]: https://github.com/Vituhlos/casomira/compare/v0.9.4...v0.9.5
