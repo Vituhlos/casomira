@@ -6,6 +6,28 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.9-beta] – 2026-06-05
+
+### Přidáno
+- **Windows 11 Mica efekt** — na Windows 11 (build ≥ 22000) appka využívá
+  nativní DWM Mica materiál; sidebar a toolbar mají solidní barvy (stejný přístup
+  jako VS Code / Teams), Mica prosvítá pouze přes titlebar.
+- **macOS nativní vibrancy** — sidebar a toolbar využívají `setVibrancy('sidebar')`;
+  na macOS 26 (a starších) je obsah průhledný vůči desktopu.
+
+### Změněno
+- **Migrace databáze: better-sqlite3 → node:sqlite** — SQLite je nyní vestavěný
+  přímo v Node.js (experimentální API od Node 22.5). Odpadá nativní `.node` modul,
+  který musel být rebuildován pro každou verzi Electronu a způsoboval problémy
+  s podepisováním na macOS. Databázová vrstva i migrace jsou plně kompatibilní;
+  existující data zůstávají beze změny.
+- **Electron 39 → 42** — aktuální stabilní verze; přináší opravy zabezpečení
+  a výkonnostní zlepšení.
+- **PDF export konzistentní DPI** — explicitní `scaleFactor: 100` + `dpi: 150`
+  zabraňuje rozdílné velikosti textu na HiDPI displejích (změna výchozího chování v E42).
+- **ASAR integrita** — `integrity: true` v electron-builderu; spustitelný soubor
+  ověřuje integritu ASAR archivu při startu (ochrana proti manipulaci).
+
 ## [0.9.8-beta] – 2026-06-05
 
 ### Přidáno
@@ -199,7 +221,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.8-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.9-beta...HEAD
+[0.9.9-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.8-beta...v0.9.9-beta
 [0.9.8-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...v0.9.8-beta
 [0.9.7-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...v0.9.7-beta
 [0.9.6-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.5...v0.9.6-beta
