@@ -41,10 +41,10 @@ function openDb(): DatabaseSync {
 section('1. Migrace a seed')
 {
   const db = openDb()
-  // Verze 0 → spusť všech 9 migrací
+  // Verze 0 → spusť všech 12 migrací
   migrate(db)
   const ver = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version
-  check('user_version = 9 po migraci', ver === 9, `actual: ${ver}`)
+  check('user_version = 12 po migraci', ver === 12, `actual: ${ver}`)
 
   // Seed naplní závod + kategorie + jezdce
   seed(db)
@@ -88,7 +88,7 @@ section('3. Migrace je idempotentní')
   migrate(db)
   migrate(db) // druhý běh nesmí spadnout
   const ver = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version
-  check('druhá migrace projde bez chyby a version = 9', ver === 9)
+  check('druhá migrace projde bez chyby a version = 12', ver === 12)
 }
 
 section('4. Žebříček bodů')
@@ -102,8 +102,7 @@ section('4. Žebříček bodů')
   check('1. místo STANDARD = 50 bodů', b1 === 50, `${b1}`)
   check('2. místo STANDARD = 45 bodů', b2 === 45, `${b2}`)
   check('3. místo STANDARD = 42 bodů', b3 === 42, `${b3}`)
-  const s1 = (db.prepare("SELECT body FROM zebricek WHERE ruleset='SOTOLINA' AND poradi=1").get() as { body: number })?.body
-  check('1. místo SOTOLINA = 14 bodů', s1 === 14, `${s1}`)
+  // SOTOLINA ruleset byl odstraněn v issue 007 — žebříček obsahuje jen STANDARD.
 }
 
 section('5. Cizí klíče fungují (foreign_keys = ON)')
