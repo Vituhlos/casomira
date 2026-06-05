@@ -6,18 +6,27 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
-## [0.9.8-beta] – 2026-06-04
+## [0.9.8-beta] – 2026-06-05
 
 ### Přidáno
 - **Sportity integrace** — publikování výsledkových listů přímo do Sportity kanálu
   bez ručního nahrávání. V Nastavení: zadání API klíče, výběr závodu a složky s výsledky,
   automatické párování kategorií podle názvu, publikování jednoho listu nebo celé kategorie
   najednou. Historie posledních akcí s časovými razítky a stavem (ok / chyba).
+- **Sportity setup při zakládání závodu** — pokud je API klíč nastaven a spojení funguje,
+  zobrazí se v dialogu „Nový závod" sekce pro výběr kanálu a složky; mapování se uloží
+  automaticky při vytvoření závodu.
 - **Závodní tiskový preset** — jedno tlačítko v Nastavení vytiskne předdefinovanou sadu
   listů rovnou na tiskárnu (bez PDF dialogu): startovní listina 1×, rošty Q1/Q2/Q3/Finále
   4×, výsledky Finále 1×. Funguje pro více kategorií najednou.
+- **Tisk přímo z toolbaru** — ikona tiskárny vedle tlačítka Stopky tiskne aktuálně
+  zobrazený list na tiskárnu. Počet kopií dle závodního presetu (rošty 4×, ostatní 1×).
+  Pokud je připojeno více tiskáren, zobrazí se výběr; při jedné tiskárně tiskne okamžitě.
 - **Přegenerovat celkové výsledky** — tlačítko na obrazovce Celkově nyní jasně popisuje
   akci; celkové výsledky se navíc automaticky přepočítají při každé změně dat v kategorii.
+- **ISO datum v názvu složky PDF** — složka závodu se nyní jmenuje např.
+  `2026-06-15 Rally Morava` místo pouhého `Rally Morava`; složky se v průzkumníku
+  řadí chronologicky automaticky.
 
 ### Opraveno
 - **Kvalifikační podmínka do SF/finále** — jezdec se počítal jako kvalifikovaný i tehdy,
