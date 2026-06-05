@@ -121,9 +121,9 @@ function bezpecneFsJmeno(s: string): string {
   return out || 'bez_nazvu'
 }
 
-// Cílová složka listu: <kořen>/<závod>/<kategorie>.
-function cilovaSlozka(root: string, zavodNazev: string, katNazev: string): string {
-  return join(root, bezpecneFsJmeno(zavodNazev), bezpecneFsJmeno(katNazev))
+// Cílová složka listu: <kořen>/<datum> <závod>/<kategorie>.
+function cilovaSlozka(root: string, zavodNazev: string, katNazev: string, zavodDatum: string): string {
+  return join(root, bezpecneFsJmeno(`${zavodDatum} ${zavodNazev}`), bezpecneFsJmeno(katNazev))
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +398,7 @@ interface Sestaveno {
   html: string
   listSoubor: string // ASCII název listu bez přípony (Q1_vysledky…)
   zavodNazev: string
+  zavodDatum: string // ISO YYYY-MM-DD — pro název složky
   katNazev: string
 }
 
@@ -477,7 +478,7 @@ function sestav(kategorieId: number, listKey: ListKey, logo: string | null): Ses
     `${kat.nazev} ${nadpis}`,
     hlavicka(logo, zavod.nazev, kat.nazev, nadpis, pocet) + telo
   )
-  return { html, listSoubor: SOUBOR[listKey], zavodNazev: zavod.nazev, katNazev: kat.nazev }
+  return { html, listSoubor: SOUBOR[listKey], zavodNazev: zavod.nazev, zavodDatum: zavod.datum, katNazev: kat.nazev }
 }
 
 // ---------------------------------------------------------------------------
@@ -609,7 +610,7 @@ export async function exportJeden(
   } else {
     const root = await zajistiRoot(parentWin)
     if (!root) return { ok: false, zruseno: true }
-    cilSlozky = cilovaSlozka(root, s.zavodNazev, s.katNazev)
+    cilSlozky = cilovaSlozka(root, s.zavodNazev, s.katNazev, s.zavodDatum)
     cilSouboru = join(cilSlozky, `${s.listSoubor}.pdf`)
   }
 
@@ -746,7 +747,7 @@ export async function exportVse(
           if (jeRX && key === 'class_q2') continue
           if ((key === 'sf_rost' || key === 'sf_res') && !stav.sfSeKona) continue
           const s = sestav(katId, key, logo)
-          const slozka = cilovaSlozka(root, s.zavodNazev, s.katNazev)
+          const slozka = cilovaSlozka(root, s.zavodNazev, s.katNazev, s.zavodDatum)
           await mkdir(slozka, { recursive: true })
           const buf = await tiskni(win, s.html)
           await writeFile(join(slozka, `${s.listSoubor}.pdf`), buf)
