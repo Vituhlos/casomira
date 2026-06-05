@@ -27,3 +27,5 @@ Každý issue soubor by měl ideálně obsahovat:
 - [005 — Rošt finále: doplnit náhradníky](./005-finale-nahradnici.md)
 - [006 — Celkové výsledky: umožnit přegenerování po změnách](./006-celkove-vysledky-pregenerovani.md)
 - [007 — Odstranit speciální ruleset/pipeline Šotolina](./007-odstraneni-sotolina-ruleset.md)
+- [008 — macOS nativní verze ve SwiftUI, Windows Electron ponechat](./008-macos-swiftui-native-port.md)
+- [009 — macOS 26 SwiftUI kompatibilita a nativní feel checklist](./009-macos26-swiftui-kompatibilita-native-feel.md)
