@@ -18,7 +18,6 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
-    "rebuild": "electron-rebuild -f -w better-sqlite3",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
@@ -31,17 +30,14 @@
     "docs:word": "npx --yes @mohtasham/md-to-docx docs/user/INSTALACE-MAC.md docs/user/Casomira-instalace-Mac.docx && npx --yes @mohtasham/md-to-docx docs/user/NAVOD-PRO-TESTERY.md docs/user/Casomira-navod-pro-testery.docx"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.18.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.2.0",
-    "electron": "^39.8.10",
+    "electron": "^42.0.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "react": "^19.2.0",

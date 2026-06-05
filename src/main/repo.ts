@@ -41,6 +41,7 @@ import type {
   Stav
 } from '../shared/types'
 import { getDb } from './db/connection'
+import { runInTransaction } from './db/transaction'
 import { parseSheets } from './excel'
 import { aplikujRucniPoradi, spocitejJizdu, tiebreakPerKolo, type JizdaVstup, type Penalizace } from './scoring'
 import {
@@ -59,10 +60,13 @@ const JEZDEC_SLOUPCE =
 const EDITOVATELNA: JezdecPole[] = ['los', 'st_cislo', 'prijmeni', 'jmeno', 'znacka', 'model']
 
 function isUniqueError(e: unknown): boolean {
+  // node:sqlite hází ERR_SQLITE_ERROR s errcode=19 (SQLITE_CONSTRAINT)
+  // a errstr obsahující 'UNIQUE constraint failed'
   return (
     e instanceof Error &&
-    'code' in e &&
-    (e as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE'
+    'errcode' in e &&
+    (e as { errcode?: number }).errcode === 19 &&
+    ((e as { errstr?: string }).errstr ?? '').includes('UNIQUE')
   )
 }
 
@@ -152,7 +156,7 @@ export function listZavody(): ZavodInfo[] {
 export function createZavod(data: NovyZavod): Zavod {
   const db = getDb()
   const typ = data.typ === 'RX' ? 'RX' : 'RAC'
-  const id = db.transaction(() => {
+  const id = runInTransaction(db, () => {
     const r = db
       .prepare('INSERT INTO zavod (nazev, datum, misto, typ) VALUES (?, ?, ?, ?)')
       .run(data.nazev.trim() || 'Nový závod', data.datum, data.misto.trim(), typ)
@@ -164,7 +168,7 @@ export function createZavod(data: NovyZavod): Zavod {
       insKat.run(zavodId, nazev, 'STANDARD')
     }
     return zavodId
-  })()
+  })
   setAktivniZavod(id)
   return getZavodById(id) as Zavod
 }
@@ -190,7 +194,7 @@ function syncKategorie(zavodId: number, pozadovane: { nazev: string; ruleset: Ru
   const stavajici = listKategorie(zavodId)
   const pozadovaneKeys = new Set(uniq.map((k) => k.nazev.toLocaleLowerCase('cs')))
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     for (const kat of stavajici) {
       if (!pozadovaneKeys.has(kat.nazev.toLocaleLowerCase('cs'))) {
         db.prepare('DELETE FROM kategorie WHERE id = ?').run(kat.id)
@@ -203,16 +207,16 @@ function syncKategorie(zavodId: number, pozadovane: { nazev: string; ruleset: Ru
         ins.run(zavodId, k.nazev, k.ruleset)
       }
     }
-  })()
+  })
 }
 
 export function updateZavod(uprava: ZavodUprava): Zavod {
   const db = getDb()
-  db.transaction(() => {
+  runInTransaction(db, () => {
     db.prepare('UPDATE zavod SET nazev = ?, datum = ?, misto = ? WHERE id = ?')
       .run(uprava.nazev.trim() || 'Závod', uprava.datum, uprava.misto.trim(), uprava.id)
     if (uprava.kategorie) syncKategorie(uprava.id, uprava.kategorie)
-  })()
+  })
   return getZavodById(uprava.id) as Zavod
 }
 
@@ -370,7 +374,7 @@ export function importJezdci(commit: ImportCommit): ImportResult {
   let prepsano = 0
   let preskoceno = 0
 
-  const tx = db.transaction(() => {
+  runInTransaction(db, () => {
     for (const list of commit.listy) {
       for (const j of list.jezdci) {
         const existing =
@@ -400,7 +404,6 @@ export function importJezdci(commit: ImportCommit): ImportResult {
       }
     }
   })
-  tx()
 
   return { vlozeno, prepsano, preskoceno }
 }
@@ -544,14 +547,14 @@ export function setRostSlot(
     .get(jizdaId, jezdec.id, pozice)
   if (dup) return { ok: false, jezdec: null, duplicitni: true }
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     db.prepare('DELETE FROM rost_pozice WHERE jizda_id = ? AND pozice = ?').run(jizdaId, pozice)
     db.prepare('INSERT INTO rost_pozice (jizda_id, pozice, jezdec_id) VALUES (?, ?, ?)').run(
       jizdaId,
       pozice,
       jezdec.id
     )
-  })()
+  })
 
   return { ok: true, jezdec }
 }
@@ -781,7 +784,7 @@ export function zapisRost(kategorieId: number, typ: KoloTyp, jizdy: RostZapisJiz
   const koloId = ensureKolo(db, kategorieId, typ)
   const potreba = Math.max(1, jizdy.length)
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     const mam = (
       db.prepare('SELECT COUNT(*) AS n FROM jizda WHERE kolo_id = ?').get(koloId) as { n: number }
     ).n
@@ -803,7 +806,7 @@ export function zapisRost(kategorieId: number, typ: KoloTyp, jizdy: RostZapisJiz
       // finále má až 10 míst v jedné jízdě, proto neořezáváme na 8
       jz.jezdecIds.slice(0, 16).forEach((jid, i) => insP.run(jizdaId, i + 1, jid))
     }
-  })()
+  })
 
   return getRosty(kategorieId, typ)
 }
@@ -920,7 +923,7 @@ function prepoctiJizdu(
     )
   }
   const upd = db.prepare('UPDATE vysledek SET poradi = ?, body = ? WHERE jizda_id = ? AND jezdec_id = ?')
-  db.transaction(() => {
+  runInTransaction(db, () => {
     for (const v of vysl) {
       // Ruční override má přednost — uloží se jako finální `body` (klasifikace
       // čte právě tento sloupec, takže se upravené body promítnou všude).
@@ -928,7 +931,7 @@ function prepoctiJizdu(
       const finalBody = rucni !== null && rucni !== undefined ? rucni : v.body
       upd.run(v.poradi, finalBody, jizdaId, v.jezdec_id)
     }
-  })()
+  })
 }
 
 function nactiJizdu(db: Db, jizdaId: number, cislo: number): VysledekJizda {
@@ -1013,7 +1016,7 @@ export function getVysledky(kategorieId: number, typ: KoloTyp): VysledekKolo {
   // Sync roštu s výsledky + přepočet bodů v jediné transakci — žádný mezistav
   // kde jsou řádky sesynchronizované ale body ještě nepřepočítané.
   // prepoctiJizdu uvnitř vytvoří savepoint (better-sqlite3 nested tx).
-  const jizdyData = db.transaction(() => {
+  const jizdyData = runInTransaction(db, () => {
     for (const jz of jizdy) {
       clean.run(jz.id, jz.id)
       for (const p of selPoz.all(jz.id) as { jezdec_id: number }[]) ensure.run(jz.id, p.jezdec_id)
@@ -1022,7 +1025,7 @@ export function getVysledky(kategorieId: number, typ: KoloTyp): VysledekKolo {
       prepoctiJizdu(db, jz.id, bodyZaPozici, penalizace)
       return nactiJizdu(db, jz.id, jz.cislo)
     })
-  })()
+  })
 
   return { koloId, jizdy: jizdyData }
 }
@@ -1037,7 +1040,7 @@ export function setVysledek(arg: SetVysledekArg): VysledekJizda {
     .get(arg.jizdaId) as { kategorie_id: number; cislo: number } | undefined
   if (!meta) throw new Error('Jízda neexistuje')
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     db.prepare(
       `INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (?, ?, 0, 'OK')`
     ).run(arg.jizdaId, arg.jezdecId)
@@ -1058,7 +1061,7 @@ export function setVysledek(arg: SetVysledekArg): VysledekJizda {
         arg.jezdecId
       )
     }
-  })()
+  })
 
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
   prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
@@ -1108,10 +1111,10 @@ export function setCasovaPenalizace(arg: CasovaPenalizaceArg): VysledekJizda {
   const vysledekId = ensureVysledekRow(db, arg.jizdaId, arg.jezdecId)
   const penalizaceMs = Math.round(arg.sekundy * 1000)
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     db.prepare('UPDATE vysledek SET penalizace_ms = ? WHERE id = ?').run(penalizaceMs, vysledekId)
     zapisUpravaLog(db, vysledekId, 'CASOVA_PENALIZACE', penalizaceMs, duvod)
-  })()
+  })
 
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
   prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
@@ -1144,10 +1147,10 @@ export function setBodovaPenalizace(arg: BodovaPenalizaceArg): VysledekJizda {
   const delta = Math.round(arg.delta)
   const finalBody = auto + delta
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     db.prepare('UPDATE vysledek SET body_rucni = ? WHERE id = ?').run(finalBody, vysledekId)
     zapisUpravaLog(db, vysledekId, 'BODOVA_PENALIZACE', delta, duvod)
-  })()
+  })
 
   prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
   return nactiJizdu(db, arg.jizdaId, meta.cislo)
@@ -1183,10 +1186,10 @@ export function setPosunPoradi(arg: PosunPoradiArg): VysledekJizda {
     throw new Error(`V jízdě je jen ${maxPoradi.n} jezdců s pořadím (max. pozice ${maxPoradi.n}).`)
   }
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     db.prepare('UPDATE vysledek SET rucni_poradi = ? WHERE id = ?').run(pozice, vysledekId)
     zapisUpravaLog(db, vysledekId, 'POSUN_PORADI', pozice, duvod)
-  })()
+  })
 
   prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
   return nactiJizdu(db, arg.jizdaId, meta.cislo)
@@ -1202,7 +1205,7 @@ export function zrusPenalizaci(arg: ZrusPenalizaciArg): VysledekJizda {
   const vysledekId = ensureVysledekRow(db, arg.jizdaId, arg.jezdecId)
   const typ = arg.typ ?? 'CASOVA_PENALIZACE'
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     if (typ === 'CASOVA_PENALIZACE') {
       db.prepare('UPDATE vysledek SET penalizace_ms = 0 WHERE id = ?').run(vysledekId)
       zapisUpravaLog(db, vysledekId, 'ZRUSENI', null, `Časová penalizace zrušena: ${duvod}`)
@@ -1213,7 +1216,7 @@ export function zrusPenalizaci(arg: ZrusPenalizaciArg): VysledekJizda {
       db.prepare('UPDATE vysledek SET rucni_poradi = NULL WHERE id = ?').run(vysledekId)
       zapisUpravaLog(db, vysledekId, 'ZRUSENI', null, `Posun pořadí zrušen: ${duvod}`)
     }
-  })()
+  })
 
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.kategorie_id))
   prepoctiJizdu(db, arg.jizdaId, bodyZaPozici, penalizace)
@@ -1957,7 +1960,7 @@ export function zapisMereniDoVysledku(jizdaId: number): VysledekJizda {
     )
     .all(jizdaId, zavodId) as { cas_ms: number; jezdec_id: number }[]
 
-  db.transaction(() => {
+  runInTransaction(db, () => {
     // Zajisti, že přiřazení jezdci jsou v roštu jízdy — jinak by je synchronizace
     // ve Výsledcích smazala (vysledek je vázán na rost_pozice).
     let next = (
@@ -1983,7 +1986,7 @@ export function zapisMereniDoVysledku(jizdaId: number): VysledekJizda {
       insV.run(jizdaId, r.jezdec_id)
       updV.run(r.cas_ms, jizdaId, r.jezdec_id)
     }
-  })()
+  })
 
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, meta.katId))
   prepoctiJizdu(db, jizdaId, bodyZaPozici, penalizace)

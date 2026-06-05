@@ -1,4 +1,5 @@
-import type Database from 'better-sqlite3'
+import type { DatabaseSync } from 'node:sqlite'
+import { runInTransaction } from './transaction'
 import { SCHEMA_SQL } from './schema'
 
 // Číslo poslední migrace. Každý krok zvýší SCHEMA_VERSION o 1.
@@ -6,21 +7,20 @@ import { SCHEMA_SQL } from './schema'
 export const SCHEMA_VERSION = 12
 const LATEST = SCHEMA_VERSION
 
-function step(db: Database.Database, targetVersion: number, fn: () => void): void {
-  const run = db.transaction(() => {
+function step(db: DatabaseSync, targetVersion: number, fn: () => void): void {
+  runInTransaction(db, () => {
     fn()
-    db.pragma(`user_version = ${targetVersion}`)
+    db.exec(`PRAGMA user_version = ${targetVersion}`)
   })
-  run()
 }
 
-function hasColumn(db: Database.Database, table: string, column: string): boolean {
-  const cols = db.pragma(`table_info(${table})`) as Array<{ name: string }>
+function hasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
   return cols.some((c) => c.name === column)
 }
 
-export function migrate(db: Database.Database): void {
-  let version = db.pragma('user_version', { simple: true }) as number
+export function migrate(db: DatabaseSync): void {
+  let version = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version
 
   if (version < 1) {
     step(db, 1, () => db.exec(SCHEMA_SQL))
@@ -211,6 +211,6 @@ export function migrate(db: Database.Database): void {
   // Pojistka: synchronizuj user_version s LATEST pro případ, že bylo přidáno
   // více kroků v jednom commitu (nemělo by nastat, ale bezpečnostní síť).
   if (version < LATEST) {
-    db.pragma(`user_version = ${LATEST}`)
+    db.exec(`PRAGMA user_version = ${LATEST}`)
   }
 }

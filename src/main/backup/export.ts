@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3'
+import type { DatabaseSync } from 'node:sqlite'
 import { getDb } from '../db/connection'
 import { backupEnvelopeBase } from './meta'
 import type {

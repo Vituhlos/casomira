@@ -1,4 +1,5 @@
-import type Database from 'better-sqlite3'
+import type { DatabaseSync } from 'node:sqlite'
+import { runInTransaction } from './transaction'
 
 // Bodový žebříček STANDARD (CLAUDE.md §4): 1=50, 2=45, 3=42, dál 44−pořadí.
 function standardBody(pozice: number): number {
@@ -44,11 +45,11 @@ const KATEGORIE: [string, 'STANDARD'][] = [
 ]
 
 // Naplní prázdnou databázi výchozími daty. Pokud už závod existuje, nedělá nic.
-export function seed(db: Database.Database): void {
+export function seed(db: DatabaseSync): void {
   const existuje = db.prepare('SELECT COUNT(*) AS n FROM zavod').get() as { n: number }
   if (existuje.n > 0) return
 
-  const tx = db.transaction(() => {
+  runInTransaction(db, () => {
     // Závod
     const zavod = db
       .prepare('INSERT INTO zavod (nazev, datum, misto, typ) VALUES (?, ?, ?, ?)')
@@ -84,6 +85,4 @@ export function seed(db: Database.Database): void {
       insJ.run(n1600, st, prijmeni, jmeno, znacka, model, los)
     }
   })
-
-  tx()
 }

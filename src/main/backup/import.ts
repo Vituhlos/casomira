@@ -1,4 +1,5 @@
-import type Database from 'better-sqlite3'
+import type { DatabaseSync } from 'node:sqlite'
+import { runInTransaction } from '../db/transaction'
 import { getDb } from '../db/connection'
 import * as repo from '../repo'
 import type {
@@ -56,7 +57,7 @@ export function previewRestoreFromText(text: string, soubor: string, zavodIndex 
   }
 }
 
-function insertZavodBlock(db: Database.Database, block: BackupZavodPayload): number {
+function insertZavodBlock(db: DatabaseSync, block: BackupZavodPayload): number {
   const z = block.zavod
   const newZavodId = Number(
     db
@@ -188,7 +189,7 @@ function insertZavodBlock(db: Database.Database, block: BackupZavodPayload): num
   return newZavodId
 }
 
-function importGlobalTables(db: Database.Database, data: CasomiraBackupFile): void {
+function importGlobalTables(db: DatabaseSync, data: CasomiraBackupFile): void {
   if (!data.zebricek?.length && !data.pravidla?.length && !data.nastaveni?.length) return
 
   if (data.zebricek?.length) {
@@ -240,7 +241,7 @@ export function restoreFromText(
   const block = data.zavody[idx]
 
   const db = getDb()
-  const zavodId = db.transaction(() => {
+  const zavodId = runInTransaction(db, () => {
     if (mode === 'overwrite') {
       if (targetZavodId == null) {
         throw new BackupValidationError('Chybí cílový závod pro přepsání.')
@@ -257,7 +258,7 @@ export function restoreFromText(
     }
 
     return newId
-  })()
+  })
 
   repo.setAktivniZavod(zavodId)
   return { zavodId, nazev: block.zavod.nazev }
@@ -266,7 +267,7 @@ export function restoreFromText(
 export function restoreAllZavodyFromText(text: string): number[] {
   const data = parseBackupJson(text)
   const db = getDb()
-  return db.transaction(() => {
+  return runInTransaction(db, () => {
     const ids: number[] = []
     for (const block of data.zavody) {
       ids.push(insertZavodBlock(db, block))
@@ -274,7 +275,7 @@ export function restoreAllZavodyFromText(text: string): number[] {
     if (data.scope === 'database') importGlobalTables(db, data)
     if (ids.length > 0) repo.setAktivniZavod(ids[ids.length - 1])
     return ids
-  })()
+  })
 }
 
 export { BackupValidationError }
