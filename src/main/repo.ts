@@ -60,14 +60,13 @@ const JEZDEC_SLOUPCE =
 const EDITOVATELNA: JezdecPole[] = ['los', 'st_cislo', 'prijmeni', 'jmeno', 'znacka', 'model']
 
 function isUniqueError(e: unknown): boolean {
-  // node:sqlite hází ERR_SQLITE_ERROR s errcode=19 (SQLITE_CONSTRAINT)
-  // a errstr obsahující 'UNIQUE constraint failed'
-  return (
-    e instanceof Error &&
-    'errcode' in e &&
-    (e as { errcode?: number }).errcode === 19 &&
-    ((e as { errstr?: string }).errstr ?? '').includes('UNIQUE')
-  )
+  if (!(e instanceof Error)) return false
+  // node:sqlite: errcode = extended SQLite result code.
+  // SQLITE_CONSTRAINT_UNIQUE = 2067 (= SQLITE_CONSTRAINT 19 | 8<<8).
+  // Záložně testujeme message — obsahuje 'UNIQUE constraint failed: ...'.
+  const errcode = (e as { errcode?: number }).errcode
+  if (errcode === 2067) return true
+  return e.message.includes('UNIQUE constraint')
 }
 
 // ---- Nastavení (klíč/hodnota) ----
