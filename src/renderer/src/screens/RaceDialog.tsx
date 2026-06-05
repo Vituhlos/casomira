@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { Kategorie, RaceType, Zavod } from '@shared/types'
+import { useEffect, useRef, useState } from 'react'
+import type { Kategorie, RaceType, SportityEventView, SportityNodeView, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn, DevBadge } from '../components/ui'
 import { VYCHOZI_KATEGORIE } from '../data/raceDefaults'
@@ -45,6 +45,30 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   const [nacita, setNacita] = useState(mode === 'edit')
   const [confirmOdebrani, setConfirmOdebrani] = useState<string | null>(null)
 
+  // Sportity — zobrazí se jen pokud je API klíč nastaven a spojení funguje
+  const [sportityDostupne, setSportityDostupne] = useState(false)
+  const sportityChecked = useRef(false)
+  const [sportityHeslo, setSportityHeslo] = useState('')
+  const [sportityEvents, setSportityEvents] = useState<SportityEventView[]>([])
+  const [sportityLoadingEvents, setSportityLoadingEvents] = useState(false)
+  const [sportityEventId, setSportityEventId] = useState('')
+  const [sportityFolders, setSportityFolders] = useState<SportityNodeView[]>([])
+  const [sportityLoadingFolders, setSportityLoadingFolders] = useState(false)
+  const [sportityFolderId, setSportityFolderId] = useState('')
+  const [sportityFolderName, setSportityFolderName] = useState('')
+
+  useEffect(() => {
+    if (mode !== 'new' || sportityChecked.current) return
+    sportityChecked.current = true
+    safeCall(
+      window.api.getSportitySettings().then(async (s) => {
+        if (!s.apiKeySet) return
+        const res = await window.api.testSportityConnection()
+        if (res.ok) setSportityDostupne(true)
+      })
+    )
+  }, [mode])
+
   useEffect(() => {
     if (mode !== 'edit' || !zavod) return
     let live = true
@@ -86,6 +110,33 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
     setVlastni('')
   }
 
+  const nactiSportityEvents = async (): Promise<void> => {
+    setSportityLoadingEvents(true)
+    setSportityEvents([])
+    setSportityEventId('')
+    setSportityFolders([])
+    setSportityFolderId('')
+    try {
+      const evs = await window.api.sportityListEvents()
+      setSportityEvents(evs)
+    } finally {
+      setSportityLoadingEvents(false)
+    }
+  }
+
+  const nactiSportityFolders = async (eventId: string): Promise<void> => {
+    if (!sportityHeslo.trim()) return
+    setSportityLoadingFolders(true)
+    setSportityFolders([])
+    setSportityFolderId('')
+    try {
+      const docs = await window.api.sportityListDocuments(sportityHeslo.trim(), eventId || null)
+      setSportityFolders(docs.filter((d) => d.type === 'folder'))
+    } finally {
+      setSportityLoadingFolders(false)
+    }
+  }
+
   const vybraneNazvy = dostupne.filter((n) => vybrane.has(n))
   const muzeUlozit =
     nazev.trim() !== '' && datum !== '' && vybraneNazvy.length > 0 && !nacita
@@ -100,6 +151,15 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
         onSaved(z)
       } else {
         const z = await window.api.createZavod({ nazev, datum, misto, typ, kategorie })
+        if (sportityDostupne && sportityHeslo.trim() && sportityFolderId) {
+          await window.api.saveSportityZavodMap(
+            z.id,
+            sportityHeslo.trim(),
+            sportityEventId || null,
+            sportityFolderId,
+            sportityFolderName
+          )
+        }
         onSaved(z)
       }
     } finally {
@@ -269,6 +329,26 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
             </span>
           </Pole>
           {kategorieSekce}
+          {sportityDostupne && (
+            <SportitySekce
+              heslo={sportityHeslo}
+              onHeslo={setSportityHeslo}
+              events={sportityEvents}
+              loadingEvents={sportityLoadingEvents}
+              onNactiEvents={() => void nactiSportityEvents()}
+              eventId={sportityEventId}
+              onEventId={(id) => {
+                setSportityEventId(id)
+                setSportityFolders([])
+                setSportityFolderId('')
+                if (id !== undefined) void nactiSportityFolders(id)
+              }}
+              folders={sportityFolders}
+              loadingFolders={sportityLoadingFolders}
+              folderId={sportityFolderId}
+              onFolderId={(id, name) => { setSportityFolderId(id); setSportityFolderName(name) }}
+            />
+          )}
           {typ === 'RX' && (
             <p
               style={{
@@ -383,6 +463,147 @@ function Pole({
         {label}
       </div>
       {children}
+    </div>
+  )
+}
+
+function SportitySekce({
+  heslo, onHeslo,
+  events, loadingEvents, onNactiEvents, eventId, onEventId,
+  folders, loadingFolders, folderId, onFolderId
+}: {
+  heslo: string
+  onHeslo: (v: string) => void
+  events: SportityEventView[]
+  loadingEvents: boolean
+  onNactiEvents: () => void
+  eventId: string
+  onEventId: (id: string) => void
+  folders: SportityNodeView[]
+  loadingFolders: boolean
+  folderId: string
+  onFolderId: (id: string, name: string) => void
+}): React.JSX.Element {
+  return (
+    <div
+      style={{
+        margin: '4px 0 12px',
+        padding: '12px',
+        border: '0.5px solid var(--hairline)',
+        borderRadius: 'var(--r-ctrl)',
+        background: 'var(--card-alt)'
+      }}
+    >
+      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)', marginBottom: 10 }}>
+        Sportity
+      </div>
+
+      {/* Heslo kanálu + načíst */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <input
+          value={heslo}
+          onChange={(e) => onHeslo(e.target.value)}
+          placeholder="Heslo kanálu"
+          style={{ ...inputStyle, flex: 1 }}
+        />
+        <Btn
+          variant="bezel"
+          onClick={onNactiEvents}
+          disabled={!heslo.trim() || loadingEvents}
+        >
+          {loadingEvents ? 'Načítám…' : 'Načíst'}
+        </Btn>
+      </div>
+
+      {/* Event picker */}
+      {events.length > 0 && (
+        <PickerList
+          items={events.map((e) => ({ id: e.id, label: e.name }))}
+          value={eventId}
+          onChange={onEventId}
+          placeholder="— bez eventu —"
+          style={{ marginBottom: 10 }}
+        />
+      )}
+
+      {/* Folder picker */}
+      {loadingFolders && (
+        <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-3)' }}>Načítám složky…</p>
+      )}
+      {folders.length > 0 && (
+        <>
+          <div style={{ fontSize: 11.5, color: 'var(--text-2)', marginBottom: 4 }}>
+            Složka s výsledky:
+          </div>
+          <PickerList
+            items={folders.map((f) => ({ id: f.id, label: f.name }))}
+            value={folderId}
+            onChange={(id) => {
+              const f = folders.find((x) => x.id === id)
+              onFolderId(id, f?.name ?? '')
+            }}
+          />
+        </>
+      )}
+
+      {folderId && (
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)' }}>
+          Sportity mapování se uloží automaticky po vytvoření závodu.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function PickerList({
+  items,
+  value,
+  onChange,
+  placeholder,
+  style
+}: {
+  items: { id: string; label: string }[]
+  value: string
+  onChange: (id: string) => void
+  placeholder?: string
+  style?: React.CSSProperties
+}): React.JSX.Element {
+  const all = placeholder ? [{ id: '', label: placeholder }, ...items] : items
+  return (
+    <div
+      style={{
+        maxHeight: 140,
+        overflowY: 'auto',
+        border: '0.5px solid var(--hairline)',
+        borderRadius: 'var(--r-ctrl)',
+        ...style
+      }}
+    >
+      {all.map((item, i) => {
+        const active = item.id === value
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onChange(item.id)}
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              padding: '7px 12px',
+              fontSize: 13,
+              font: 'inherit',
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
+              background: active ? 'var(--accent)' : i % 2 === 0 ? 'transparent' : 'var(--card-alt)',
+              color: active ? 'var(--accent-text)' : 'var(--text-1)',
+              fontWeight: active ? 560 : 440,
+              cursor: 'pointer'
+            }}
+          >
+            {item.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
