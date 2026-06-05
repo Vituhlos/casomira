@@ -2,6 +2,11 @@
 # Release na GitHub řeší .github/workflows/release.yml (ne auto-publish z tagu).
 publish: null
 
+# ASAR integrity (E41+): Electron ověří hash obsahu ASAR při startu — detekce
+# neoprávněné modifikace bez nutnosti plného Apple/Windows code signing.
+asar:
+  integrity: true
+
 appId: cz.casomira.app
 productName: Časomíra
 copyright: Copyright © Časomíra
@@ -30,12 +35,7 @@ extraResources:
   - from: build/icon.png
     to: icon.png
 
-# Nativní SQLite — nesmí být uvnitř asar (CLAUDE.md + electron-vite guide).
-asarUnpack:
-  - node_modules/better-sqlite3/**
-
-# Přebuildovat native moduly jen když ještě nejsou pro Electron (viz `npm run rebuild`).
-# Při EPERM zavři běžící Časomíru / `npm run dev` a spusť znovu, nebo: npm run rebuild && npm run dist:win
+# node:sqlite je vestavěný v Node.js — žádný nativní modul k rozbalení.
 npmRebuild: false
 
 win:
@@ -69,14 +69,12 @@ mac:
       arch: universal
   category: public.app-category.sports
   artifactName: Casomira-${version}-mac-universal.${ext}
-  # Nativní moduly (better-sqlite3) v asarUnpack — pro universal obě architektury.
-  mergeASARs: true
   # Ad-hoc podpis (bez Apple Developer účtu). Povinné s hardenedRuntime — jinak
-  # entitlements.plist se do .app neaplikují a better-sqlite3 padá SIGTRAP při startu.
+  # se entitlements.plist do .app neaplikují a V8/JIT nestartuje.
   # CSC_IDENTITY_AUTO_DISCOVERY=false v CI samo o sobě podpis vypne.
   identity: '-'
-  # Hardened runtime + oprávnění: bez `disable-library-validation` macOS odmítne
-  # načíst nativní modul better-sqlite3 a appka spadne hned po startu (SIGTRAP).
+  # Hardened runtime: nutné pro V8 JIT (allow-jit + allow-unsigned-executable-memory).
+  # disable-library-validation odstraněno — node:sqlite nevyžaduje .node soubory.
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist

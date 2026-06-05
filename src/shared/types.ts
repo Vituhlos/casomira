@@ -499,6 +499,10 @@ export interface SportityPublishLogEntry {
 
 /** Tvar API, které preload most vystaví do okna jako `window.api`. */
 export interface CasomiraApi {
+  /** Platforma hostitele ('darwin' | 'win32' | 'linux') — pro platform-specifické styly. */
+  readonly platform: NodeJS.Platform
+  /** True pokud okno používá nativní vibrancy/Mica material (macOS vždy, Win11+). */
+  readonly nativeVibrancy: boolean
   getAktivniZavod(): Promise<Zavod | null>
   // Správa závodů
   /** Seznam všech závodů (s počty kategorií a jezdců) pro úvodní obrazovku. */

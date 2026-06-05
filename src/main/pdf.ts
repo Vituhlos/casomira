@@ -577,12 +577,21 @@ async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
   try {
     await win.loadFile(tmp)
     void unlink(tmp).catch(() => {})
-    const data = await win.webContents.printToPDF({
+    // scaleFactor a dpi nejsou ještě v Electron TS typech (přidány v E42),
+    // proto přetypujeme přes unknown, aby TS nehlásil neznámé property.
+    const pdfOptions = {
       pageSize: 'A4',
       landscape: false,
       printBackground: true,
-      preferCSSPageSize: true
-    })
+      preferCSSPageSize: true,
+      // E42: výchozí scaleFactor se změnil z deviceScaleFactor na 1.0 — uvádíme
+      // explicitně, aby byl výstup konzistentní na HiDPI i standardních displejích.
+      scaleFactor: 100,
+      // E42: explicitní DPI pro tisk. Závodní listiny se tisknou — 150 DPI = ostřejší
+      // text oproti výchozímu rozlišení displeje (typicky 96 DPI na Windows).
+      dpi: { horizontal: 150, vertical: 150 }
+    } as unknown as Electron.PrintToPDFOptions
+    const data = await win.webContents.printToPDF(pdfOptions)
     return Buffer.from(data)
   } catch (e) {
     void unlink(tmp).catch(() => {})

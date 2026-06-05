@@ -108,7 +108,7 @@ const ZAVOD_SLOUPCE = 'id, nazev, datum, misto, typ'
 export function getZavodById(id: number): Zavod | null {
   const row = getDb()
     .prepare(`SELECT ${ZAVOD_SLOUPCE} FROM zavod WHERE id = ?`)
-    .get(id) as Zavod | undefined
+    .get(id) as unknown as Zavod | undefined
   return row ?? null
 }
 
@@ -122,7 +122,7 @@ export function getAktivniZavod(): Zavod | null {
   }
   const row = getDb()
     .prepare(`SELECT ${ZAVOD_SLOUPCE} FROM zavod ORDER BY id LIMIT 1`)
-    .get() as Zavod | undefined
+    .get() as unknown as Zavod | undefined
   return row ?? null
 }
 
@@ -148,7 +148,7 @@ export function listZavody(): ZavodInfo[] {
        FROM zavod z
        ORDER BY z.datum DESC, z.id DESC`
     )
-    .all() as ZavodInfo[]
+    .all() as unknown as ZavodInfo[]
 }
 
 // Založí nový závod i s kategoriemi, nastaví ho jako aktivní a vrátí ho.
@@ -169,7 +169,7 @@ export function createZavod(data: NovyZavod): Zavod {
     return zavodId
   })
   setAktivniZavod(id)
-  return getZavodById(id) as Zavod
+  return getZavodById(id) as unknown as Zavod
 }
 
 // Srovná kategorie závodu s požadovaným seznamem (přidá nové, odebere chybějící).
@@ -216,7 +216,7 @@ export function updateZavod(uprava: ZavodUprava): Zavod {
       .run(uprava.nazev.trim() || 'Závod', uprava.datum, uprava.misto.trim(), uprava.id)
     if (uprava.kategorie) syncKategorie(uprava.id, uprava.kategorie)
   })
-  return getZavodById(uprava.id) as Zavod
+  return getZavodById(uprava.id) as unknown as Zavod
 }
 
 // Smaže závod; kaskáda v DB smaže kategorie, jezdce, kola, rošty i výsledky.
@@ -233,7 +233,7 @@ export function listKategorie(zavodId: number): Kategorie[] {
        WHERE k.zavod_id = ?
        ORDER BY k.id`
     )
-    .all(zavodId) as Kategorie[]
+    .all(zavodId) as unknown as Kategorie[]
 }
 
 // Jedna kategorie podle id (i s číslem závodu) — bez počtu jezdců.
@@ -253,7 +253,7 @@ export function listJezdci(kategorieId: number): Jezdec[] {
        WHERE kategorie_id = ?
        ORDER BY los IS NULL, los`
     )
-    .all(kategorieId) as Jezdec[]
+    .all(kategorieId) as unknown as Jezdec[]
 }
 
 export function updateJezdec(uprava: JezdecUprava): Jezdec {
@@ -283,7 +283,7 @@ export function updateJezdec(uprava: JezdecUprava): Jezdec {
     }
     throw e
   }
-  return db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`).get(uprava.id) as Jezdec
+  return db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`).get(uprava.id) as unknown as Jezdec
 }
 
 // Přidá prázdného jezdce do kategorie (startovní číslo doplní operátor inline).
@@ -297,7 +297,7 @@ export function addJezdec(kategorieId: number): Jezdec {
     .run(kategorieId)
   return db
     .prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
-    .get(Number(r.lastInsertRowid)) as Jezdec
+    .get(Number(r.lastInsertRowid)) as unknown as Jezdec
 }
 
 export function deleteJezdec(id: number): void {
@@ -537,7 +537,7 @@ export function setRostSlot(
 
   const jezdec = db
     .prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE kategorie_id = ? AND st_cislo = ?`)
-    .get(meta.kategorie_id, st_cislo) as Jezdec | undefined
+    .get(meta.kategorie_id, st_cislo) as unknown as Jezdec | undefined
   if (!jezdec) return { ok: false, jezdec: null }
 
   // Jeden jezdec nesmí být v téže jízdě na dvou pozicích.
@@ -621,7 +621,7 @@ interface SkupinaInfo {
 function listSkupiny(db: Db, kategorieId: number): SkupinaInfo[] {
   return db
     .prepare('SELECT id, nazev FROM skupina WHERE kategorie_id = ? ORDER BY id')
-    .all(kategorieId) as SkupinaInfo[]
+    .all(kategorieId) as unknown as SkupinaInfo[]
 }
 
 // Idempotentně doplní chybějící skupiny na požadovaný počet (A, B, C…).
@@ -674,7 +674,7 @@ function jezdciVeSkupineQ1(db: Db, kategorieId: number, skupinaId: number): Jezd
        WHERE jz.skupina_id = ? AND k.kategorie_id = ? AND k.typ = 'Q1'
        ORDER BY rp.pozice`
     )
-    .all(skupinaId, kategorieId) as Record<string, unknown>[]
+    .all(skupinaId, kategorieId) as unknown as Record<string, unknown>[]
   return rows.map(jezdecZRadku)
 }
 
@@ -830,7 +830,7 @@ function nactiBodovani(db: Db, ruleset: Ruleset): {
     .prepare(
       'SELECT dnf_offset, dns_offset, dq_offset, dnf_body, dns_body, dq_body FROM pravidla WHERE ruleset = ?'
     )
-    .get(ruleset) as Penalizace | undefined
+    .get(ruleset) as unknown as Penalizace | undefined
   return {
     bodyZaPozici: (p: number) => zMap.get(p) ?? 0,
     penalizace: pr ?? {
@@ -952,7 +952,7 @@ function nactiJizdu(db: Db, jizdaId: number, cislo: number): VysledekJizda {
        WHERE v.jizda_id = ?
        ORDER BY (v.poradi IS NULL), v.poradi`
     )
-    .all(jizdaId) as VysledekRadek[]
+    .all(jizdaId) as unknown as VysledekRadek[]
   return { id: jizdaId, cislo, vysledky }
 }
 
@@ -1239,7 +1239,7 @@ export function listUpravaLog(kategorieId: number): UpravaLogRadek[] {
        WHERE k.kategorie_id = ?
        ORDER BY ul.kdy DESC`
     )
-    .all(kategorieId) as UpravaLogRadek[]
+    .all(kategorieId) as unknown as UpravaLogRadek[]
 }
 
 /**
@@ -1519,7 +1519,7 @@ export function navrhSF(kategorieId: number): RostNavrh {
     }
   }
   const sel = db.prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE id = ?`)
-  const toJezdci = (ids: number[]): Jezdec[] => ids.map((id) => sel.get(id) as Jezdec)
+  const toJezdci = (ids: number[]): Jezdec[] => ids.map((id) => sel.get(id) as unknown as Jezdec)
   const { heat1, heat2 } = nasazSF(kval)
   return {
     ok: true,
@@ -1552,7 +1552,7 @@ export function navrhFinale(kategorieId: number): RostNavrh {
       ok: true,
       chyba: null,
       obsazeno,
-      jizdy: [{ cislo: 1, jezdci: vsichni.map((id) => sel.get(id) as Jezdec) }],
+      jizdy: [{ cislo: 1, jezdci: vsichni.map((id) => sel.get(id) as unknown as Jezdec) }],
       pocetJizd: 1,
       minJizd: 1,
       maxJizd: 1,
@@ -1713,7 +1713,7 @@ const MERENI_SLOUPCE =
 function mereniRadek(db: Db, id: number): MereniRadek {
   return db
     .prepare(`SELECT ${MERENI_SLOUPCE} FROM mereni m LEFT JOIN jezdec j ON j.id = m.jezdec_id WHERE m.id = ?`)
-    .get(id) as MereniRadek
+    .get(id) as unknown as MereniRadek
 }
 
 // Přehled rozměřených jízd (kanálů) — jen aktivní závod.
@@ -1758,7 +1758,7 @@ export function mereniList(jizdaId: number): MereniRadek[] {
       `SELECT ${MERENI_SLOUPCE} FROM mereni m LEFT JOIN jezdec j ON j.id = m.jezdec_id
        WHERE m.jizda_id = ? AND m.zavod_id = ? ORDER BY m.poradi_kliku`
     )
-    .all(jizdaId, zavodId) as MereniRadek[]
+    .all(jizdaId, zavodId) as unknown as MereniRadek[]
 }
 
 export function mereniPridej(jizdaId: number, cas_ms: number): MereniRadek {
@@ -1821,7 +1821,7 @@ export function mereniSetCislo(id: number, st_cislo: number | null): MereniSetCi
 
   const jezdec = db
     .prepare(`SELECT ${JEZDEC_SLOUPCE} FROM jezdec WHERE kategorie_id = ? AND st_cislo = ?`)
-    .get(meta.katId, st_cislo) as Jezdec | undefined
+    .get(meta.katId, st_cislo) as unknown as Jezdec | undefined
   if (!jezdec) return { ok: false, jezdec: null }
 
   const dup = db

@@ -87,6 +87,13 @@ function listProFazi(phase: string, sub: SubView): ListKey | null {
   }
 }
 
+// Nastavíme synchronně před prvním renderem, aby CSS pravidla html[data-*]
+// platila okamžitě — žádný záblesk neprůhledného pozadí při startu.
+document.documentElement.dataset.platform = window.api.platform
+if (window.api.nativeVibrancy) {
+  document.documentElement.dataset.nativeVibrancy = 'true'
+}
+
 export function App(): React.JSX.Element {
   const { theme, toggle } = useTheme()
   // Režim obrazovky: seznam závodů (úvod) vs otevřený závod.

@@ -1,4 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { release } from 'node:os'
+
+// Win11 detection v preloadu — stejná logika jako v main/index.ts.
+const _isWin11 = process.platform === 'win32' && (() => {
+  const parts = release().split('.').map(Number)
+  return (parts[2] ?? 0) >= 22000
+})()
 import type { BackupRestoreArg } from '../shared/backup'
 import type {
   CasomiraApi,
@@ -20,6 +27,8 @@ import type {
 // Vystavíme do okna jen tyto konkrétní funkce (žádný přímý přístup k Node ani
 // k databázi). Každá jen pošle zprávu hlavnímu procesu a počká na odpověď.
 const api: CasomiraApi = {
+  platform: process.platform,
+  nativeVibrancy: process.platform === 'darwin' || _isWin11,
   getAktivniZavod: () => ipcRenderer.invoke('zavod:aktivni'),
   listZavody: () => ipcRenderer.invoke('zavod:list'),
   openZavod: (id: number) => ipcRenderer.invoke('zavod:open', id),

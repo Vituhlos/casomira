@@ -8,8 +8,9 @@ export function getAppVersion(): string {
 }
 
 export function getSchemaVersion(): number {
-  const v = getDb().pragma('user_version', { simple: true })
-  return typeof v === 'number' ? v : SCHEMA_VERSION
+  // node:sqlite nemá .pragma() — čteme přes PRAGMA query.
+  const row = getDb().prepare('PRAGMA user_version').get() as { user_version: number } | undefined
+  return row?.user_version ?? SCHEMA_VERSION
 }
 
 export function backupEnvelopeBase(scope: 'zavod' | 'database') {

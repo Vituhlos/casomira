@@ -1,5 +1,15 @@
 import { app, shell, BrowserWindow, dialog, Menu } from 'electron'
 import { join } from 'node:path'
+import { release } from 'node:os'
+
+// Windows 11 = build ≥ 22000 (první verze s Mica materialem).
+// os.release() vrátí např. "10.0.22621" i pro Windows 11.
+function detectWin11(): boolean {
+  if (process.platform !== 'win32') return false
+  const parts = release().split('.').map(Number)
+  return (parts[2] ?? 0) >= 22000
+}
+const isWin11 = detectWin11()
 
 // Cesta k ikoně appky za běhu (Windows/Linux).
 // macOS ikonu řeší .app bundle (electron-builder) — na darwinu vracíme undefined.
@@ -92,6 +102,10 @@ function setupMacMenu(): void {
 }
 
 function createWindow(): void {
+  const isMac = process.platform === 'darwin'
+  // Průhledné pozadí potřebujeme všude, kde aplikujeme nativní material.
+  const useNativeVibrancy = isMac || isWin11
+
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -99,7 +113,11 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: '#f4f4f6', // sníží bílé bliknutí při startu
+    // Průhledné pozadí = nativní material prosvítá přes rgba() sidebar/toolbar.
+    // Na Windows 10 / Linuxu zůstáváme solidní — Mica není k dispozici.
+    backgroundColor: useNativeVibrancy ? '#00000000' : '#f4f4f6',
+    // macOS: sidebar vibrancy material (bluruje plochu/jiné appky za oknem).
+    vibrancy: isMac ? 'sidebar' : undefined,
     title: 'Časomíra',
     icon: appIconPath(),
     webPreferences: {
@@ -109,6 +127,12 @@ function createWindow(): void {
       nodeIntegration: false
     }
   })
+
+  // Windows 11: Mica material (blurovaná + tónovaná tapeta plochy).
+  // Nastavíme až po vytvoření okna — constructor option pro Windows neexistuje.
+  if (isWin11) {
+    mainWindow.setBackgroundMaterial('mica')
+  }
 
   // Okno ukážeme až je obsah připravený — žádné bliknutí prázdného okna.
   mainWindow.on('ready-to-show', () => mainWindow.show())
