@@ -2,8 +2,8 @@
 // Odpovídají datovému modelu z CLAUDE.md §11.
 
 export type RaceType = 'RAC' | 'RX'
-export type Ruleset = 'STANDARD' | 'SOTOLINA'
-export type KoloTyp = 'Q1' | 'Q2' | 'Q3' | 'SF' | 'F' | 'F_A' | 'F_B'
+export type Ruleset = 'STANDARD'
+export type KoloTyp = 'Q1' | 'Q2' | 'Q3' | 'SF' | 'F'
 export type Stav = 'OK' | 'DNF' | 'DNS' | 'DQ'
 
 export interface Zavod {
@@ -162,6 +162,8 @@ export interface RostNavrh {
   pocetJizd: number // použitý počet jízd
   minJizd: number // nejmenší možný počet (strop 8/jízda)
   maxJizd: number // největší možný počet (1 jezdec/jízda)
+  /** U finále: počet finalistů (1..N = finalisté, N+1.. = náhradníci v jizdy[0]). */
+  finaleVelikost?: number
 }
 
 export interface RostZapisJizda {
@@ -177,33 +179,19 @@ export interface CelkoveRadek {
   prijmeni: string
   jmeno: string
   pq: number | null // pořadí po Q3
-  // STANDARD (RAC/RX):
   psf: number | null // pořadí v semifinále
   pf: number | null // pořadí ve finále
-  // SOTOLINA — pořadí ve Finále A / Finále B (jinde null/undefined):
-  pfa?: number | null
-  pfb?: number | null
   bq: number // body z kvalifikace (po Q3)
 }
 
 /** Stav závěru závodu pro kategorii (semifinále / finále). */
 export interface ZaverStav {
-  /** Ruleset kategorie — UI podle něj rozhoduje, zda jet SF/Finále, nebo Finále A/B. */
-  ruleset: Ruleset
   kvalifikovani: number // počet kvalifikovaných jezdců
-  // STANDARD (RAC/RX) — semifinále/finále:
   prahSF: number // od kolika se koná SF (12)
   sfSeKona: boolean // kvalifikovaných >= prahSF
   sfHotovo: boolean // SF rošt je vygenerován
   finaleHotovo: boolean // finále je nasazeno
   finaleVelikost: number // 8 nebo 10
-  // SOTOLINA — Finále A / Finále B (CLAUDE.md §8):
-  finaleAHotovo?: boolean
-  finaleBHotovo?: boolean
-  /** Počet jezdců, kteří spadnou do Finále A (max 10). */
-  pocetDoA?: number
-  /** Počet jezdců, kteří spadnou do Finále B (od 11. místa). */
-  pocetDoB?: number
 }
 
 /** Jeden řádek výsledku jízdy (s vypočteným pořadím a body). */
@@ -410,11 +398,6 @@ export type ListKey =
   | 'sf_res'
   | 'final_rost'
   | 'final_res'
-  // SOTOLINA — místo SF jedou dvě finále (B před A):
-  | 'final_b_rost'
-  | 'final_b_res'
-  | 'final_a_rost'
-  | 'final_a_res'
   | 'overall'
 
 export interface ExportPdfResult {
@@ -438,6 +421,80 @@ export interface ExportVseResult {
   pocet?: number // kolik PDF se vytvořilo
   zruseno?: boolean
   chyba?: string
+}
+
+export interface PrintPresetResult {
+  ok: boolean
+  vytisteno: number // počet odeslaných tiskových úloh (kopie × listy)
+  preskoceno: number // listy přeskočené (chybějící data)
+  chyba?: string
+}
+
+// ---------------------------------------------------------------------------
+// Sportity integrace
+// ---------------------------------------------------------------------------
+
+export interface SportitySettingsView {
+  apiKeySet: boolean
+  apiKeyHint: string | null
+}
+
+export interface SportityEventView {
+  id: string
+  name: string
+  password: string
+}
+
+export interface SportityNodeView {
+  id: string
+  name: string
+  type: 'Folder' | 'PDF' | 'Text' | 'Image' | 'Link'
+  parentId: string | null
+}
+
+export interface SportityZavodMapView {
+  channelPassword: string
+  eventId: string | null
+  resultsFolderId: string
+  resultsFolderName: string
+}
+
+export interface SportityKategorieMapView {
+  kategorieId: number
+  kategorieNazev: string
+  folderId: string | null
+  folderName: string | null
+}
+
+export interface SportityConnectionResult {
+  ok: boolean
+  message: string
+}
+
+export interface SportityPublishItemResult {
+  listKey: string
+  nazev: string
+  status: 'created' | 'updated' | 'skipped' | 'failed'
+  message?: string
+}
+
+export interface SportityPublishResult {
+  ok: boolean
+  created: number
+  updated: number
+  skipped: number
+  failed: number
+  items: SportityPublishItemResult[]
+}
+
+export interface SportityPublishLogEntry {
+  id: number
+  kategorieNazev: string | null
+  listKey: string | null
+  action: string
+  status: string
+  message: string | null
+  createdAt: string
 }
 
 /** Tvar API, které preload most vystaví do okna jako `window.api`. */
@@ -502,9 +559,7 @@ export interface CasomiraApi {
   /** Navrhne nasazení finále (z postupujících SF, nebo z Q3 když SF nebylo). */
   navrhFinale(kategorieId: number): Promise<RostNavrh>
   /** Šotolina — návrh Finále A (10 nejlepších po Q3; pokud B hotovo, 6 z Q3 + 4 z B). */
-  navrhFinaleA(kategorieId: number): Promise<RostNavrh>
   /** Šotolina — návrh Finále B (od 11. místa po Q3, max 4 jezdci postupují do A). */
-  navrhFinaleB(kategorieId: number): Promise<RostNavrh>
   /** Celkové výsledky závodu (pořadí řízené finále, body z kvalifikace). */
   getCelkove(kategorieId: number): Promise<CelkoveRadek[]>
   // PDF export
@@ -513,6 +568,12 @@ export interface CasomiraApi {
   exportPdf(kategorieId: number, listKey: ListKey, saveAs?: boolean): Promise<ExportPdfResult>
   /** Vyexportuje všechny listy vybraných kategorií do struktury pod kořenovou složkou. */
   exportPdfVse(kategorieIds: number[]): Promise<ExportVseResult>
+  /** Závodní tisk — vytiskne preset listů (startovka 1×, rošty 4×, výsledky finále 1×). */
+  printPreset(kategorieIds: number[]): Promise<PrintPresetResult>
+  /** Vrátí seznam dostupných tiskáren. */
+  getTiskarny(): Promise<{ name: string; displayName: string; isDefault: boolean }[]>
+  /** Vytiskne jeden list N kopií (volitelně na konkrétní tiskárnu). */
+  tiskniList(kategorieId: number, listKey: ListKey, kopii: number, deviceName?: string): Promise<PrintPresetResult>
   // Kořenová složka pro PDF
   /** Vrátí nastavenou kořenovou složku a zda existuje. */
   getPdfRootStav(): Promise<PdfRootStav>
@@ -580,4 +641,20 @@ export interface CasomiraApi {
   previewRestoreBackup(): Promise<import('./backup').BackupPreviewResponse>
   /** Provede obnovu dle volby uživatele (nový / přepsat). */
   restoreBackup(arg: import('./backup').BackupRestoreArg): Promise<import('./backup').BackupRestoreResult>
+  // Sportity integrace
+  getSportitySettings(): Promise<SportitySettingsView>
+  saveSportityApiKey(apiKey: string): Promise<void>
+  clearSportityApiKey(): Promise<void>
+  testSportityConnection(): Promise<SportityConnectionResult>
+  sportityListEvents(): Promise<SportityEventView[]>
+  sportityListDocuments(password: string, eventId?: string | null): Promise<SportityNodeView[]>
+  getSportityZavodMap(zavodId: number): Promise<SportityZavodMapView | null>
+  saveSportityZavodMap(zavodId: number, channelPassword: string, eventId: string | null, resultsFolderId: string, resultsFolderName: string): Promise<void>
+  getSportityKategorieMap(zavodId: number): Promise<SportityKategorieMapView[]>
+  saveSportityKategorieMap(kategorieId: number, folderId: string, folderName: string): Promise<void>
+  clearSportityKategorieMap(kategorieId: number): Promise<void>
+  sportityAutoMapCategories(zavodId: number): Promise<SportityKategorieMapView[]>
+  sportityPublishList(kategorieId: number, listKey: string): Promise<SportityPublishResult>
+  sportityPublishCategory(kategorieId: number): Promise<SportityPublishResult>
+  getSportityPublishLog(zavodId: number): Promise<SportityPublishLogEntry[]>
 }

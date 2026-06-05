@@ -70,12 +70,14 @@ const api: CasomiraApi = {
     ipcRenderer.invoke('zaver:finaleVelikost', kategorieId, velikost),
   navrhSF: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhSF', kategorieId),
   navrhFinale: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhFinale', kategorieId),
-  navrhFinaleA: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhFinaleA', kategorieId),
-  navrhFinaleB: (kategorieId: number) => ipcRenderer.invoke('zaver:navrhFinaleB', kategorieId),
   getCelkove: (kategorieId: number) => ipcRenderer.invoke('zaver:celkove', kategorieId),
   exportPdf: (kategorieId: number, listKey: ListKey, saveAs?: boolean) =>
     ipcRenderer.invoke('pdf:export', kategorieId, listKey, saveAs),
   exportPdfVse: (kategorieIds: number[]) => ipcRenderer.invoke('pdf:exportVse', kategorieIds),
+  printPreset: (kategorieIds: number[]) => ipcRenderer.invoke('pdf:printPreset', kategorieIds),
+  getTiskarny: () => ipcRenderer.invoke('pdf:tiskarny'),
+  tiskniList: (kategorieId: number, listKey: ListKey, kopii: number, deviceName?: string) =>
+    ipcRenderer.invoke('pdf:printList', kategorieId, listKey, kopii, deviceName),
   getPdfRootStav: () => ipcRenderer.invoke('pdf:rootStav'),
   choosePdfRoot: () => ipcRenderer.invoke('pdf:chooseRoot'),
   openFolder: (cesta: string) => ipcRenderer.invoke('shell:openFolder', cesta),
@@ -121,7 +123,44 @@ const api: CasomiraApi = {
     ipcRenderer.on('stopky:requestConfirm', h)
     return () => ipcRenderer.removeListener('stopky:requestConfirm', h)
   },
-  stopkyZavritPotvrzeno: () => ipcRenderer.invoke('stopky:zavritPotvrzeno')
+  stopkyZavritPotvrzeno: () => ipcRenderer.invoke('stopky:zavritPotvrzeno'),
+  // Sportity integrace
+  getSportitySettings: () => ipcRenderer.invoke('sportity:settings'),
+  saveSportityApiKey: (key: string) => ipcRenderer.invoke('sportity:apiKey:save', key),
+  clearSportityApiKey: () => ipcRenderer.invoke('sportity:apiKey:clear'),
+  testSportityConnection: () => ipcRenderer.invoke('sportity:test'),
+  sportityListEvents: () => ipcRenderer.invoke('sportity:events'),
+  sportityListDocuments: (password: string, eventId?: string | null) =>
+    ipcRenderer.invoke('sportity:documents', password, eventId),
+  getSportityZavodMap: (zavodId: number) => ipcRenderer.invoke('sportity:zavodMap:get', zavodId),
+  saveSportityZavodMap: (
+    zavodId: number,
+    channelPassword: string,
+    eventId: string | null,
+    resultsFolderId: string,
+    resultsFolderName: string
+  ) =>
+    ipcRenderer.invoke(
+      'sportity:zavodMap:save',
+      zavodId,
+      channelPassword,
+      eventId,
+      resultsFolderId,
+      resultsFolderName
+    ),
+  getSportityKategorieMap: (zavodId: number) =>
+    ipcRenderer.invoke('sportity:kategorieMap:get', zavodId),
+  saveSportityKategorieMap: (kategorieId: number, folderId: string, folderName: string) =>
+    ipcRenderer.invoke('sportity:kategorieMap:save', kategorieId, folderId, folderName),
+  clearSportityKategorieMap: (kategorieId: number) =>
+    ipcRenderer.invoke('sportity:kategorieMap:clear', kategorieId),
+  sportityAutoMapCategories: (zavodId: number) =>
+    ipcRenderer.invoke('sportity:autoMap', zavodId),
+  sportityPublishList: (kategorieId: number, listKey: string) =>
+    ipcRenderer.invoke('sportity:publish:list', kategorieId, listKey),
+  sportityPublishCategory: (kategorieId: number) =>
+    ipcRenderer.invoke('sportity:publish:category', kategorieId),
+  getSportityPublishLog: (zavodId: number) => ipcRenderer.invoke('sportity:log', zavodId)
 }
 
 contextBridge.exposeInMainWorld('api', api)

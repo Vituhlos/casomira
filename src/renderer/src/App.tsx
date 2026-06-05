@@ -24,7 +24,6 @@ import { QFaze } from './screens/QFaze'
 import { Standings } from './screens/Standings'
 import { Semifinale, type SubView } from './screens/Semifinale'
 import { Finale } from './screens/Finale'
-import { FinaleAB } from './screens/FinaleAB'
 import { Overall } from './screens/Overall'
 import { Settings } from './screens/Settings'
 import { UpravaLogModal } from './components/UpravaLogModal'
@@ -34,11 +33,12 @@ import { phasesForCategory } from './data/phases'
 import { useTheme } from './hooks/useTheme'
 import { useHotkeys } from './hooks/useHotkeys'
 import { HotkeyHelp } from './components/HotkeyHelp'
+import { PrinterPickerModal } from './components/PrinterPickerModal'
 import { isMac, HK_GENERATE_ROST } from './lib/hotkeys'
 import { safeCall } from './lib/api'
 
 // Fáze, které mají vnitřní přepínač Rošt/Výsledky (zkratky R / V a ⌘/Ctrl+G).
-const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final', 'final_a', 'final_b'])
+const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final'])
 
 function czDate(iso: string): string {
   const parts = iso.split('-').map(Number)
@@ -55,6 +55,11 @@ function contentMaxWidth(phase: string): number {
   if (phase === 'class_q3') return 724
   if (phase === 'overall') return 660
   return 1020 // Q1–Q3, semifinále, finále
+}
+
+// Počet kopií pro daný list dle závodního presetu (výchozí 1).
+const PRESET_KOPII: Partial<Record<ListKey, number>> = {
+  grid_q1: 4, grid_q2: 4, grid_q3: 4, sf_rost: 4, final_rost: 4
 }
 
 // Která tisková listina odpovídá zobrazené fázi (u Q i SF/finále podle pohledu).
@@ -77,10 +82,6 @@ function listProFazi(phase: string, sub: SubView): ListKey | null {
       return sub === 'res' ? 'sf_res' : 'sf_rost'
     case 'final':
       return sub === 'res' ? 'final_res' : 'final_rost'
-    case 'final_b':
-      return sub === 'res' ? 'final_b_res' : 'final_b_rost'
-    case 'final_a':
-      return sub === 'res' ? 'final_a_res' : 'final_a_rost'
     default:
       return null
   }
@@ -112,6 +113,11 @@ export function App(): React.JSX.Element {
   const [nastaveniOtevreno, setNastaveniOtevreno] = useState(false)
   const [upravaLogOtevreno, setUpravaLogOtevreno] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [printerPicker, setPrinterPicker] = useState<{
+    tiskarny: { name: string; displayName: string; isDefault: boolean }[]
+    listKey: ListKey
+    kopii: number
+  } | null>(null)
   // Problém s kořenovou složkou pro PDF (nenastavená / smazaná) → výzva k výběru.
   const [rootProblem, setRootProblem] = useState<PdfRootStav | null>(null)
   // Zvýší se, když jiné okno změní data → vynutí přenačtení obsahu.
@@ -323,11 +329,7 @@ export function App(): React.JSX.Element {
   //   SOTOLINA: místo SF/Finále jede Finále B → Finále A (CLAUDE.md §3c).
   const aktivniKategorie = kategorie.find((c) => c.id === activeCat) ?? null
   const catLabel = aktivniKategorie?.nazev ?? ''
-  const jeSotolina = aktivniKategorie?.ruleset === 'SOTOLINA'
-  const phases = phasesForCategory(
-    zavod?.typ ?? 'RAC',
-    aktivniKategorie?.ruleset ?? 'STANDARD'
-  )
+  const phases = phasesForCategory(zavod?.typ ?? 'RAC')
   const phaseLabel = phases.find((p) => p.id === phase)?.label ?? ''
   const contentMaxW = contentMaxWidth(phase)
 
@@ -357,6 +359,30 @@ export function App(): React.JSX.Element {
   }
   const onPdf = (): Promise<void> => exportujAktualni(false)
   const onPdfSaveAs = (): Promise<void> => exportujAktualni(true)
+
+  const onPrint = async (): Promise<void> => {
+    if (activeCat == null) { oznam('Nejdřív vyber kategorii v levém panelu.'); return }
+    const key = listProFazi(phase, subView)
+    if (!key) return
+    const kopii = PRESET_KOPII[key] ?? 1
+    const tiskarny = await window.api.getTiskarny()
+    if (tiskarny.length > 1) {
+      setPrinterPicker({ tiskarny, listKey: key, kopii })
+    } else {
+      const deviceName = tiskarny[0]?.name
+      const res = await window.api.tiskniList(activeCat, key, kopii, deviceName)
+      if (res.ok) oznam(`Vytištěno ${res.vytisteno}× na tiskárnu.`)
+      else oznam(res.chyba ?? 'Tisk se nezdařil.')
+    }
+  }
+
+  const doTiskni = async (deviceName: string): Promise<void> => {
+    if (!printerPicker || activeCat == null) return
+    setPrinterPicker(null)
+    const res = await window.api.tiskniList(activeCat, printerPicker.listKey, printerPicker.kopii, deviceName)
+    if (res.ok) oznam(`Vytištěno ${res.vytisteno}× na tiskárnu.`)
+    else oznam(res.chyba ?? 'Tisk se nezdařil.')
+  }
 
   // Otevře kořenovou složku PDF v průzkumníku (nebo nechá vybrat, když chybí).
   const onOpenPdfFolder = async (): Promise<void> => {
@@ -437,33 +463,15 @@ export function App(): React.JSX.Element {
         return <Semifinale kategorieId={activeCat} sub={subView} onSub={setSubView} />
       case 'final':
         return <Finale kategorieId={activeCat} sub={subView} onSub={setSubView} />
-      case 'final_b':
-        return (
-          <FinaleAB
-            kategorieId={activeCat}
-            varianta="B"
-            sub={subView}
-            onSub={setSubView}
-          />
-        )
-      case 'final_a':
-        return (
-          <FinaleAB
-            kategorieId={activeCat}
-            varianta="A"
-            sub={subView}
-            onSub={setSubView}
-          />
-        )
       case 'overall':
-        return <Overall kategorieId={activeCat} jeSotolina={jeSotolina} />
+        return <Overall kategorieId={activeCat} />
       case 'class_q2':
         return (
           <Standings
             kategorieId={activeCat}
             koloTypy={['Q1', 'Q2']}
             title="Klasifikace po Q2"
-            ukazLos={jeSotolina}
+            ukazLos={false}
           />
         )
       case 'class_q3':
@@ -472,7 +480,7 @@ export function App(): React.JSX.Element {
             kategorieId={activeCat}
             koloTypy={['Q1', 'Q2', 'Q3']}
             title="Klasifikace po Q3"
-            ukazLos={jeSotolina}
+            ukazLos={false}
           />
         )
       default:
@@ -522,6 +530,7 @@ export function App(): React.JSX.Element {
               onPdf={() => void onPdf()}
               onPdfSaveAs={() => void onPdfSaveAs()}
               onOpenPdfFolder={() => void onOpenPdfFolder()}
+              onPrint={() => void onPrint()}
               onStopky={() => void window.api.openStopky()}
               onSettings={() => setNastaveniOtevreno(true)}
             />
@@ -592,6 +601,14 @@ export function App(): React.JSX.Element {
         </Modal>
       )}
 
+      {printerPicker && (
+        <PrinterPickerModal
+          tiskarny={printerPicker.tiskarny}
+          onPrint={(deviceName) => void doTiskni(deviceName)}
+          onClose={() => setPrinterPicker(null)}
+        />
+      )}
+
       {nastaveniOtevreno && (
         <Settings
           kategorie={kategorie}
@@ -625,6 +642,8 @@ export function App(): React.JSX.Element {
                 }
               : undefined
           }
+          zavodId={zavod?.id}
+          zavod={zavod ?? undefined}
         />
       )}
 

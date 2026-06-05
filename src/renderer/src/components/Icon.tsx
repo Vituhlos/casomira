@@ -20,6 +20,7 @@ export type IconName =
   | 'gear'
   | 'pencil'
   | 'keyboard'
+  | 'printer'
 
 const PATHS: Record<IconName, ReactNode> = {
   timer: (
@@ -103,6 +104,14 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M4 16h1.8l8.7-8.7-1.8-1.8L4 14.2z" />
       <path d="M13.4 4.6l1.2-1.2a1 1 0 0 1 1.4 0l.6.6a1 1 0 0 1 0 1.4l-1.2 1.2z" />
+    </>
+  ),
+  printer: (
+    <>
+      <path d="M5.5 7V3.5h9V7" />
+      <path d="M5.5 14.5H4a1.5 1.5 0 0 1-1.5-1.5V8.5A1.5 1.5 0 0 1 4 7h12a1.5 1.5 0 0 1 1.5 1.5V13a1.5 1.5 0 0 1-1.5 1.5h-1.5" />
+      <rect x="5.5" y="11.5" width="9" height="5" rx="0.5" />
+      <path d="M14.5 9.5h.01" />
     </>
   ),
   keyboard: (

@@ -53,6 +53,8 @@ interface RostGridProps {
   jizdaTitle?: (cislo: number, total: number) => string
   /** Zavolá se po potvrzení generování (parent si může obnovit stav). */
   onChanged?: () => void
+  /** Počet finalistů — pokud zadáno, sloty nad tuto hranici se zobrazí jako NÁHRADNÍCI. */
+  finaleVelikost?: number
 }
 
 export function RostGrid({
@@ -69,7 +71,8 @@ export function RostGrid({
   previewTitle,
   previewText,
   jizdaTitle,
-  onChanged
+  onChanged,
+  finaleVelikost
 }: RostGridProps): React.JSX.Element {
   const [rost, setRost] = useState<RostKolo | null>(null)
   const [sloty, setSloty] = useState<Record<string, SlotState>>({})
@@ -272,7 +275,7 @@ export function RostGrid({
                   </tr>
                 </thead>
                 <tbody>
-                  {jz.sloty.map((s) => {
+                  {jz.sloty.map((s, idx) => {
                     const st = sloty[key(jz.id, s.pozice)] ?? {
                       cislo: '',
                       jezdec: null,
@@ -280,48 +283,72 @@ export function RostGrid({
                       duvod: null
                     }
                     const d = st.jezdec
+                    const jeNahradnik = finaleVelikost != null && s.pozice > finaleVelikost
+                    const prvniNahradnik = jeNahradnik && (idx === 0 || jz.sloty[idx - 1].pozice <= finaleVelikost)
+                    const nahradnikPoradi = jeNahradnik ? s.pozice - finaleVelikost : null
                     return (
-                      <tr key={s.pozice}>
-                        <td
-                          style={{
-                            ...tdStyle,
-                            height: 38,
-                            color: 'var(--text-2)',
-                            fontVariantNumeric: 'tabular-nums',
-                            fontSize: 12.5
-                          }}
-                        >
-                          {s.pozice}
-                        </td>
-                        <td style={{ ...tdStyle, height: 38, padding: '0 9px' }}>
-                          <SlotInput
-                            value={st.cislo}
-                            warn={st.warn}
-                            onCommit={(raw) => commit(jz.id, s.pozice, raw)}
-                          />
-                        </td>
-                        <td style={{ ...tdStyle, height: 38 }}>
-                          {d ? (
-                            <span style={{ color: 'var(--text-3)' }}>
-                              <b style={{ color: 'var(--text-2)', fontWeight: 590 }}>{d.prijmeni}</b>{' '}
-                              {d.jmeno}
-                            </span>
-                          ) : st.warn ? (
-                            <span style={{ color: '#c93636', fontSize: 12.5 }}>
-                              {st.duvod === 'duplicitni' ? 'už v této jízdě' : 'neznámé číslo'}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-4)' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ ...tdStyle, height: 38, color: 'var(--text-2)' }}>
-                          {d ? (
-                            `${d.znacka} ${d.model}`
-                          ) : (
-                            <span style={{ color: 'var(--text-4)' }}>—</span>
-                          )}
-                        </td>
-                      </tr>
+                      <>
+                        {prvniNahradnik && (
+                          <tr key={`nahr-head-${s.pozice}`}>
+                            <td
+                              colSpan={4}
+                              style={{
+                                ...tdStyle,
+                                height: 30,
+                                fontWeight: 620,
+                                fontSize: 11.5,
+                                letterSpacing: '0.04em',
+                                color: 'var(--text-3)',
+                                background: 'var(--card-alt)',
+                                borderTop: '0.5px solid var(--hairline)'
+                              }}
+                            >
+                              NÁHRADNÍCI
+                            </td>
+                          </tr>
+                        )}
+                        <tr key={s.pozice} style={jeNahradnik ? { opacity: 0.75 } : undefined}>
+                          <td
+                            style={{
+                              ...tdStyle,
+                              height: 38,
+                              color: 'var(--text-2)',
+                              fontVariantNumeric: 'tabular-nums',
+                              fontSize: 12.5
+                            }}
+                          >
+                            {jeNahradnik ? `N${nahradnikPoradi}` : s.pozice}
+                          </td>
+                          <td style={{ ...tdStyle, height: 38, padding: '0 9px' }}>
+                            <SlotInput
+                              value={st.cislo}
+                              warn={st.warn}
+                              onCommit={(raw) => commit(jz.id, s.pozice, raw)}
+                            />
+                          </td>
+                          <td style={{ ...tdStyle, height: 38 }}>
+                            {d ? (
+                              <span style={{ color: 'var(--text-3)' }}>
+                                <b style={{ color: 'var(--text-2)', fontWeight: 590 }}>{d.prijmeni}</b>{' '}
+                                {d.jmeno}
+                              </span>
+                            ) : st.warn ? (
+                              <span style={{ color: '#c93636', fontSize: 12.5 }}>
+                                {st.duvod === 'duplicitni' ? 'už v této jízdě' : 'neznámé číslo'}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-4)' }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ ...tdStyle, height: 38, color: 'var(--text-2)' }}>
+                            {d ? (
+                              `${d.znacka} ${d.model}`
+                            ) : (
+                              <span style={{ color: 'var(--text-4)' }}>—</span>
+                            )}
+                          </td>
+                        </tr>
+                      </>
                     )
                   })}
                 </tbody>
@@ -390,53 +417,67 @@ export function RostGrid({
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {navrh.jizdy.map((jz) => (
-              <div
-                key={jz.cislo}
-                style={{
-                  border: '0.5px solid var(--hairline)',
-                  borderRadius: 'var(--r-ctrl)',
-                  overflow: 'hidden'
-                }}
-              >
+            {navrh.jizdy.map((jz) => {
+              const fv = navrh.finaleVelikost
+              const finaliste = fv != null ? jz.jezdci.slice(0, fv) : jz.jezdci
+              const nahradnici = fv != null ? jz.jezdci.slice(fv) : []
+              const renderRadek = (d: Jezdec, label: string, dimmed = false): React.JSX.Element => (
                 <div
-                  style={{
-                    padding: '7px 12px',
-                    background: 'var(--card-alt)',
-                    fontSize: 12.5,
-                    fontWeight: 620,
-                    borderBottom: '0.5px solid var(--hairline)'
-                  }}
+                  key={d.id}
+                  style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0', opacity: dimmed ? 0.7 : 1 }}
                 >
-                  {titulekJizdy(jz.cislo, navrh.jizdy.length)}{' '}
-                  <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>
-                    · {jz.jezdci.length} jezdců
-                  </span>
+                  <span style={{ color: 'var(--text-4)', width: 22, textAlign: 'right' }}>{label}</span>
+                  <span className="tnum" style={{ width: 44, fontWeight: 600 }}>{d.st_cislo}</span>
+                  <span style={{ fontWeight: 560 }}>{d.prijmeni}</span>
+                  <span style={{ color: 'var(--text-2)' }}>{d.jmeno}</span>
+                  {showLos && (
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-3)' }}>los {d.los ?? '—'}</span>
+                  )}
                 </div>
-                <div style={{ padding: '6px 12px' }}>
-                  {jz.jezdci.map((d, i) => (
-                    <div
-                      key={d.id}
-                      style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0' }}
-                    >
-                      <span style={{ color: 'var(--text-4)', width: 18, textAlign: 'right' }}>
-                        {i + 1}.
-                      </span>
-                      <span className="tnum" style={{ width: 44, fontWeight: 600 }}>
-                        {d.st_cislo}
-                      </span>
-                      <span style={{ fontWeight: 560 }}>{d.prijmeni}</span>
-                      <span style={{ color: 'var(--text-2)' }}>{d.jmeno}</span>
-                      {showLos && (
-                        <span style={{ marginLeft: 'auto', color: 'var(--text-3)' }}>
-                          los {d.los ?? '—'}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+              )
+              return (
+                <div
+                  key={jz.cislo}
+                  style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden' }}
+                >
+                  <div
+                    style={{
+                      padding: '7px 12px',
+                      background: 'var(--card-alt)',
+                      fontSize: 12.5,
+                      fontWeight: 620,
+                      borderBottom: '0.5px solid var(--hairline)'
+                    }}
+                  >
+                    {titulekJizdy(jz.cislo, navrh.jizdy.length)}{' '}
+                    <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>· {finaliste.length} jezdců</span>
+                  </div>
+                  <div style={{ padding: '6px 12px' }}>
+                    {finaliste.map((d, i) => renderRadek(d, `${i + 1}.`))}
+                  </div>
+                  {nahradnici.length > 0 && (
+                    <>
+                      <div
+                        style={{
+                          padding: '5px 12px',
+                          background: 'var(--card-alt)',
+                          fontSize: 11.5,
+                          fontWeight: 620,
+                          letterSpacing: '0.04em',
+                          color: 'var(--text-3)',
+                          borderTop: '0.5px solid var(--hairline)'
+                        }}
+                      >
+                        NÁHRADNÍCI
+                      </div>
+                      <div style={{ padding: '6px 12px' }}>
+                        {nahradnici.map((d, i) => renderRadek(d, `N${i + 1}.`, true))}
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Modal>
       )}
