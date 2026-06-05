@@ -15,8 +15,8 @@ export function Segmented({ active, phases, onTab }: SegmentedProps): React.JSX.
     >
       <div
         style={{
-          display: 'inline-flex', // obaluje jen záložky → textAlign:center je jako blok vystředí
-          maxWidth: '100%', // při úzkém okně se zúží a vodorovně scrolluje
+          display: 'inline-flex',
+          maxWidth: '100%',
           alignItems: 'center',
           gap: 2,
           background: 'var(--seg-track)',

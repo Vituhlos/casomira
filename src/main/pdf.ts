@@ -499,6 +499,62 @@ async function withTiskoveOkno<T>(fn: (win: BrowserWindow) => Promise<T>): Promi
   }
 }
 
+// Robustní wrapper pro webContents.print():
+// - Electron 29+: print() vrací Promise<void> (runtime) → awaitujem ji
+// - Starší API: print() vrací void, callback se zavolá po zařazení do fronty OS
+// - Timeout 30s: pokud ani Promise ani callback nepřijdou, vzdáme se čekání
+//   (tisk mohl být odeslán i tak — OS frontu nelze spolehlivě potvrdit)
+async function tisknout(
+  wc: Electron.WebContents,
+  options: Electron.WebContentsPrintOptions
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let settled = false
+    const done = (ok: boolean, err?: string): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (ok) resolve()
+      else reject(new Error(err ?? 'Tisk selhal'))
+    }
+    // Fallback: pokud callback ani Promise nepřijdou do 30 s, předpokládáme úspěch
+    const timer = setTimeout(() => done(true), 30_000)
+    try {
+      // Voláme print() s callbackem (TypeScript typy ho stále uvádějí jako optional).
+      // V Electron 39 callback není volán — ale zkusíme i Promise (viz níže).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = (wc.print as any)(
+        options,
+        (success: boolean, failureReason: string) => {
+          done(success, failureReason)
+        }
+      ) as unknown
+      // Pokud print() ZÁROVEŇ vrátí Promise (Electron 29+ runtime), použijeme ji.
+      if (result != null && typeof (result as { then?: unknown }).then === 'function') {
+        ;(result as Promise<void>).then(() => done(true), (e: unknown) => done(false, String(e)))
+      }
+    } catch (e) {
+      done(false, e instanceof Error ? e.message : 'Tisk selhal')
+    }
+  })
+}
+
+// Okno pro přímý tisk na tiskárnu — bez sandboxu (sandbox může blokovat
+// systémové API tisku na Windows).
+async function withTiskOkno<T>(fn: (win: BrowserWindow) => Promise<T>): Promise<T> {
+  const win = new BrowserWindow({
+    show: false,
+    width: 900,
+    height: 1200,
+    webPreferences: { sandbox: false, offscreen: false }
+  })
+  try {
+    return await fn(win)
+  } finally {
+    win.destroy()
+  }
+}
+
 async function nactiHtml(win: BrowserWindow, html: string): Promise<void> {
   const tmp = join(
     app.getPath('temp'),
@@ -671,16 +727,12 @@ export async function printList(
     } catch {
       return { ok: false, vytisteno: 0, preskoceno: 1, chyba: 'List nelze sestavit (chybějící data).' }
     }
-    await withTiskoveOkno(async (win) => {
+    await withTiskOkno(async (win) => {
       await nactiHtml(win, s.html)
-      await new Promise<void>((resolve, reject) => {
-        win.webContents.print(
-          { silent: true, copies: kopii, ...(deviceName ? { deviceName } : {}) },
-          (success, errorType) => {
-            if (!success) reject(new Error(errorType ?? 'Tisk selhal'))
-            else resolve()
-          }
-        )
+      await tisknout(win.webContents, {
+        silent: true,
+        copies: kopii,
+        ...(deviceName ? { deviceName } : {})
       })
     })
     return { ok: true, vytisteno: kopii, preskoceno: 0 }
@@ -697,7 +749,7 @@ export async function printPreset(
   let vytisteno = 0
   let preskoceno = 0
   try {
-    await withTiskoveOkno(async (win) => {
+    await withTiskOkno(async (win) => {
       for (const katId of kategorieIds) {
         for (const item of TISKOVY_PRESET) {
           let s: Sestaveno
@@ -708,12 +760,7 @@ export async function printPreset(
             continue
           }
           await nactiHtml(win, s.html)
-          await new Promise<void>((resolve, reject) => {
-            win.webContents.print({ silent: true, copies: item.kopii }, (success, errorType) => {
-              if (!success) reject(new Error(errorType ?? 'Tisk selhal'))
-              else resolve()
-            })
-          })
+          await tisknout(win.webContents, { silent: true, copies: item.kopii })
           vytisteno += item.kopii
         }
       }

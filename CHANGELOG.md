@@ -9,6 +9,9 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 ## [0.9.8-beta] – 2026-06-05
 
 ### Přidáno
+- **Zapamatování tiskárny** — appka si pamatuje naposledy zvolenou tiskárnu; při dalším tisku
+  tiskne rovnou bez výběrového dialogu. Shift+klik na ikonu tiskárny vynutí výběr znovu
+  (a novou volbu uloží).
 - **Sportity integrace** — publikování výsledkových listů přímo do Sportity kanálu
   bez ručního nahrávání. V Nastavení: zadání API klíče, výběr závodu a složky s výsledky,
   automatické párování kategorií podle názvu, publikování jednoho listu nebo celé kategorie
@@ -29,6 +32,11 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
   řadí chronologicky automaticky.
 
 ### Opraveno
+- **Tisk na tiskárnu nefungoval** — dvě rozbití způsobená Electron 39:
+  (1) `webContents.getPrinters()` byla odstraněna, nahrazena `getPrintersAsync()`;
+  (2) `webContents.print()` změnilo API — nový helper `tisknout()` zvládá callback
+  i Promise variantu a tisková okna se vytváří bez sandbox omezení, které blokovalo
+  přístup k tiskovému subsystému Windows.
 - **Kvalifikační podmínka do SF/finále** — jezdec se počítal jako kvalifikovaný i tehdy,
   když měl v obou jízdách DQ. Opraveno dle pravidel: DQ v jízdě = jako kdyby nenastoupil;
   jezdec musí mít alespoň jednu kompletní jízdu A zároveň alespoň jednu odstartovanou.

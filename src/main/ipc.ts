@@ -175,9 +175,10 @@ export function registerIpc(): void {
   ipcMain.handle('pdf:printPreset', (_e, kategorieIds: number[]) =>
     printPreset(kategorieIds, repo.getLogo())
   )
-  ipcMain.handle('pdf:tiskarny', (e) => {
+  ipcMain.handle('pdf:tiskarny', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    return win ? win.webContents.getPrinters() : []
+    // getPrinters() byl odstraněn v Electron 22+, nahrazen getPrintersAsync()
+    return win ? win.webContents.getPrintersAsync() : []
   })
   ipcMain.handle(
     'pdf:printList',

@@ -16,7 +16,7 @@ interface ToolbarProps {
   onPdf?: () => void
   onPdfSaveAs?: () => void
   onOpenPdfFolder?: () => void
-  onPrint?: () => void
+  onPrint?: (e?: React.MouseEvent) => void
   onSettings?: () => void
 }
 
@@ -95,7 +95,7 @@ export function Toolbar({
         Stopky
       </Btn>
       {onPrint && (
-        <Btn variant="bezel" icon="printer" onClick={onPrint} title="Vytisknout tento list" />
+        <Btn variant="bezel" icon="printer" onClick={(e) => onPrint?.(e)} title="Vytisknout tento list (Shift = změnit tiskárnu)" />
       )}
 
       {/* Uložit PDF + šipka — jeden pill (.pdf-split), hover/active na obalu. */}

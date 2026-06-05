@@ -360,27 +360,38 @@ export function App(): React.JSX.Element {
   const onPdf = (): Promise<void> => exportujAktualni(false)
   const onPdfSaveAs = (): Promise<void> => exportujAktualni(true)
 
-  const onPrint = async (): Promise<void> => {
+  const PREF_TISKARNA_KEY = 'casomira.preferovanaTiskarna'
+
+  const onPrint = async (shiftKey = false): Promise<void> => {
     if (activeCat == null) { oznam('Nejdřív vyber kategorii v levém panelu.'); return }
     const key = listProFazi(phase, subView)
     if (!key) return
     const kopii = PRESET_KOPII[key] ?? 1
     const tiskarny = await window.api.getTiskarny()
-    if (tiskarny.length > 1) {
-      setPrinterPicker({ tiskarny, listKey: key, kopii })
-    } else {
-      const deviceName = tiskarny[0]?.name
+    // Shift = vynutit výběr tiskárny (změna preference)
+    const preferovana = shiftKey ? null : localStorage.getItem(PREF_TISKARNA_KEY)
+    const matchTiskarna = preferovana ? tiskarny.find(t => t.name === preferovana) : undefined
+    if (matchTiskarna) {
+      const res = await window.api.tiskniList(activeCat, key, kopii, matchTiskarna.name)
+      if (res.ok) oznam(`Vytištěno ${res.vytisteno}× → ${matchTiskarna.name}`)
+      else oznam(res.chyba ?? 'Tisk se nezdařil.')
+    } else if (!shiftKey && tiskarny.length === 1) {
+      const deviceName = tiskarny[0].name
       const res = await window.api.tiskniList(activeCat, key, kopii, deviceName)
       if (res.ok) oznam(`Vytištěno ${res.vytisteno}× na tiskárnu.`)
       else oznam(res.chyba ?? 'Tisk se nezdařil.')
+    } else {
+      setPrinterPicker({ tiskarny, listKey: key, kopii })
     }
   }
 
   const doTiskni = async (deviceName: string): Promise<void> => {
     if (!printerPicker || activeCat == null) return
     setPrinterPicker(null)
+    // Zapamatuj si vybranou tiskárnu pro příště
+    localStorage.setItem(PREF_TISKARNA_KEY, deviceName)
     const res = await window.api.tiskniList(activeCat, printerPicker.listKey, printerPicker.kopii, deviceName)
-    if (res.ok) oznam(`Vytištěno ${res.vytisteno}× na tiskárnu.`)
+    if (res.ok) oznam(`Vytištěno ${res.vytisteno}× → ${deviceName}`)
     else oznam(res.chyba ?? 'Tisk se nezdařil.')
   }
 
@@ -530,7 +541,7 @@ export function App(): React.JSX.Element {
               onPdf={() => void onPdf()}
               onPdfSaveAs={() => void onPdfSaveAs()}
               onOpenPdfFolder={() => void onOpenPdfFolder()}
-              onPrint={() => void onPrint()}
+              onPrint={(e) => void onPrint(e?.shiftKey)}
               onStopky={() => void window.api.openStopky()}
               onSettings={() => setNastaveniOtevreno(true)}
             />

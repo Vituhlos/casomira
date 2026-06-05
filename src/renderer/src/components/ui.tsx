@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { Icon, type IconName } from './Icon'
 
 type BtnVariant = 'primary' | 'bezel' | 'plain' | 'danger'
@@ -8,7 +8,7 @@ interface BtnProps {
   children?: ReactNode
   variant?: BtnVariant
   icon?: IconName
-  onClick?: () => void
+  onClick?: (e?: MouseEvent<HTMLButtonElement>) => void
   title?: string
   size?: BtnSize
   style?: CSSProperties
@@ -33,7 +33,7 @@ export function Btn({
       className={`btn btn--${variant}`}
       title={title}
       disabled={disabled}
-      onClick={disabled ? undefined : onClick}
+      onClick={disabled ? undefined : (e) => onClick?.(e)}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
