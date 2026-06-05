@@ -16,6 +16,7 @@ interface ToolbarProps {
   onPdf?: () => void
   onPdfSaveAs?: () => void
   onOpenPdfFolder?: () => void
+  onPrint?: () => void
   onSettings?: () => void
 }
 
@@ -29,6 +30,7 @@ export function Toolbar({
   onPdf,
   onPdfSaveAs,
   onOpenPdfFolder,
+  onPrint,
   onSettings
 }: ToolbarProps): React.JSX.Element {
   const [menu, setMenu] = useState(false)
@@ -92,6 +94,9 @@ export function Toolbar({
       <Btn variant="bezel" icon="stopwatch" onClick={onStopky}>
         Stopky
       </Btn>
+      {onPrint && (
+        <Btn variant="bezel" icon="printer" onClick={onPrint} title="Vytisknout tento list" />
+      )}
 
       {/* Uložit PDF + šipka — jeden pill (.pdf-split), hover/active na obalu. */}
       <div ref={pdfSplitRef} className="pdf-split">

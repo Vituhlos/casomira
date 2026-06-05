@@ -656,6 +656,38 @@ export const TISKOVY_PRESET: { listKey: ListKey; nazev: string; kopii: number }[
   { listKey: 'final_res', nazev: 'Výsledky finále', kopii: 1 },
 ]
 
+export async function printList(
+  kategorieId: number,
+  listKey: ListKey,
+  kopii: number,
+  logo: string | null,
+  deviceName?: string
+): Promise<PrintPresetResult> {
+  try {
+    let s: Sestaveno
+    try {
+      s = sestav(kategorieId, listKey, logo)
+    } catch {
+      return { ok: false, vytisteno: 0, preskoceno: 1, chyba: 'List nelze sestavit (chybějící data).' }
+    }
+    await withTiskoveOkno(async (win) => {
+      await nactiHtml(win, s.html)
+      await new Promise<void>((resolve, reject) => {
+        win.webContents.print(
+          { silent: true, copies: kopii, ...(deviceName ? { deviceName } : {}) },
+          (success, errorType) => {
+            if (!success) reject(new Error(errorType ?? 'Tisk selhal'))
+            else resolve()
+          }
+        )
+      })
+    })
+    return { ok: true, vytisteno: kopii, preskoceno: 0 }
+  } catch (e) {
+    return { ok: false, vytisteno: 0, preskoceno: 0, chyba: e instanceof Error ? e.message : 'Tisk se nezdařil.' }
+  }
+}
+
 export async function printPreset(
   kategorieIds: number[],
   logo: string | null

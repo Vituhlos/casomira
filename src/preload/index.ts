@@ -75,6 +75,9 @@ const api: CasomiraApi = {
     ipcRenderer.invoke('pdf:export', kategorieId, listKey, saveAs),
   exportPdfVse: (kategorieIds: number[]) => ipcRenderer.invoke('pdf:exportVse', kategorieIds),
   printPreset: (kategorieIds: number[]) => ipcRenderer.invoke('pdf:printPreset', kategorieIds),
+  getTiskarny: () => ipcRenderer.invoke('pdf:tiskarny'),
+  tiskniList: (kategorieId: number, listKey: ListKey, kopii: number, deviceName?: string) =>
+    ipcRenderer.invoke('pdf:printList', kategorieId, listKey, kopii, deviceName),
   getPdfRootStav: () => ipcRenderer.invoke('pdf:rootStav'),
   choosePdfRoot: () => ipcRenderer.invoke('pdf:chooseRoot'),
   openFolder: (cesta: string) => ipcRenderer.invoke('shell:openFolder', cesta),

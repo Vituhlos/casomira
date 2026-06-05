@@ -570,6 +570,10 @@ export interface CasomiraApi {
   exportPdfVse(kategorieIds: number[]): Promise<ExportVseResult>
   /** Závodní tisk — vytiskne preset listů (startovka 1×, rošty 4×, výsledky finále 1×). */
   printPreset(kategorieIds: number[]): Promise<PrintPresetResult>
+  /** Vrátí seznam dostupných tiskáren. */
+  getTiskarny(): Promise<{ name: string; displayName: string; isDefault: boolean }[]>
+  /** Vytiskne jeden list N kopií (volitelně na konkrétní tiskárnu). */
+  tiskniList(kategorieId: number, listKey: ListKey, kopii: number, deviceName?: string): Promise<PrintPresetResult>
   // Kořenová složka pro PDF
   /** Vrátí nastavenou kořenovou složku a zda existuje. */
   getPdfRootStav(): Promise<PdfRootStav>

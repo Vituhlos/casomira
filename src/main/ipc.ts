@@ -24,7 +24,7 @@ import {
   restoreBackup
 } from './backup/actions'
 import { BackupValidationError } from './backup/import'
-import { exportJeden, exportVse, pdfRootStav, choosePdfRoot, printPreset } from './pdf'
+import { exportJeden, exportVse, pdfRootStav, choosePdfRoot, printPreset, printList } from './pdf'
 import { openStopky, broadcast } from './windows'
 import * as sportity from './sportity/service'
 import type { BackupRestoreArg } from '../shared/backup'
@@ -174,6 +174,15 @@ export function registerIpc(): void {
 
   ipcMain.handle('pdf:printPreset', (_e, kategorieIds: number[]) =>
     printPreset(kategorieIds, repo.getLogo())
+  )
+  ipcMain.handle('pdf:tiskarny', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    return win ? win.webContents.getPrinters() : []
+  })
+  ipcMain.handle(
+    'pdf:printList',
+    (_e, kategorieId: number, listKey: ListKey, kopii: number, deviceName?: string) =>
+      printList(kategorieId, listKey, kopii, repo.getLogo(), deviceName)
   )
 
   // Pomocná okna
