@@ -96,6 +96,7 @@ export interface ImportSheetPreview {
   pocet: number
   konflikty: number // kolik startovních čísel už v cílové kategorii existuje
   losKolize: number[] // losy, které se v listu opakují (musí být unikátní)
+  bezLosu: number // jezdci bez vyplněného losu (neprojeli přejímkou)
   jezdci: ParsedJezdec[]
 }
 

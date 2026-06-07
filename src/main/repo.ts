@@ -341,6 +341,8 @@ export function buildImportPreview(soubor: string): ImportPreview {
       .map(([los]) => los)
       .sort((a, b) => a - b)
 
+    const bezLosu = s.jezdci.filter((j) => j.los === null).length
+
     return {
       sheet: s.sheet,
       mappedNazev: s.mappedNazev,
@@ -348,6 +350,7 @@ export function buildImportPreview(soubor: string): ImportPreview {
       pocet: s.jezdci.length,
       konflikty,
       losKolize,
+      bezLosu,
       jezdci: s.jezdci
     }
   })
@@ -687,11 +690,12 @@ export function navrhniRost(
 ): RostNavrh {
   const db = getDb()
   const prazdny = { pocetJizd: 0, minJizd: 0, maxJizd: 0 }
-  const jezdci = listJezdci(kategorieId)
+  // Jezdci bez losu neprojeli přejímkou — do roštů nevstupují.
+  const jezdci = listJezdci(kategorieId).filter((j) => j.los !== null)
   if (jezdci.length === 0) {
     return {
       ok: false,
-      chyba: 'V kategorii nejsou žádní jezdci.',
+      chyba: 'V kategorii nejsou žádní jezdci s přiděleným losem.',
       obsazeno: false,
       jizdy: [],
       ...prazdny
@@ -1384,8 +1388,11 @@ export function getKlasifikace(kategorieId: number, koloTypy: KoloTyp[]): Klasif
   const rows = db
     .prepare(
       `SELECT v.jezdec_id AS jezdec_id, k.typ AS typ, v.body AS body
-       FROM vysledek v JOIN jizda jz ON jz.id = v.jizda_id JOIN kolo k ON k.id = jz.kolo_id
-       WHERE k.kategorie_id = ? AND k.typ IN (${ph})`
+       FROM vysledek v
+       JOIN jizda jz ON jz.id = v.jizda_id
+       JOIN kolo k ON k.id = jz.kolo_id
+       JOIN jezdec j ON j.id = v.jezdec_id
+       WHERE k.kategorie_id = ? AND k.typ IN (${ph}) AND j.los IS NOT NULL`
     )
     .all(kategorieId, ...koloTypy) as { jezdec_id: number; typ: string; body: number | null }[]
 

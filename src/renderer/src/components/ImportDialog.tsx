@@ -112,6 +112,12 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
                     unikátní)
                   </div>
                 )}
+                {l.bezLosu > 0 && (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
+                    {l.bezLosu} jezdců bez losu — naimportují se, ale nebudou zařazeni do roštů
+                    (neprojeli přejímkou)
+                  </div>
+                )}
               </span>
               <span className="tnum" style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
                 {l.pocet} jezdců

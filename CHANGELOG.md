@@ -6,9 +6,15 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
-## [0.9.9-beta] – 2026-06-05
+## [0.9.9-beta] – 2026-06-07
 
 ### Přidáno
+- **Jezdci bez přejímky** — jezdci importovaní z Excelu bez vyplněného losu jsou
+  nově vizuálně odlišeni v Startovní listině: šedivý odznak „Bez přejímky" a ztlumený
+  řádek. Do roštů (Q1–Q3, Semifinále, Finále) a klasifikace nevstupují. Jakmile operátor
+  los ručně doplní, jezdec se automaticky aktivuje a do roštů vstoupí normálně.
+- **Upozornění při importu** — ImportDialog nově zobrazuje pro každý list počet jezdců
+  bez losu s informací, že budou naimportováni, ale do roštů nezařazeni.
 - **Windows 11 Mica efekt** — na Windows 11 (build ≥ 22000) appka využívá
   nativní DWM Mica materiál; sidebar a toolbar mají solidní barvy (stejný přístup
   jako VS Code / Teams), Mica prosvítá pouze přes titlebar.

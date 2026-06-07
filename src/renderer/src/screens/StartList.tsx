@@ -40,6 +40,7 @@ export function StartList({
 }: StartListProps): React.JSX.Element {
   // Řazení dle losu (prázdný los až nakonec).
   const sorted = [...jezdci].sort((a, b) => (a.los ?? 9999) - (b.los ?? 9999))
+  const bezLosu = jezdci.filter((j) => j.los === null).length
 
   const commit = (id: number, col: Col, raw: string): Promise<boolean> => {
     if (col.num) {
@@ -50,9 +51,14 @@ export function StartList({
     return onEdit(id, col.key, raw)
   }
 
+  const subText =
+    bezLosu > 0
+      ? `${jezdci.length} přihlášených · ${bezLosu} čeká na přejímku · řazeno dle losu`
+      : `${jezdci.length} přihlášených · řazeno dle losu`
+
   return (
     <div className="screen-enter">
-      <ContentHead title="Startovní listina" sub={`${jezdci.length} přihlášených · řazeno dle losu`}>
+      <ContentHead title="Startovní listina" sub={subText}>
         <Btn icon="import" onClick={onImport}>
           Importovat z Excelu
         </Btn>
@@ -90,30 +96,64 @@ export function StartList({
                 </td>
               </tr>
             )}
-            {sorted.map((d, i) => (
-              <Row key={d.id} i={i} zebra={zebra}>
-                {COLS.map((c) => (
-                  <td key={c.key} style={tdStyle}>
-                    <EditableCell
-                      value={d[c.key]}
-                      num={c.num}
-                      weight={c.weight}
-                      onCommit={(raw) => commit(d.id, c, raw)}
-                    />
+            {sorted.map((d, i) => {
+              const cekaNaPrejimku = d.los === null
+              return (
+                <Row key={d.id} i={i} zebra={zebra}>
+                  {COLS.map((c) => (
+                    <td
+                      key={c.key}
+                      style={{ ...tdStyle, opacity: cekaNaPrejimku ? 0.55 : 1 }}
+                    >
+                      {c.key === 'prijmeni' && cekaNaPrejimku ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <EditableCell
+                            value={d[c.key]}
+                            num={c.num}
+                            weight={c.weight}
+                            onCommit={(raw) => commit(d.id, c, raw)}
+                          />
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              height: 18,
+                              padding: '0 7px',
+                              borderRadius: 'var(--r-ctrl)',
+                              fontSize: 10.5,
+                              fontWeight: 600,
+                              letterSpacing: '0.02em',
+                              background: 'rgba(120,120,128,0.14)',
+                              color: 'var(--text-3)',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Bez přejímky
+                          </span>
+                        </div>
+                      ) : (
+                        <EditableCell
+                          value={d[c.key]}
+                          num={c.num}
+                          weight={c.weight}
+                          onCommit={(raw) => commit(d.id, c, raw)}
+                        />
+                      )}
+                    </td>
+                  ))}
+                  <td style={{ ...tdStyle, padding: '0 8px', textAlign: 'center' }}>
+                    <button
+                      className="row-action"
+                      title="Smazat jezdce"
+                      onClick={() => onDelete(d)}
+                      style={{ display: 'inline-flex', padding: 4 }}
+                    >
+                      <Icon name="trash" size={15} />
+                    </button>
                   </td>
-                ))}
-                <td style={{ ...tdStyle, padding: '0 8px', textAlign: 'center' }}>
-                  <button
-                    className="row-action"
-                    title="Smazat jezdce"
-                    onClick={() => onDelete(d)}
-                    style={{ display: 'inline-flex', padding: 4 }}
-                  >
-                    <Icon name="trash" size={15} />
-                  </button>
-                </td>
-              </Row>
-            ))}
+                </Row>
+              )
+            })}
           </tbody>
         </table>
       </Card>
