@@ -6,13 +6,17 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.10-beta] – 2026-06-09
+
 ### Opraveno
 - **macOS 26 pád při startu (SIGABRT / DYLD Team ID mismatch)** — obnovena
   entitlement `disable-library-validation`; bez ní macOS 26+ odmítne načíst
   Electron Framework pod ad-hoc podpisem (`identity: '-'`), protože framework
-  má jiné Team ID než hlavní binárka. Opraven i `afterPack` skript: nově
-  aktualizuje `CFBundleExecutable` v `Info.plist` helperů, aby codesign mohl
-  Helpers správně podepsat.
+  má jiné Team ID než hlavní binárka. Příčina: electron-builder 26.0.13+ začal
+  ad-hoc signing skutečně volat (dřív byl beze signing), čímž se hardened runtime
+  začal uplatňovat — entitlements musí být kompletní (issues #9529 a #9396).
+  Opraven i `afterPack` skript: nově aktualizuje `CFBundleExecutable` v `Info.plist`
+  helperů, aby codesign mohl Helpers správně podepsat.
 
 ## [0.9.9-beta] – 2026-06-07
 
@@ -235,7 +239,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.9-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.10-beta...HEAD
+[0.9.10-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.9-beta...v0.9.10-beta
 [0.9.9-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.8-beta...v0.9.9-beta
 [0.9.8-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...v0.9.8-beta
 [0.9.7-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.6-beta...v0.9.7-beta
