@@ -1,4 +1,6 @@
 # Sestavení instalátorů Windows (NSIS) + macOS (DMG) a nahrání do GitHub Release.
+# Soubory se nahrávají přímo do Release — nepoužívá actions/upload-artifact
+# (vyhneme se artifact storage quotě).
 #
 # Spuštění:
 #   git tag v0.9.0 && git push origin v0.9.0
@@ -20,8 +22,43 @@ permissions:
   contents: write
 
 jobs:
+  # Vytvoří (nebo aktualizuje) draft Release s popisem z CHANGELOG.md.
+  # Musí proběhnout dřív než build joby nahrávají soubory.
+  create-release:
+    name: Vytvoř GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Zjisti tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sestav poznámky k Release
+        run: node scripts/release-notes.mjs "${{ steps.tag.outputs.value }}" > RELEASE_NOTES.md
+
+      - name: Vytvoř nebo aktualizuj draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: Časomíra ${{ steps.tag.outputs.value }}
+          draft: true
+          prerelease: ${{ contains(steps.tag.outputs.value, '-') }}
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
     name: Build (${{ matrix.os_label }})
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -62,47 +99,25 @@ jobs:
         shell: bash
         run: ls -la release/ || true
 
-      - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: installer-${{ matrix.os_label }}
-          path: ${{ matrix.artifact_glob }}
-          if-no-files-found: error
-
-  publish:
-    name: Publish GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-
-    steps:
-      # Checkout kvůli CHANGELOG.md a skriptu pro poznámky (musí být PŘED stažením
-      # artefaktů, ať nepřepíše složku artifacts/).
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: List artifacts
-        run: find artifacts -type f
-
-      # Popis Release = sekce z CHANGELOG.md pro daný tag + instalační poznámka.
-      - name: Sestav poznámky k Release
-        run: node scripts/release-notes.mjs "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}" > RELEASE_NOTES.md
-
-      - name: Create or update GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          name: Časomíra ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
-          body_path: RELEASE_NOTES.md
-          files: |
-            artifacts/**/*
+      # Nahraj přímo do GitHub Release — bez artifact storage.
+      - name: Nahraj do GitHub Release
+        shell: bash
+        run: |
+          TAG="${{ needs.create-release.outputs.tag }}"
+          gh release upload "$TAG" ${{ matrix.artifact_glob }} --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Jakmile jsou oba buildy hotové, zveřejni Release (draft → publish).
+  publish:
+    name: Zveřejni Release
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publikuj Release
+        run: |
+          TAG="${{ needs.create-release.outputs.tag }}"
+          gh release edit "$TAG" --draft=false --repo "$GITHUB_REPOSITORY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
