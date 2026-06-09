@@ -2,7 +2,7 @@
 
 Tento text můžeš poslat časoměřiči spolu s instalátorem. Popisuje **co aplikace umí** a **jak s ní projít typický závod** — bez programátorských detailů.
 
-> **Verze dokumentu:** k aplikaci **0.9.1** (Electron, Windows + Mac).  
+> **Verze dokumentu:** k aplikaci **0.9.9-beta** (Electron, Windows + Mac).  
 > **Instalace na Mac:** Word `docs/user/Casomira-instalace-Mac.docx` (nebo [INSTALACE-MAC.md](./INSTALACE-MAC.md)). Na Windows spusť `Casomira-Setup-….exe` z release.
 
 ---
@@ -40,7 +40,7 @@ ZÁVOD (RAC Race nebo RX Cup, zvolíš při založení)
 
 - **Levý panel** — přepínání kategorií (u každé vidíš počet jezdců).
 - **Horní lišta (segment)** — fáze závodu; u RX Cup **není** záložka „Klasifikace po Q2“ (pořád se ale počítá pro Q3).
-- **Kategorie Šotolina** — jiná lišta: místo Semifinále/Finále jsou **Finále B** a **Finále A**.
+- **Kategorie Šotolina** — jede stejnou pipeline jako ostatní RAC kategorie (Q1 → Q2 → … → Semifinále → Finále → Celkově).
 
 ---
 
@@ -80,15 +80,16 @@ Po spuštění vidíš seznam závodů.
 | **Stopky** | Otevře **samostatné okno** pro měření časů v cíli (viz kapitola Stopky) |
 | **Uložit PDF** | Uloží **aktuální obrazovku** jako PDF (stejný list jako v Excelu) |
 | Šipka u PDF | **Uložit jako…** (jiná složka) nebo **Otevřít složku PDF** |
+| Ikona tiskárny | Tiskne aktuální list přímo na tiskárnu (rošty 4×, ostatní 1×) |
 | **Zásahy** | Přehled úprav ředitele (penalizace, posuny) — audit |
-| **Nastavení** | Logo do PDF, složka pro PDF, hromadný export všech listů |
+| **Nastavení** | Logo do PDF, složka pro PDF, hromadný export, závodní tiskový preset, Sportity integrace |
 | Ikona měsíce/slunce | Přepnutí vzhledu |
 
 ### Horní segment (fáze)
 
 Přepínáš např. **Startovní listina → Q1 → Q2 → Klasifikace po Q2 → …**
 
-U **Q1, Q2, Q3, Semifinále, Finále** (a Finále A/B) jsou dvě **podzáložky**:
+U **Q1, Q2, Q3, Semifinále, Finále** jsou dvě **podzáložky**:
 
 - **Rošt** — kdo v jaké jízdě startuje (zadáváš startovní čísla)
 - **Výsledky** — časy, body, stavy DNF/DNS/DQ
@@ -138,7 +139,7 @@ U **Q1, Q2, Q3, Semifinále, Finále** (a Finále A/B) jsou dvě **podzáložky*
 
 - Do pole času můžeš napsat **`dnf`**, **`dns`**, **`dq`** (nebo zkratky **f / s / q**).
 - Nebo klikni na **šipku / menu** vpravo u řádku → vyber stav.
-- Body se dopočítají podle pravidel kategorie (Hobby vs Šotolina se liší).
+- Body se dopočítají podle pravidel kategorie (DNF = poslední −1, DNS = poslední −5, DQ = poslední −10).
 
 ### Ruční úprava bodů
 
@@ -160,7 +161,7 @@ U **Q1, Q2, Q3, Semifinále, Finále** (a Finále A/B) jsou dvě **podzáložky*
 
 | Záložka | Obsah |
 |---------|--------|
-| **Klasifikace po Q2** | Součet bodů Q1+Q2, pořadí (u Šotoliny i sloupec **Los** pro tiebreak) |
+| **Klasifikace po Q2** | Součet bodů Q1+Q2, pořadí (při shodě rozhoduje Q2, potom Q1) |
 | **Klasifikace po Q3** | Součet Q1+Q2+Q3 |
 | **Celkově** | Finální pořadí závodu v kategorii (včetně bodů z finále / SF dle typu) |
 
@@ -168,17 +169,11 @@ Medaile u 1.–3. místa = vizuální zvýraznění pořadí.
 
 ---
 
-## 7. Semifinále, Finále, Šotolina A/B
+## 7. Semifinále a Finále
 
-### RAC Race / RX Cup (běžná kategorie)
-
-- **Semifinále** — rošty + výsledky (čas u SF nemusíš měřit, stačí pořadí / stavy dle pravidel)
-- **Finále** — rošty + výsledky; u Hobby můžeš přepínat velikost finále (8 / 10 jezdců), kde je to v UI
-
-### Šotolina
-
-- **Finále B**, pak **Finále A** — stejný princip Rošt / Výsledky
-- Žádné semifinále
+- **Semifinále** — rošty + výsledky (čas u SF nemusíš měřit, stačí pořadí / stavy dle pravidel). Koná se při ≥ 12 kvalifikovaných jezdcích.
+- **Finále** — rošty + výsledky; u Hobby jede finále 10 jezdců.
+- Šotolina jede stejně jako ostatní RAC kategorie — Semifinále + Finále, žádné speciální A/B pipeline.
 
 ---
 
@@ -241,7 +236,6 @@ Zapiš si, co bylo matoucí nebo co nesedí s papírovým/Excelovým výsledkem.
 |--------|------|
 | Automatické rošty Q2/Q3 podle všech pravidel seedingu | částečně / kontroluj ručně |
 | Paste box časů ze schránky (Free Stopwatch) | zatím ne |
-| Záloha / obnova celého závodu jedním souborem | zatím ne |
 | Síť / mobilní zadávání | ne |
 | Podpis Apple / notarizace Mac | ne — první spuštění přes *Otevřít* pravým tlačítkem |
 

@@ -1,9 +1,9 @@
 # Report: Migrace better-sqlite3 → node:sqlite
 
 > Analýza proveditelnosti — zpracoval Claude Code, 2026-06-04.  
-> **Krok 1 hotový** na větvi `experiment/node-sqlite`: wrapper + testy — viz
-> [node-sqlite-transaction-wrapper.md](./node-sqlite-transaction-wrapper.md).  
-> Zbytek migrace (connection, repo, Electron 42) zatím neproveden.
+> **Migrace je plně hotová** — vydáno v `0.9.9-beta` na větvi `experiment/node-sqlite`.
+> Všechny kroky níže byly provedeny: wrapper, connection, repo, Electron 39→42, integrační testy.
+> Tento dokument slouží jako historický záznam analýzy a technického návrhu.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Stav
 
-Plánováno.
+**Hotovo** — vydáno v `0.9.8-beta` (CHANGELOG: Přegenerovat celkové výsledky + automatický přepočet při každé změně dat).
 
 ## Cíl
 

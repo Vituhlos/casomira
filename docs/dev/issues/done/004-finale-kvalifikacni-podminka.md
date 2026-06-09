@@ -2,7 +2,7 @@
 
 ## Stav
 
-Plánováno.
+**Hotovo** — vydáno v `0.9.8-beta` (CHANGELOG: Kvalifikační podmínka do SF/finále — DQ v jízdě = jako kdyby nenastoupil).
 
 ## Cíl
 

@@ -2,7 +2,7 @@
 
 ## Stav
 
-Plánováno.
+**Hotovo** — vydáno v `0.9.8-beta` (CHANGELOG: Sportity integrace, Sportity setup při zakládání závodu).
 
 ## Cíl
 

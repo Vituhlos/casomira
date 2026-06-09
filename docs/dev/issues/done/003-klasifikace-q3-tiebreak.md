@@ -2,7 +2,7 @@
 
 ## Stav
 
-Plánováno.
+**Hotovo** — vydáno v `0.9.8-beta` (CHANGELOG: Tiebreak klasifikace — porovnání napříč všemi jízdami dle pravidel).
 
 ## Cíl
 

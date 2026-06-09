@@ -25,7 +25,7 @@ přepisují. Pravidla jsou v dokumentu „Časoměřičská bible".
 
 - **Electron** (desktopový obal, „appka jako Chrome / VS Code / Discord").
 - **React + Vite + TypeScript** (UI).
-- **SQLite** přes `better-sqlite3` — lokálně, offline.
+- **SQLite** přes `node:sqlite` (vestavěný v Node.js 22+) — lokálně, offline. Migrace z `better-sqlite3` dokončena v `0.9.9-beta`.
 - **Instalačky** přes `electron-builder`. Windows: **instalátor** (`Casomira-Setup-x.y.z.exe`,
   NSIS) — appka se **nainstaluje jako normální program** (ikona na ploše i v Start menu,
   záznam v „Přidat/odebrat programy", čistá odinstalace). NE portable .exe.
@@ -106,7 +106,7 @@ z něj přebírá vzhled, ne pravidla.
 - Statická ukázková data (ROSTER, RES_Q*) → nahradit reálnými z SQLite.
 - Import z Excelu a PDF jsou v prototypu jen naznačené → implementovat nativně
   (SheetJS / `webContents.printToPDF`).
-- Šotolina pipeline (Finále A/B, los tiebreak, skupiny) v prototypu chybí → doplnit.
+- Šotolina pipeline (Finále A/B, los tiebreak, skupiny) — v prototypu chybí a v aplikaci byla odstraněna (v0.9.7-beta); Šotolina jede jako STANDARD kategorie.
 
 **Postup pro Claude Code:** převzít `mac.css` a komponentní kostru, napojit na
 reálnou datovou/pravidlovou vrstvu (SQLite + ruleset), a teprve pak rozšiřovat.
@@ -119,9 +119,7 @@ reálnou datovou/pravidlovou vrstvu (SQLite + ruleset), a teprve pak rozšiřova
 - **Kategorie** = ekvivalent jednoho dnešního excelového sešitu. Každá je **plně
   samostatná** (vlastní startovka, rošty, body, klasifikace, PDF). Vybírá se
   z levého panelu. Body se nesdílí mezi kategoriemi.
-- **Pravidla jedou na úrovni kategorie** (`ruleset`): výchozí dle typu závodu,
-  ale konkrétní kategorie (typicky **Šotolina**) může jet po svém i uvnitř RAC
-  závodu.
+- **Pravidla jedou na úrovni kategorie** (`ruleset`): aktuálně jen `STANDARD` (dle typu závodu RAC/RX). Speciální `SOTOLINA` ruleset byl deaktivován v `0.9.7-beta` — viz issue 007.
 
 Aplikace musí umět tři varianty pipeline:
 
@@ -129,9 +127,7 @@ Aplikace musí umět tři varianty pipeline:
 - **RAC Race JE Hobby.** Celá bible platí pro RAC Race **včetně** pasáží
   označených „Hobby" — ty NEJSOU výjimka, ale přímo definují, jak RAC Race jede
   (např. finále na 10 jezdců u kategorií, kde to tak je nastaveno).
-- **Šotolina je součást RAC Race** (kategorie uvnitř RAC závodu s `ruleset=SOTOLINA`),
-  jen s lehce upravenými pravidly (body 14→1, finále A/B, los tiebreak, skupiny).
-  Není to samostatný typ závodu.
+- **Šotolina je kategorie v RAC Race** s `ruleset=STANDARD` — jede stejnou pipeline jako ostatní kategorie. Speciální pravidla (body 14→1, finále A/B, los tiebreak, skupiny) byla deaktivována v `0.9.7-beta`. Není to samostatný typ závodu.
 - **RX Cup jede taky podle bible, ALE ignoruje:** (a) „Hobby" specifika v semifinále
   (řídí se standardní variantou, ne hobby), (b) veškeré zmínky o Šotolině
   (RX Cup nemá šotolinové kategorie).
@@ -140,51 +136,43 @@ Aplikace musí umět tři varianty pipeline:
 Listy: Startovní listina → Rošty/Výsledky Q1 → Q2 → **Celkově po Q2** → Q3 →
 **Celkově po Q3** → **Semifinále** → **Finále** → Celkově.
 Kategorie: Cross Cup, Dámský pohár do 1400, Dámský pohár nad 1400, Junior,
-N1400, N1600, N1600+, S1600, S1600+, Škoda Cup (+ Šotolina jako kategorie
-s `ruleset=SOTOLINA`).
+N1400, N1600, N1600+, S1600, S1600+, Škoda Cup, Šotolina (vše `ruleset=STANDARD`).
 
 ### 3b. RX Cup — `typ=RX`, `ruleset=STANDARD`
 Jako RAC Race, ale **bez listu „Celkově po Q2"** (jen po Q3). Závěr SF → Finále.
 Kategorie: DX, N1400, N1600, N1600+, S1400, S1600, S1600+, S4x4, Škoda Cup.
 
-### 3c. Šotolina — `ruleset=SOTOLINA` (kategorie, ne samostatný typ závodu)
-Q1 → Q2 → **Celkově po Q2 (s Losem)** → Q3 → Celkově po Q3 → **Finále B →
-Finále A** (žádné semifinále) → Celkově. Jezdí se ve **fixních skupinách**.
+### 3c. Šotolina — `ruleset=STANDARD` (kategorie v RAC závodě)
+Jede **stejnou pipeline jako ostatní RAC Race kategorie** (viz 3a). Od `0.9.7-beta` není Šotolina odlišena žádnou speciální logikou. Zbytky legacy kódu (F_A, F_B, SOTOLINA větve) čekají na cleanup — viz issue 007.
 
 ## 4. Bodové žebříčky (ověřeno proti vzorům)
 
-| Pořadí | RAC Race / RX Cup | Šotolina (po skupinách) |
-|--------|-------------------|-------------------------|
-| 1.     | 50                | 14 |
-| 2.     | 45                | 13 |
-| 3.     | 42                | 12 |
-| 4.     | 40                | 11 |
-| 5.     | 39                | 10 |
-| 6.     | 38                | 9 |
-| 7.     | 37                | 8 |
-| 8.     | 36                | 7 |
-| 9+     | dále −1 za místo  | dále −1 (max 14 ve skupině, pak reset pro další skupinu) |
+| Pořadí | RAC Race / RX Cup |
+|--------|-------------------|
+| 1.     | 50                |
+| 2.     | 45                |
+| 3.     | 42                |
+| 4.     | 40                |
+| 5.     | 39                |
+| 6.     | 38                |
+| 7.     | 37                |
+| 8.     | 36                |
+| 9+     | dále −1 za místo  |
 
-Žebříčky musí být **konfigurovatelné** (tabulka `bodovy_zebricek`).
+Žebříčky musí být **konfigurovatelné** (tabulka `bodovy_zebricek`). Šotolina používá stejný žebříček jako ostatní STANDARD kategorie.
 
-## 5. Penalizace / stavy (z bible — liší se dle formátu!)
+## 5. Penalizace / stavy
 
-**RAC Race / RX Cup (Hobby):**
+**RAC Race / RX Cup (Hobby) — platí pro všechny kategorie vč. Šotoliny:**
 - `DNF` (nedokončí) = body za **poslední místo − 1**
 - `DNS` (nepřejede startovní čáru) = body za **poslední místo − 5**
 - `DQ` (vyloučen z jízdy) = body za **poslední místo − 10**
 
-**Šotolina Cup:**
-- `DNS` (nenastoupí) = **0 bodů**
-- `DNF` (nedojede) = **0 bodů**
-- `DQ` (diskvalifikace) = **−20 bodů**
-- `DQ ve dvou jízdách` = vyloučení ze závodu (−30 řeší ručně pořadatel)
-
-„Poslední místo" = počet jezdců v dané jízdě (resp. skupině).
+„Poslední místo" = počet jezdců v dané jízdě.
 
 ## 6. Nasazování roštů (seeding)
 
-### RAC Race / RX Cup
+### RAC Race / RX Cup (platí pro všechny kategorie vč. Šotoliny)
 - **Q1** = podle **losu**.
 - **Q2** = **obrácené pořadí** losu.
 - **Q3** = podle **Celkově po Q2** (u RX Cup: podle průběžných bodů po Q2).
@@ -194,18 +182,10 @@ Finále A** (žádné semifinále) → Celkově. Jezdí se ve **fixních skupin�
   poslední jízda = nejrychlejší. (15 jezdců: 1.jízda = pořadí 11–15,
   2.jízda = 6–10, 3.jízda = 1–5.)
 
-### Šotolina Cup
-- Jezdí se ve **fixních skupinách** (kdo spolu jel Q1, jede spolu Q2 i Q3).
-- **Q1** = podle losu, **Q2** = obrácené pořadí, **Q3** = podle **součtu bodů
-  Q1+Q2** v rámci skupiny.
-
 ## 7. Klasifikace po sériích a tiebreak
 
 - Klasifikace = součet bodů ze všech odjetých kol, **seřazeno sestupně**.
-- **Tiebreak RAC Race / RX Cup:** lepší výsledek v **jakékoli** rozjížďce
-  (stačí jedno lepší umístění v libovolné jízdě).
-- **Tiebreak Šotolina:** **pouze los do 1. jízdy** (proto má list „Celkově po Q*"
-  sloupec `Los`).
+- **Tiebreak:** při shodě bodů rozhoduje lepší výsledek v Q3, pak Q2, pak Q1.
 
 ## 8. Kvalifikace do semifinále / finále
 
@@ -224,16 +204,10 @@ alespoň odstartoval**. **DQ v jízdě = jako kdyby nenastoupil.**
   (za stejné kvalifikační podmínky).
 - **HOBBY: finále jede 10 jezdců** → 10 přímo, nebo prvních 5 ze semi A i B.
 
-### Šotolina Cup
-- Max 14 jezdců.
-- **Finále A** = rovnou **10 nejlepších** po Q3.
-- **Finále B** = od 11. místa; **první 4** z B postupují do A.
-
 ## 9. Celkové výsledky
 
-- RAC Race / RX Cup: `Celkově = Q (celkem) + SF + F`.
-- Šotolina: `Celkově = Q (celkem) + F`.
-- Seřazeno sestupně dle celkových bodů (tiebreak dle formátu, viz §7).
+- `Celkově = Q (celkem) + SF + F` (u RX Cup bez SF, pokud < 12 kvalifikovaných).
+- Seřazeno sestupně dle celkových bodů (tiebreak viz §7).
 
 ## 10. Náhrada časoměřičského workflow (zabít ruční přepisování)
 
@@ -254,18 +228,15 @@ V appce:
 ```
 zavod        (id, nazev, datum, misto, typ)      -- typ ∈ {RAC,RX}
 kategorie    (id, zavod_id, nazev, ruleset)
-              -- ruleset ∈ {STANDARD, SOTOLINA}
+              -- ruleset ∈ {STANDARD} (aktivní); SOTOLINA v DB existuje jen jako legacy
               -- STANDARD = chová se dle typu závodu (RAC vs RX kostra)
-              -- SOTOLINA = vlastní pravidla (body 14→1, finále A/B, los tiebreak,
-              --   fixní skupiny) i uvnitř RAC závodu
-              -- výchozí ruleset se předvyplní podle typu závodu, lze přepnout
-              --   u konkrétní kategorie (typicky „Šotolina")
+              -- výchozí ruleset se předvyplní podle typu závodu
 jezdec       (id, kategorie_id, st_cislo, prijmeni, jmeno,
               znacka, model, rok_narozeni, los)
               -- UNIQUE(kategorie_id, st_cislo)
-skupina      (id, kategorie_id, nazev)            -- jen Šotolina (fixní skupiny)
+skupina      (id, kategorie_id, nazev)            -- legacy, nepoužívá se pro nová data
 kolo         (id, kategorie_id, typ, poradi)
-              -- typ ∈ {Q1,Q2,Q3,SF,F,F_A,F_B}
+              -- typ ∈ {Q1,Q2,Q3,SF,F} (F_A,F_B jen v legacy datech)
 jizda        (id, kolo_id, cislo, skupina_id NULLABLE)
 rost_pozice  (id, jizda_id, pozice, jezdec_id)    -- pozice 1..8
 vysledek     (id, jizda_id, jezdec_id, namereny_cas_ms, penalizace_ms,
@@ -278,7 +249,7 @@ vysledek     (id, jizda_id, jezdec_id, namereny_cas_ms, penalizace_ms,
 uprava_log   (id, vysledek_id, typ, hodnota, duvod, rozhodl, kdy)
               -- typ ∈ {POSUN_PORADI,CASOVA_PENALIZACE,ZMENA_STAVU,OPRAVA_CASU}
               -- audit: každý zásah ředitele/časoměřiče se loguje (důvod povinný)
-zebricek     (id, ruleset, poradi, body)          -- STANDARD: 50/45/42…; SOTOLINA: 14→1
+zebricek     (id, ruleset, poradi, body)          -- STANDARD: 50/45/42…
 pravidla     (id, ruleset, ...)                    -- penalizace, prahy SF, finále apod.
 mereni       (id, jizda_id, poradi_kliku, cas_ms, jezdec_id NULLABLE)
               -- záznam z vestavěných stopek (fáze 2): jeden řádek = jedno
@@ -287,13 +258,12 @@ mereni       (id, jizda_id, poradi_kliku, cas_ms, jezdec_id NULLABLE)
 
 ## 12. MVP rozsah (1:1 s Excelem)
 
-- Typ závodu (RAC / RX) volený při založení; kategorie s vlastním `ruleset`
-  (STANDARD / SOTOLINA). Výběr kategorie z levého panelu.
+- Typ závodu (RAC / RX) volený při založení; kategorie s `ruleset=STANDARD`. Výběr kategorie z levého panelu.
 - Startovní listina + import z `.xls`/`.xlsx` (seznam jezdců + los).
 - Rošty (zadání st. čísla → autofill jména/značky/modelu).
 - Výsledky (paste-box časů → auto pořadí + auto body + penalizační stavy).
 - Klasifikace po Q2/Q3 s korektním tiebreakem dle formátu.
-- SF / Finále (vč. A/B u Šotoliny) + Celkově.
+- SF / Finále + Celkově.
 - **PDF export** všech listů se shodnými názvy:
   `Startovní_listina.pdf`, `Q1_rošty.pdf`, `Q1_výsledky.pdf`, `Q2_rošty.pdf`,
   `Q2_výsledky.pdf`, `Klasifikace po Q2.pdf`, `Q3_rošty.pdf`, `Q3_výsledky.pdf`,

@@ -2,7 +2,7 @@
 
 ## Stav
 
-Plánováno.
+**Hotovo** — vydáno v `0.9.8-beta` (CHANGELOG: Náhradníci ve finále automaticky do roštu). Poznámka: náhradníci se zapisují automaticky, ne ručně jak plánoval původní MVP.
 
 ## Cíl
 

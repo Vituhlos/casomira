@@ -2,7 +2,7 @@
 
 ## Stav
 
-Plánováno.
+**Částečně hotovo** — Šotolina převedena na `ruleset=STANDARD` v `0.9.7-beta` (DB migrace krok 11, seed opraven). Speciální pipeline Finále A/B a fixní skupiny dočasně deaktivovány — legacy kód (`F_A`, `F_B`, `SOTOLINA` větve) zatím zůstává v kódu pro zpětnou kompatibilitu se starými zálohami. Zbývá fáze 2–5 dle implementačního postupu níže.
 
 ## Cíl
 
