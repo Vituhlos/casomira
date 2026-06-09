@@ -6,6 +6,14 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+### Opraveno
+- **macOS 26 pád při startu (SIGABRT / DYLD Team ID mismatch)** — obnovena
+  entitlement `disable-library-validation`; bez ní macOS 26+ odmítne načíst
+  Electron Framework pod ad-hoc podpisem (`identity: '-'`), protože framework
+  má jiné Team ID než hlavní binárka. Opraven i `afterPack` skript: nově
+  aktualizuje `CFBundleExecutable` v `Info.plist` helperů, aby codesign mohl
+  Helpers správně podepsat.
+
 ## [0.9.9-beta] – 2026-06-07
 
 ### Přidáno

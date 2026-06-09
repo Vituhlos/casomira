@@ -11,5 +11,10 @@
   <!-- Electron při startu čte DYLD_* proměnné prostředí. -->
   <key>com.apple.security.cs.allow-dyld-environment-variables</key>
   <true/>
+
+  <!-- Potřeba pro načtení Electron Framework pod ad-hoc podpisem (identity '-').
+       Bez toho macOS 26+ odmítne framework s jiným Team ID než hlavní binárka. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
 </dict>
 </plist>

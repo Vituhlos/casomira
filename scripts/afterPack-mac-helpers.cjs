@@ -4,7 +4,8 @@
  *
  * electron-builder přejmenuje Helper .app na "{productName} Helper", ale hlavní
  * Electron binárka zůstane neupravená a hledá "Electron Helper.app".
- * Přejmenujeme Helpers zpět na původní názvy.
+ * Přejmenujeme Helpers zpět na původní názvy + opravíme CFBundleExecutable
+ * v Info.plist, aby codesign (spouštěný po tomto hooku) mohl Helpers podepsat.
  */
 const fs = require('fs')
 const path = require('path')
@@ -25,9 +26,19 @@ exports.default = async function afterPackMacHelpers(context) {
 
     fs.renameSync(src, dst)
 
+    // Přejmenuj binárku uvnitř Helpers
     const macOSDir = path.join(dst, 'Contents', 'MacOS')
     const oldBin = path.join(macOSDir, `${product} Helper${suffix}`)
     const newBin = path.join(macOSDir, `Electron Helper${suffix}`)
     if (fs.existsSync(oldBin)) fs.renameSync(oldBin, newBin)
+
+    // Oprav CFBundleExecutable v Info.plist — bez toho codesign odmítne helper
+    // podepsat, protože klíč nesedí s názvem binárky na disku.
+    const infoPlist = path.join(dst, 'Contents', 'Info.plist')
+    if (fs.existsSync(infoPlist)) {
+      let plist = fs.readFileSync(infoPlist, 'utf8')
+      plist = plist.replaceAll(`${product} Helper${suffix}`, `Electron Helper${suffix}`)
+      fs.writeFileSync(infoPlist, plist, 'utf8')
+    }
   }
 }
