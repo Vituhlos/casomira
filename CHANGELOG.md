@@ -6,6 +6,15 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.11-beta] – 2026-06-09
+
+### Přidáno
+- **Oznámení o nové verzi** — appka při startu (po 10 s) tiše zkontroluje
+  GitHub Releases a pokud existuje novější vydání, zobrazí malý odznáček dole
+  v sidebaru s tlačítkem „Stáhnout" (otevře GitHub Release v prohlížeči).
+  Kliknutím na „×" se verze uloží jako zobrazená a znovu se nezobrazí.
+  Check probíhá max. jednou za 24 h; bez internetu selže tiše.
+
 ## [0.9.10-beta] – 2026-06-09
 
 ### Opraveno
@@ -239,7 +248,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.10-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.11-beta...HEAD
+[0.9.11-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.10-beta...v0.9.11-beta
 [0.9.10-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.9-beta...v0.9.10-beta
 [0.9.9-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.8-beta...v0.9.9-beta
 [0.9.8-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.7-beta...v0.9.8-beta
