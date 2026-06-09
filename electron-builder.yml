@@ -69,7 +69,9 @@ mac:
   # CSC_IDENTITY_AUTO_DISCOVERY=false v CI samo o sobě podpis vypne.
   identity: '-'
   # Hardened runtime: nutné pro V8 JIT (allow-jit + allow-unsigned-executable-memory).
-  # disable-library-validation odstraněno — node:sqlite nevyžaduje .node soubory.
+  # disable-library-validation NUTNÉ i bez nativních .node modulů — bez něj electron-builder
+  # 26.0.13+ aplikuje ad-hoc podpis s hardenedRuntime a Electron Framework dostane jiné
+  # Team ID než hlavní binárka → DYLD crash "different Team IDs" na macOS 26 (#9529, #9396).
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
