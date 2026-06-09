@@ -1,5 +1,5 @@
 # Smoke test na macOS 26 — ověří, zda appka nastartuje bez pádu.
-# Spouští se automaticky při push na branch v2 a při PR do master.
+# Spouští se automaticky při push na v2 / experiment/node-sqlite a při PR do master.
 # Lze spustit i ručně: Actions → Smoke test macOS 26 → Run workflow
 name: Smoke test macOS 26
 
@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - v2
+      - experiment/node-sqlite
   pull_request:
     branches:
       - master
@@ -30,9 +31,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Ověří, že better-sqlite3 se zkompiluje pro Electron na tomto macOS
-      - name: Rebuild native modules
-        run: npm run rebuild
+      # node:sqlite je vestavěný v Node.js — žádné nativní moduly k rebuildování.
 
       # Vite build (bez DMG — chceme jen .app bundle pro test)
       - name: Build app
@@ -54,13 +53,15 @@ jobs:
       - name: Odstraň quarantine atribut
         run: xattr -cr "${{ steps.find_app.outputs.app_path }}"
 
-      # Ověř ad-hoc podpis + entitlements (bez disable-library-validation = SIGTRAP)
+      # Ověř ad-hoc podpis + entitlements
+      # disable-library-validation je nutné i bez .node modulů — bez něj electron-builder
+      # 26.0.13+ způsobí DYLD "different Team IDs" crash na macOS 26 (issues #9529, #9396)
       - name: Ověř codesign a entitlements
         run: |
           APP="${{ steps.find_app.outputs.app_path }}"
           codesign -dv --verbose=4 "$APP" 2>&1 | head -20
           codesign -d --entitlements :- "$APP" 2>&1 | grep -E "disable-library-validation|allow-jit" || {
-            echo "❌ V .app chybí očekávaná entitlements (better-sqlite3 spadne)"
+            echo "❌ V .app chybí očekávaná entitlements (macOS 26 DYLD crash)"
             codesign -d --entitlements :- "$APP" 2>&1 || true
             exit 1
           }
