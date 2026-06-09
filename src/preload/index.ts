@@ -20,7 +20,8 @@ import type {
   PosunPoradiArg,
   SetVysledekArg,
   ZrusPenalizaciArg,
-  ZavodUprava
+  ZavodUprava,
+  UpdateInfo
 } from '../shared/types'
 
 
@@ -169,7 +170,15 @@ const api: CasomiraApi = {
     ipcRenderer.invoke('sportity:publish:list', kategorieId, listKey),
   sportityPublishCategory: (kategorieId: number) =>
     ipcRenderer.invoke('sportity:publish:category', kategorieId),
-  getSportityPublishLog: (zavodId: number) => ipcRenderer.invoke('sportity:log', zavodId)
+  getSportityPublishLog: (zavodId: number) => ipcRenderer.invoke('sportity:log', zavodId),
+  // Aktualizace
+  onUpdateAvailable: (cb: (info: UpdateInfo) => void) => {
+    const h = (_e: unknown, info: UpdateInfo): void => cb(info)
+    ipcRenderer.on('app:updateAvailable', h)
+    return () => ipcRenderer.removeListener('app:updateAvailable', h)
+  },
+  dismissUpdate: (version: string) => ipcRenderer.invoke('updater:dismiss', version),
+  openUrl: (url: string) => ipcRenderer.invoke('updater:openUrl', url)
 }
 
 contextBridge.exposeInMainWorld('api', api)

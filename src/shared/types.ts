@@ -662,4 +662,17 @@ export interface CasomiraApi {
   sportityPublishList(kategorieId: number, listKey: string): Promise<SportityPublishResult>
   sportityPublishCategory(kategorieId: number): Promise<SportityPublishResult>
   getSportityPublishLog(zavodId: number): Promise<SportityPublishLogEntry[]>
+  // Aktualizace
+  /** Přihlásí se k události „nová verze je k dispozici". Vrací odhlášení. */
+  onUpdateAvailable(cb: (info: UpdateInfo) => void): () => void
+  /** Uloží verzi jako „viděno / zavřeno" — příště se nezobrazí. */
+  dismissUpdate(version: string): Promise<void>
+  /** Otevře URL v systémovém prohlížeči. */
+  openUrl(url: string): Promise<void>
+}
+
+/** Info o dostupné aktualizaci z GitHub Releases. */
+export interface UpdateInfo {
+  version: string
+  url: string
 }

@@ -1,4 +1,5 @@
-import type { Kategorie } from '@shared/types'
+import { useState, useEffect } from 'react'
+import type { Kategorie, UpdateInfo } from '@shared/types'
 import { Icon, type IconName } from './Icon'
 import { APP_NAME, APP_VERSION_LABEL } from '../lib/version'
 
@@ -26,6 +27,23 @@ export function Sidebar({
   operator,
   datum
 }: SidebarProps): React.JSX.Element {
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+
+  useEffect(() => {
+    return window.api.onUpdateAvailable((info) => setUpdateInfo(info))
+  }, [])
+
+  function handleOpen(): void {
+    if (!updateInfo) return
+    window.api.openUrl(updateInfo.url).catch(() => {})
+  }
+
+  function handleDismiss(): void {
+    if (!updateInfo) return
+    window.api.dismissUpdate(updateInfo.version).catch(() => {})
+    setUpdateInfo(null)
+  }
+
   return (
     <aside
       style={{
@@ -124,8 +142,7 @@ export function Sidebar({
         </span>
       </div>
 
-      {/* Brand patička: název appky + verze z package.json. Decentní, malé,
-          šedé — jen aby uživatel viděl, kterou verzi má nainstalovanou. */}
+      {/* Brand patička: název appky + verze z package.json. */}
       <div
         style={{
           padding: '6px 16px 9px',
@@ -138,6 +155,55 @@ export function Sidebar({
       >
         {APP_NAME} <span className="tnum">{APP_VERSION_LABEL}</span>
       </div>
+
+      {/* Oznámení o nové verzi — zobrazí se když main process detekuje novější tag na GitHubu. */}
+      {updateInfo && (
+        <div
+          style={{
+            margin: '0 8px 8px',
+            padding: '5px 7px 5px 9px',
+            borderRadius: 7,
+            background: 'rgba(0,122,255,0.08)',
+            border: '0.5px solid rgba(0,122,255,0.28)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+          }}
+        >
+          <span style={{ flex: 1, color: 'var(--accent)', fontSize: 11, fontWeight: 500, lineHeight: 1.3 }}>
+            Nová:{' '}
+            <span className="tnum">{updateInfo.version}</span>
+          </span>
+          <button
+            onClick={handleOpen}
+            style={{
+              color: 'var(--accent)',
+              fontSize: 11,
+              fontWeight: 500,
+              padding: '1px 5px',
+              borderRadius: 4,
+              background: 'rgba(0,122,255,0.12)',
+              flexShrink: 0
+            }}
+          >
+            Stáhnout
+          </button>
+          <button
+            onClick={handleDismiss}
+            title="Zavřít"
+            style={{
+              color: 'var(--text-3)',
+              fontSize: 14,
+              lineHeight: 1,
+              padding: '0 2px',
+              borderRadius: 3,
+              flexShrink: 0
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </aside>
   )
 }

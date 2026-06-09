@@ -23,6 +23,7 @@ function appIconPath(): string | undefined {
 }
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { registerIpc } from './ipc'
+import { scheduleUpdateCheck, registerUpdaterIpc } from './updater'
 import { getDb } from './db/connection'
 import { migrate } from './db/migrate'
 import { seed } from './db/seed'
@@ -172,8 +173,10 @@ app.whenReady().then(() => {
 
     if (process.platform === 'darwin') setupMacMenu()
     registerIpc()
+    registerUpdaterIpc()
     registerAppQuitGuard()
     createWindow()
+    scheduleUpdateCheck()
     logStartup('start dokončen, okno vytvořeno')
 
     app.on('activate', () => {
