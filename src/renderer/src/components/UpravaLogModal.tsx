@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import type { UpravaLogRadek, UpravaTyp, KoloTyp } from '@shared/types'
 import { Modal } from './Modal'
 import { Btn } from './ui'
@@ -91,17 +91,17 @@ export function UpravaLogModal({
         </>
       }
     >
-      <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-2)' }}>
-        Kategorie <strong style={{ color: 'var(--text-1)' }}>{kategorieNazev}</strong> — chronologický
+      <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--muted)' }}>
+        Kategorie <strong style={{ color: 'var(--foreground)' }}>{kategorieNazev}</strong> — chronologický
         přehled všech zásahů (nejnovější nahoře). Kdo rozhodl: operátor / ředitel (bez přihlášení).
       </p>
 
       {nacita && radky.length === 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Načítám…</p>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Načítám…</p>
       )}
 
       {!nacita && radky.length === 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
           V této kategorii zatím nebyl žádný zásah ředitele.
         </p>
       )}
@@ -128,7 +128,7 @@ export function UpravaLogModal({
             <tbody>
               {radky.map((r, i) => (
                 <Row key={r.id} i={i} zebra>
-                  <td style={{ ...tdStyle, fontSize: 12, color: 'var(--text-2)' }}>
+                  <td style={{ ...tdStyle, fontSize: 12, color: 'var(--muted)' }}>
                     <span className="tnum">{formatKdy(r.kdy)}</span>
                   </td>
                   <td style={tdStyle}>
@@ -139,21 +139,21 @@ export function UpravaLogModal({
                       ...tdStyle,
                       fontVariantNumeric: 'tabular-nums',
                       fontWeight: 590,
-                      color: r.typ === 'ZRUSENI' ? 'var(--text-3)' : 'var(--text-1)'
+                      color: r.typ === 'ZRUSENI' ? 'var(--muted)' : 'var(--foreground)'
                     }}
                   >
                     {formatHodnota(r.typ, r.hodnota)}
                   </td>
                   <td style={{ ...tdStyle, fontSize: 12.5 }}>
-                    <div style={{ fontWeight: 590, color: 'var(--text-1)' }}>
+                    <div style={{ fontWeight: 590, color: 'var(--foreground)' }}>
                       {r.st_cislo != null ? `${r.st_cislo} ` : ''}
                       {r.prijmeni} {r.jmeno}
                     </div>
-                    <div style={{ color: 'var(--text-3)', marginTop: 2 }}>
+                    <div style={{ color: 'var(--muted)', marginTop: 2 }}>
                       {KOLA_LABEL[r.kolo_typ] ?? r.kolo_typ} · {r.jizda_cislo}. jízda
                     </div>
                   </td>
-                  <td style={{ ...tdStyle, fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.35 }}>
+                  <td style={{ ...tdStyle, fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.35 }}>
                     {r.duvod}
                     <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-4)' }}>
                       {r.rozhodl}
@@ -173,11 +173,11 @@ function TypBadge({ typ }: { typ: UpravaTyp }): React.JSX.Element {
   const colors: Record<UpravaTyp, { bg: string; fg: string }> = {
     CASOVA_PENALIZACE: {
       bg: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-      fg: 'var(--accent-text)'
+      fg: 'var(--accent)'
     },
     BODOVA_PENALIZACE: {
-      bg: 'color-mix(in srgb, #c93636 12%, transparent)',
-      fg: '#c93636'
+      bg: 'color-mix(in srgb, var(--danger) 12%, transparent)',
+      fg: 'var(--danger)'
     },
     POSUN_PORADI: {
       bg: 'color-mix(in srgb, #b8860b 14%, transparent)',
@@ -185,7 +185,7 @@ function TypBadge({ typ }: { typ: UpravaTyp }): React.JSX.Element {
     },
     ZRUSENI: {
       bg: 'var(--seg-track)',
-      fg: 'var(--text-3)'
+      fg: 'var(--muted)'
     }
   }
   const c = colors[typ]

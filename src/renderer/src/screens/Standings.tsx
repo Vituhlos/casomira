@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import type { KlasifikaceRadek, KoloTyp } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { Btn, Medal } from '../components/ui'
@@ -77,7 +77,7 @@ export function Standings({
               <tr>
                 <td
                   colSpan={colSpanPrazdne}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
+                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', height: 80 }}
                 >
                   Zatím žádné body — zadej výsledky v jednotlivých kolech.
                 </td>
@@ -90,7 +90,7 @@ export function Standings({
                     ...tdStyle,
                     fontVariantNumeric: 'tabular-nums',
                     fontWeight: 620,
-                    color: r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
+                    color: r.poradi <= 3 ? 'var(--foreground)' : 'var(--muted)'
                   }}
                 >
                   <Medal rank={r.poradi} />
@@ -103,7 +103,7 @@ export function Standings({
                 </td>
                 <td style={tdStyle}>
                   <b style={{ fontWeight: 590 }}>{r.prijmeni}</b>{' '}
-                  <span style={{ color: 'var(--text-2)' }}>{r.jmeno}</span>
+                  <span style={{ color: 'var(--muted)' }}>{r.jmeno}</span>
                 </td>
                 {ukazLos && (
                   <td
@@ -111,7 +111,7 @@ export function Standings({
                     style={{
                       ...tdStyle,
                       textAlign: 'right',
-                      color: r.los != null ? 'var(--text-2)' : 'var(--text-4)'
+                      color: r.los != null ? 'var(--muted)' : 'var(--text-4)'
                     }}
                   >
                     {r.los ?? '—'}
@@ -120,7 +120,7 @@ export function Standings({
                 {koloTypy.map((t) => (
                   <td
                     key={t}
-                    style={{ ...tdStyle, textAlign: 'right', color: 'var(--text-2)' }}
+                    style={{ ...tdStyle, textAlign: 'right', color: 'var(--muted)' }}
                     className="tnum"
                   >
                     {r.perKolo[t] ?? 0}

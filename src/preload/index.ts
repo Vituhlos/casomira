@@ -178,7 +178,12 @@ const api: CasomiraApi = {
     return () => ipcRenderer.removeListener('app:updateAvailable', h)
   },
   dismissUpdate: (version: string) => ipcRenderer.invoke('updater:dismiss', version),
-  openUrl: (url: string) => ipcRenderer.invoke('updater:openUrl', url)
+  openUrl: (url: string) => ipcRenderer.invoke('updater:openUrl', url),
+  // Screenshot tour
+  screenshotCapture: (name: string) => ipcRenderer.invoke('screenshot:capture', name),
+  screenshotCaptureWindow: (name: string, titlePart: string) =>
+    ipcRenderer.invoke('screenshot:captureWindow', name, titlePart),
+  screenshotDone: () => ipcRenderer.invoke('screenshot:done')
 }
 
 contextBridge.exposeInMainWorld('api', api)

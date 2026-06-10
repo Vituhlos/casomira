@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 
 interface ContentHeadProps {
   title: string
@@ -26,12 +26,12 @@ export function ContentHead({ title, sub, children }: ContentHeadProps): React.J
             fontSize: 22,
             fontWeight: 680,
             letterSpacing: '-0.02em',
-            color: 'var(--text-1)'
+            color: 'var(--foreground)'
           }}
         >
           {title}
         </h2>
-        {sub && <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-2)' }}>{sub}</p>}
+        {sub && <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--muted)' }}>{sub}</p>}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{children}</div>
     </div>

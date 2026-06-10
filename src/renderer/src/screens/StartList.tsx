@@ -1,4 +1,4 @@
-import type { Jezdec, JezdecPole } from '@shared/types'
+﻿import type { Jezdec, JezdecPole } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { Btn } from '../components/ui'
 import { Icon } from '../components/Icon'
@@ -90,7 +90,7 @@ export function StartList({
               <tr>
                 <td
                   colSpan={COLS.length + 1}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
+                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', height: 80 }}
                 >
                   Zatím žádní jezdci — naimportuj je z Excelu nebo přidej ručně.
                 </td>
@@ -119,12 +119,12 @@ export function StartList({
                               alignItems: 'center',
                               height: 18,
                               padding: '0 7px',
-                              borderRadius: 'var(--r-ctrl)',
+                              borderRadius: 'var(--radius)',
                               fontSize: 10.5,
                               fontWeight: 600,
                               letterSpacing: '0.02em',
                               background: 'rgba(120,120,128,0.14)',
-                              color: 'var(--text-3)',
+                              color: 'var(--muted)',
                               whiteSpace: 'nowrap'
                             }}
                           >
@@ -143,7 +143,7 @@ export function StartList({
                   ))}
                   <td style={{ ...tdStyle, padding: '0 8px', textAlign: 'center' }}>
                     <button
-                      className="row-action"
+                      className="opacity-0 group-hover:opacity-100 hover:bg-black/[.06] dark:hover:bg-white/[.1] hover:text-[#d2352f] text-[var(--muted)] bg-transparent border-none cursor-pointer rounded-[6px] transition-[opacity,background,color] duration-[120ms] ease-linear focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_38%,transparent)]"
                       title="Smazat jezdce"
                       onClick={() => onDelete(d)}
                       style={{ display: 'inline-flex', padding: 4 }}

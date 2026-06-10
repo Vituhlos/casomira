@@ -669,6 +669,10 @@ export interface CasomiraApi {
   dismissUpdate(version: string): Promise<void>
   /** Otevře URL v systémovém prohlížeči. */
   openUrl(url: string): Promise<void>
+  // Screenshot tour (jen v SCREENSHOT_MODE=1)
+  screenshotCapture(name: string): Promise<void>
+  screenshotCaptureWindow(name: string, titlePart: string): Promise<void>
+  screenshotDone(): Promise<void>
 }
 
 /** Info o dostupné aktualizaci z GitHub Releases. */

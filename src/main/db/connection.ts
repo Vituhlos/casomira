@@ -11,11 +11,14 @@ let db: DatabaseSync | null = null
 // (app.getPath) + path.join, nikdy se neskládá natvrdo — funguje na obou OS.
 export function getDb(): DatabaseSync {
   if (db) return db
-  const dir = app.getPath('userData')
+  // CASOMIRA_SCREENSHOT_DB: izolovaná DB pro screenshot tour — nepoškodí prod data.
+  const file = process.env['CASOMIRA_SCREENSHOT_DB']
+    ? process.env['CASOMIRA_SCREENSHOT_DB']
+    : join(app.getPath('userData'), 'casomira.db')
+  const dir = join(file, '..')
   // Na úplně čistém systému (první spuštění) složka ještě nemusí existovat —
   // node:sqlite by pak spadl na „unable to open database file". Vytvoříme ji.
   mkdirSync(dir, { recursive: true })
-  const file = join(dir, 'casomira.db')
   db = new DatabaseSync(file)
   db.exec('PRAGMA journal_mode = WAL') // svižnější a odolnější zápisy
   db.exec('PRAGMA foreign_keys = ON')  // hlídat vazby mezi tabulkami
@@ -24,5 +27,7 @@ export function getDb(): DatabaseSync {
 
 // Kde leží databázový soubor (hodí se pro zálohu/diagnostiku).
 export function dbPath(): string {
-  return join(app.getPath('userData'), 'casomira.db')
+  return process.env['CASOMIRA_SCREENSHOT_DB']
+    ? process.env['CASOMIRA_SCREENSHOT_DB']
+    : join(app.getPath('userData'), 'casomira.db')
 }

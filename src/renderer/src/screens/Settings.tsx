@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Checkbox, Separator, toast } from '@heroui/react'
 import type { Kategorie, PdfRootStav, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn } from '../components/ui'
@@ -10,7 +11,6 @@ import { safeCall } from '../lib/api'
 interface SettingsProps {
   kategorie: Kategorie[]
   onClose: () => void
-  onToast: (zprava: string) => void
   onEditZavod?: () => void
   onBackupZavod?: () => void
   onBackupAll?: () => void
@@ -24,7 +24,6 @@ interface SettingsProps {
 export function Settings({
   kategorie,
   onClose,
-  onToast,
   onEditZavod,
   onBackupZavod,
   onBackupAll,
@@ -42,15 +41,15 @@ export function Settings({
   const [ukazSportity, setUkazSportity] = useState(false)
 
   useEffect(() => {
-    safeCall(window.api.getLogo().then(setLogo), onToast)
-    safeCall(window.api.getPdfRootStav().then(setRoot), onToast)
+    safeCall(window.api.getLogo().then(setLogo), (msg) => toast.danger(msg))
+    safeCall(window.api.getPdfRootStav().then(setRoot), (msg) => toast.danger(msg))
   }, [])
 
   const zmenitSlozku = async (): Promise<void> => {
     const s = await window.api.choosePdfRoot()
     if (!s.zruseno) {
       setRoot(s)
-      onToast('Kořenová složka pro PDF nastavena.')
+      toast.success('Kořenová složka pro PDF nastavena.')
     }
   }
 
@@ -58,14 +57,14 @@ export function Settings({
     const url = await window.api.setLogo()
     if (url) {
       setLogo(url)
-      onToast('Logo nahráno — objeví se v hlavičce PDF.')
+      toast.success('Logo nahráno — objeví se v hlavičce PDF.')
     }
   }
 
   const odebrat = async (): Promise<void> => {
     await window.api.clearLogo()
     setLogo(null)
-    onToast('Logo odebráno.')
+    toast('Logo odebráno.')
   }
 
   const prepni = (id: number): void => {
@@ -86,8 +85,8 @@ export function Settings({
     setProbiha(true)
     try {
       const res = await window.api.exportPdfVse([...vybrane])
-      if (res.ok) onToast(`Hotovo — ${res.pocet} PDF uloženo do: ${res.slozka}`)
-      else if (!res.zruseno) onToast(res.chyba ?? 'Hromadný export se nezdařil.')
+      if (res.ok) toast.success(`Hotovo — ${res.pocet} PDF uloženo do: ${res.slozka}`)
+      else if (!res.zruseno) toast.danger(res.chyba ?? 'Hromadný export se nezdařil.')
     } finally {
       setProbiha(false)
     }
@@ -108,18 +107,18 @@ export function Settings({
       {onEditZavod && (
         <>
           <SekceNadpis>Závod a kategorie</SekceNadpis>
-          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
             Přidat nebo odebrat kategorie, upravit název, datum a místo závodu.
           </p>
           <Btn variant="bezel" icon="pencil" onClick={onEditZavod}>
             Upravit závod…
           </Btn>
-          <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+          <Separator className="my-[18px]" />
         </>
       )}
 
       <SekceNadpis>Záloha a obnova</SekceNadpis>
-      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
         Kompletní data závodu (rošty, výsledky, stopky, penalizace) do souboru JSON. Ostatní závody
         v databázi zůstanou nedotčené.
       </p>
@@ -141,7 +140,7 @@ export function Settings({
         )}
       </div>
 
-      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+      <Separator className="my-[18px]" />
 
       {/* ---- Logo ---- */}
       <SekceNadpis>Logo do hlavičky PDF</SekceNadpis>
@@ -151,9 +150,9 @@ export function Settings({
             width: 96,
             height: 96,
             flexShrink: 0,
-            border: '0.5px solid var(--hairline)',
-            borderRadius: 'var(--r-ctrl)',
-            background: 'var(--card-alt)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--surface-secondary)',
             display: 'grid',
             placeItems: 'center',
             overflow: 'hidden'
@@ -182,14 +181,14 @@ export function Settings({
               </Btn>
             )}
           </div>
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
             PNG / JPG. Objeví se vlevo v hlavičce všech PDF. Bez loga zůstane místo prázdné a PDF
             funguje dál.
           </p>
         </div>
       </div>
 
-      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+      <Separator className="my-[18px]" />
 
       {/* ---- Kořenová složka pro PDF ---- */}
       <SekceNadpis>Složka pro PDF</SekceNadpis>
@@ -199,9 +198,9 @@ export function Settings({
           alignItems: 'center',
           gap: 10,
           padding: '9px 12px',
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
-          background: 'var(--card-alt)'
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          background: 'var(--surface-secondary)'
         }}
       >
         <span
@@ -209,7 +208,7 @@ export function Settings({
             flex: 1,
             minWidth: 0,
             fontSize: 12.5,
-            color: root?.root ? 'var(--text-1)' : 'var(--text-3)',
+            color: root?.root ? 'var(--foreground)' : 'var(--muted)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap'
@@ -218,7 +217,7 @@ export function Settings({
         >
           {root?.root ?? 'zatím nenastaveno'}
           {root?.root && !root.existuje && (
-            <span style={{ color: '#c93636' }}> — složka neexistuje!</span>
+            <span style={{ color: 'var(--danger)' }}> — složka neexistuje!</span>
           )}
         </span>
         {root?.root && root.existuje && (
@@ -230,16 +229,16 @@ export function Settings({
           Změnit složku…
         </Btn>
       </div>
-      <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+      <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>
         Sem se ukládají PDF do struktury <b>závod / kategorie</b>. „Uložit PDF" ukládá automaticky
         bez ptaní; „Uložit jako…" (šipka u tlačítka) umožní výjimku jinam.
       </p>
 
-      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+      <Separator className="my-[18px]" />
 
       {/* ---- Závodní tisk ---- */}
       <SekceNadpis>Závodní tisk</SekceNadpis>
-      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
         Rychlý tisk standardní sady listů na výchozí tiskárnu: startovka 1×, rošty Q1–Q3 a finále 4×,
         výsledky finále 1×.
       </p>
@@ -247,18 +246,18 @@ export function Settings({
         Závodní tisk…
       </Btn>
 
-      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+      <Separator className="my-[18px]" />
 
       {/* ---- Hromadný export ---- */}
       <SekceNadpis>Hromadný export do PDF</SekceNadpis>
-      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
         Vygeneruje <b>všechny listy</b> vybraných kategorií (startovní listina, rošty, výsledky,
         klasifikace, semifinále/finále, celkově) do struktury pod kořenovou složkou.
       </p>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span style={{ fontSize: 12.5, fontWeight: 560 }}>Kategorie ({vybrane.size})</span>
-        <button className="btn btn--plain" onClick={prepniVse} style={maleLink}>
+        <button className="bg-transparent text-[var(--accent)] hover:bg-black/[.045] dark:hover:bg-white/[.06] border-none cursor-pointer transition-[background] duration-[130ms] ease-linear focus-visible:outline-none" onClick={prepniVse} style={maleLink}>
           {vse ? 'Zrušit výběr' : 'Vybrat vše'}
         </button>
       </div>
@@ -267,34 +266,30 @@ export function Settings({
         style={{
           maxHeight: 200,
           overflowY: 'auto',
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)'
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)'
         }}
       >
         {kategorie.map((k, i) => (
-          <label
+          <Checkbox
             key={k.id}
+            isSelected={vybrane.has(k.id)}
+            onChange={() => prepni(k.id)}
+            className="w-full gap-[10px] cursor-pointer"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
               padding: '7px 12px',
               fontSize: 13,
-              cursor: 'pointer',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)'
             }}
           >
-            <input
-              type="checkbox"
-              checked={vybrane.has(k.id)}
-              onChange={() => prepni(k.id)}
-              style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
-            />
-            <span style={{ fontWeight: 540 }}>{k.nazev}</span>
-            <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 12 }}>
-              {k.pocet} jezdců
-            </span>
-          </label>
+            <Checkbox.Control>
+              <Checkbox.Indicator />
+            </Checkbox.Control>
+            <Checkbox.Content className="flex-1">
+              <span style={{ fontWeight: 540 }}>{k.nazev}</span>
+            </Checkbox.Content>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>{k.pocet} jezdců</span>
+          </Checkbox>
         ))}
       </div>
 
@@ -311,11 +306,11 @@ export function Settings({
 
       {(onHotkeys || onUpravaLog) && (
         <>
-          <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+          <Separator className="my-[18px]" />
           <SekceNadpis>Nástroje</SekceNadpis>
           {onUpravaLog && (
             <>
-              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
                 Přehled ručních zásahů ředitele závodu v aktuální kategorii (penalizace, posuny pořadí).
               </p>
               <Btn variant="bezel" onClick={onUpravaLog} style={{ marginBottom: 14 }}>
@@ -325,7 +320,7 @@ export function Settings({
           )}
           {onHotkeys && (
             <>
-              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
                 Přepínání fází i Rošt/Výsledky, uložení PDF, stopky a další — ať operátor u trati nehoní
                 myš. Modifikátor se přizpůsobí systému (⌘ na macOS, Ctrl na Windows).
               </p>
@@ -337,11 +332,11 @@ export function Settings({
         </>
       )}
 
-      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+      <Separator className="my-[18px]" />
 
       {/* ---- Sportity ---- */}
       <SekceNadpis>Sportity</SekceNadpis>
-      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
         Publikování PDF výsledků přímo do aplikace Sportity (live výsledky pro diváky).
       </p>
       {zavodId && zavod ? (
@@ -352,7 +347,7 @@ export function Settings({
         <span style={{ fontSize: 12.5, color: 'var(--text-4)' }}>Nejprve otevřete závod.</span>
       )}
 
-      <div style={{ height: 1, background: 'var(--hairline)', margin: '18px 0' }} />
+      <Separator className="my-[18px]" />
 
       {/* ---- O aplikaci ---- */}
       <SekceNadpis>O aplikaci</SekceNadpis>
@@ -362,9 +357,9 @@ export function Settings({
           alignItems: 'center',
           gap: 12,
           padding: '10px 12px',
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
-          background: 'var(--card-alt)'
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          background: 'var(--surface-secondary)'
         }}
       >
         <span
@@ -385,13 +380,13 @@ export function Settings({
           ČM
         </span>
         <div style={{ flex: 1, minWidth: 0, lineHeight: 1.4 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-1)' }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--foreground)' }}>
             {APP_NAME}{' '}
-            <span className="tnum" style={{ color: 'var(--text-3)', fontWeight: 500 }}>
+            <span className="tnum" style={{ color: 'var(--muted)', fontWeight: 500 }}>
               {APP_VERSION_LABEL}
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
             Správce závodu autokros / rallycross · © {new Date().getFullYear()}
           </div>
         </div>
@@ -409,7 +404,6 @@ export function Settings({
       <TiskovyPresetModal
         kategorie={kategorie}
         onClose={() => setUkazPreset(false)}
-        onToast={onToast}
       />
     )}
 
@@ -419,7 +413,6 @@ export function Settings({
         zavod={zavod}
         kategorie={kategorie}
         onClose={() => setUkazSportity(false)}
-        onToast={onToast}
       />
     )}
   </>
@@ -433,7 +426,7 @@ function SekceNadpis({ children }: { children: React.ReactNode }): React.JSX.Ele
         margin: '0 0 10px',
         fontSize: 13.5,
         fontWeight: 620,
-        color: 'var(--text-1)'
+        color: 'var(--foreground)'
       }}
     >
       {children}

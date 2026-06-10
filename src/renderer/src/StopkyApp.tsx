@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Toast, toast } from '@heroui/react'
 import type { Kategorie, KoloTyp, MereniRadek, MereniTimerStav, RostSlot } from '@shared/types'
 import { useTheme } from './hooks/useTheme'
 import { Btn } from './components/ui'
@@ -41,7 +42,6 @@ export function StopkyApp(): React.JSX.Element {
   const [aktivniId, setAktivniId] = useState<number | null>(null)
   const [now, setNow] = useState(Date.now())
   const [nove, setNove] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [potvrd, setPotvrd] = useState<{ typ: 'zapis' | 'zahodit'; jizdaId: number; label: string } | null>(null)
   const [aktivniRadek, setAktivniRadek] = useState<number | null>(null) // řádek s fokusem
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
@@ -58,13 +58,6 @@ export function StopkyApp(): React.JSX.Element {
     if (dalsi) cisloRefs.current.get(dalsi.id)?.focus()
     else cisloRefs.current.get(id)?.blur()
   }
-
-  const oznam = useCallback((t: string): void => setToast(t), [])
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 4000)
-    return () => clearTimeout(t)
-  }, [toast])
 
   const timerPayload = (k: Kanal): MereniTimerStav => ({
     jizdaId: k.jizdaId,
@@ -166,7 +159,7 @@ export function StopkyApp(): React.JSX.Element {
       window.api.getRostJizda(akt.jizdaId).then((slots) => {
         if (live) setAktRost(slots)
       }),
-      (msg) => { if (live) oznam(`Nepodařilo se načíst rošt: ${msg}`) }
+      (msg) => { if (live) toast.danger(`Nepodařilo se načíst rošt: ${msg}`) }
     )
     return () => { live = false }
   }, [akt?.jizdaId])
@@ -261,8 +254,8 @@ export function StopkyApp(): React.JSX.Element {
     const parsed = trimmed === '' ? null : Number.parseInt(trimmed, 10)
     const valid = parsed !== null && !Number.isNaN(parsed)
     const res = await window.api.mereniSetCislo(row.id, valid ? parsed : null)
-    if (res.duplicitni) oznam(`Číslo ${parsed} už je přiřazené jinému času v této jízdě.`)
-    else if (trimmed !== '' && !res.ok) oznam(`Startovní číslo ${trimmed} v této kategorii není.`)
+    if (res.duplicitni) toast.warning(`Číslo ${parsed} už je přiřazené jinému času v této jízdě.`)
+    else if (trimmed !== '' && !res.ok) toast.warning(`Startovní číslo ${trimmed} v této kategorii není.`)
     setKanaly((prev) =>
       prev.map((k) =>
         k.jizdaId !== row.jizda_id
@@ -300,13 +293,13 @@ export function StopkyApp(): React.JSX.Element {
   const zapisDoVysledku = async (jizdaId: number): Promise<void> => {
     await window.api.zapisMereniDoVysledku(jizdaId)
     setPotvrd(null)
-    oznam('Zapsáno do Výsledků — pořadí a body se spočítaly.')
+    toast.success('Zapsáno do Výsledků — pořadí a body se spočítaly.')
   }
 
   const zkusZapsat = async (): Promise<void> => {
     if (!akt) return
     if (akt.klik.filter((c) => c.jezdec_id != null).length === 0) {
-      oznam('Nejdřív přiřaď startovní čísla k časům.')
+      toast.warning('Nejdřív přiřaď startovní čísla k časům.')
       return
     }
     if (await window.api.mereniMaVysledky(akt.jizdaId)) {
@@ -332,8 +325,8 @@ export function StopkyApp(): React.JSX.Element {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--content-bg)',
-        color: 'var(--text-1)'
+        background: 'var(--background)',
+        color: 'var(--foreground)'
       }}
     >
       {/* Horní lišta */}
@@ -343,14 +336,14 @@ export function StopkyApp(): React.JSX.Element {
           alignItems: 'center',
           gap: 12,
           padding: '12px 18px',
-          borderBottom: '0.5px solid var(--hairline)'
+          borderBottom: '0.5px solid var(--border)'
         }}
       >
         <Icon name="stopwatch" size={20} style={{ color: 'var(--accent)' }} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 680 }}>Stopky</div>
           {zavodNazev && (
-            <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{zavodNazev}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{zavodNazev}</div>
           )}
         </div>
         <div style={{ flex: 1 }} />
@@ -370,13 +363,13 @@ export function StopkyApp(): React.JSX.Element {
           gap: 8,
           padding: '10px 18px',
           flexWrap: 'wrap',
-          borderBottom: '0.5px solid var(--hairline)'
+          borderBottom: '0.5px solid var(--border)'
         }}
       >
         {kanaly.map((k) => {
           const on = k.jizdaId === aktivniId
           // Stejná geometrie jako `<Btn>` (height 28, padding 0 12, radius
-          // var(--r-ctrl), font 13) — jen aktivní stav přebíjí pozadí/barvu
+          // var(--radius), font 13) — jen aktivní stav přebíjí pozadí/barvu
           // na modrou, aby byl jasně vidět vybraný kanál.
           return (
             <button
@@ -390,14 +383,17 @@ export function StopkyApp(): React.JSX.Element {
                 setNove(false)
                 void window.api.ulozMereniAktivniJizdu(k.jizdaId)
               }}
-              className={on ? 'btn btn--primary' : 'btn btn--bezel'}
+              className={on
+                ? 'bg-[var(--accent)] text-[var(--accent-foreground)] shadow-[0_1px_1.5px_rgba(0,0,0,0.12)] hover:brightness-[1.06] active:brightness-90 border-none cursor-pointer transition-[background,filter,box-shadow,transform] duration-[130ms] ease-linear focus-visible:outline-none disabled:opacity-40 disabled:pointer-events-none'
+                : 'bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-btn)] hover:bg-black/[.06] dark:hover:bg-white/[.16] active:bg-black/[.11] dark:active:bg-white/[.22] border-none cursor-pointer transition-[background,filter,box-shadow,transform] duration-[130ms] ease-linear focus-visible:outline-none disabled:opacity-40 disabled:pointer-events-none'
+              }
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
                 height: 28,
                 padding: '0 12px',
-                borderRadius: 'var(--r-ctrl)',
+                borderRadius: 'var(--radius)',
                 fontSize: 13,
                 fontWeight: on ? 580 : 500,
                 lineHeight: 1,
@@ -417,7 +413,7 @@ export function StopkyApp(): React.JSX.Element {
                     width: 6,
                     height: 6,
                     borderRadius: 99,
-                    background: on ? 'rgba(255,255,255,0.75)' : 'var(--text-3)',
+                    background: on ? 'rgba(255,255,255,0.75)' : 'var(--muted)',
                     display: 'inline-block',
                     flexShrink: 0
                   }}
@@ -449,14 +445,14 @@ export function StopkyApp(): React.JSX.Element {
               width: 340,
               minWidth: 340,
               flexShrink: 0,
-              borderRight: '0.5px solid var(--hairline)',
+              borderRight: '0.5px solid var(--border)',
               padding: 20,
               display: 'flex',
               flexDirection: 'column',
               gap: 14
             }}
           >
-            <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{akt.label}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{akt.label}</div>
             <div
               className="tnum"
               style={{
@@ -478,7 +474,7 @@ export function StopkyApp(): React.JSX.Element {
                   <button
                     onClick={() => notStarted ? pauza() : void zaznamenej()}
                     disabled={paused}
-                    className="btn btn--primary"
+                    className="w-full bg-[var(--accent)] text-[var(--accent-foreground)] shadow-[0_1px_1.5px_rgba(0,0,0,0.12)] hover:brightness-[1.06] active:brightness-90 border-none cursor-pointer transition-[background,filter,box-shadow,transform] duration-[130ms] ease-linear focus-visible:outline-none disabled:opacity-40 disabled:pointer-events-none"
                     style={{
                       height: 92,
                       borderRadius: 'var(--r-card)',
@@ -490,7 +486,7 @@ export function StopkyApp(): React.JSX.Element {
                   >
                     {notStarted ? 'START' : 'ZAZNAMENAT'}
                   </button>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center' }}>
                     {notStarted
                       ? 'mezerník = start'
                       : akt.running
@@ -543,14 +539,14 @@ export function StopkyApp(): React.JSX.Element {
                 }}
               >
                 <span style={{ fontSize: 13.5, fontWeight: 620 }}>Naměřené časy</span>
-                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                   přiřazeno {akt.klik.filter((c) => c.jezdec_id != null).length} / {akt.klik.length}
                 </span>
               </div>
 
               {akt.klik.length === 0 ? (
                 <Card>
-                  <div style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13.5, lineHeight: 1.6 }}>
+                  <div style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.6 }}>
                     Zatím žádný záznam.
                     <br />
                     Zmáčkni <b>mezerník</b> (nebo velké tlačítko) při průjezdu cílem.
@@ -578,9 +574,9 @@ export function StopkyApp(): React.JSX.Element {
                         const assigned = row.jezdec_id != null
                         const active = aktivniRadek === row.id
                         const bg = active
-                          ? 'color-mix(in srgb, var(--accent) 14%, var(--card))'
+                          ? 'color-mix(in srgb, var(--accent) 14%, var(--surface))'
                           : i % 2
-                            ? 'var(--card-alt)'
+                            ? 'var(--surface-secondary)'
                             : 'transparent'
                         return (
                           <tr
@@ -590,7 +586,7 @@ export function StopkyApp(): React.JSX.Element {
                               boxShadow: active ? 'inset 3px 0 0 var(--accent)' : 'none'
                             }}
                           >
-                            <td style={{ ...bunka, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>
+                            <td style={{ ...bunka, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums', fontSize: 14 }}>
                               {i + 1}.
                             </td>
                             <td style={bunka}>
@@ -610,7 +606,7 @@ export function StopkyApp(): React.JSX.Element {
                               {assigned ? (
                                 <span>
                                   <b style={{ fontWeight: 600 }}>{row.prijmeni}</b>{' '}
-                                  <span style={{ color: 'var(--text-2)' }}>{row.jmeno}</span>
+                                  <span style={{ color: 'var(--muted)' }}>{row.jmeno}</span>
                                 </span>
                               ) : (
                                 <span style={{ color: 'var(--text-4)' }}>čeká na číslo</span>
@@ -691,33 +687,14 @@ export function StopkyApp(): React.JSX.Element {
           <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
             Máš rozměřené stopky, které nejsou zapsané do výsledků.
           </p>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--muted)' }}>
             Data měření zůstanou uložená v aplikaci. Po znovuotevření stopek je najdeš tam, kde
             jsi skončil. Nezapomeň je zapsat do výsledků v hlavní aplikaci.
           </p>
         </Modal>
       )}
 
-      {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 200,
-            background: 'var(--card)',
-            border: '0.5px solid var(--hairline)',
-            boxShadow: 'var(--shadow-win)',
-            borderRadius: 'var(--r-ctrl)',
-            padding: '10px 16px',
-            fontSize: 13,
-            maxWidth: '80vw'
-          }}
-        >
-          {toast}
-        </div>
-      )}
+      <Toast.Provider placement="bottom" />
     </div>
   )
 }
@@ -800,17 +777,17 @@ function NoveMereni({
         placeItems: 'center',
         overflowY: 'auto',
         padding: 24,
-        background: 'var(--content-bg)'
+        background: 'var(--background)'
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: 480,
-          background: 'var(--card)',
+          background: 'var(--surface)',
           borderRadius: 'var(--r-card)',
           boxShadow: 'var(--shadow-card)',
-          border: '0.5px solid var(--hairline)',
+          border: '0.5px solid var(--border)',
           overflow: 'hidden'
         }}
       >
@@ -818,13 +795,13 @@ function NoveMereni({
         <div
           style={{
             padding: '20px 24px 18px',
-            borderBottom: '0.5px solid var(--hairline)'
+            borderBottom: '0.5px solid var(--border)'
           }}
         >
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 680, marginBottom: 4 }}>
             Nové měření
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
             Vyber jízdu, kterou budeš měřit. Naměřené časy padnou rovnou do ní.
           </div>
         </div>
@@ -857,14 +834,21 @@ function NoveMereni({
                   <button
                     key={t}
                     onClick={() => setTyp(t)}
-                    className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
+                    className={[
+                      'appearance-none border-none cursor-pointer font-[inherit]',
+                      'transition-[background,box-shadow,color] duration-[130ms] ease-linear',
+                      'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-offset-0',
+                      !on && 'hover:bg-black/[.04] dark:hover:bg-white/[.08]'
+                    ].filter(Boolean).join(' ')}
                     style={{
                       height: 30,
                       padding: '0 13px',
                       fontSize: 13,
                       fontWeight: on ? 590 : 460,
-                      color: on ? 'var(--text-1)' : 'var(--text-2)',
-                      borderRadius: 7
+                      color: on ? 'var(--foreground)' : 'var(--muted)',
+                      borderRadius: 7,
+                      background: on ? 'var(--segment)' : 'transparent',
+                      boxShadow: on ? 'var(--seg-sel-shadow)' : 'none',
                     }}
                   >
                     {KOLA_LABEL[t]}
@@ -881,15 +865,15 @@ function NoveMereni({
               <div
                 style={{
                   fontSize: 13,
-                  color: 'var(--text-3)',
+                  color: 'var(--muted)',
                   lineHeight: 1.55,
                   padding: '12px 14px',
-                  background: 'var(--card-alt)',
-                  borderRadius: 'var(--r-ctrl)',
-                  border: '0.5px solid var(--hairline)'
+                  background: 'var(--surface-secondary)',
+                  borderRadius: 'var(--radius)',
+                  border: '0.5px solid var(--border)'
                 }}
               >
-                Pro <b style={{ color: 'var(--text-2)', fontWeight: 580 }}>{katNazev} · {KOLA_LABEL[typ]}</b> zatím není žádná jízda.
+                Pro <b style={{ color: 'var(--muted)', fontWeight: 580 }}>{katNazev} · {KOLA_LABEL[typ]}</b> zatím není žádná jízda.
                 <br />Vytvoř rošt v hlavním okně.
               </div>
             ) : (
@@ -904,7 +888,7 @@ function NoveMereni({
                       style={{
                         height: 34,
                         padding: '0 14px',
-                        borderRadius: 'var(--r-ctrl)',
+                        borderRadius: 'var(--radius)',
                         fontSize: 13.5,
                         fontWeight: jeNaRade ? 600 : 520,
                         display: 'inline-flex',
@@ -912,20 +896,20 @@ function NoveMereni({
                         gap: 6,
                         border: jeNaRade
                           ? '1.5px solid var(--accent)'
-                          : '0.5px solid var(--hairline)',
+                          : '0.5px solid var(--border)',
                         background: jeNaRade
-                          ? 'color-mix(in srgb, var(--accent) 10%, var(--card))'
-                          : 'var(--card)',
+                          ? 'color-mix(in srgb, var(--accent) 10%, var(--surface))'
+                          : 'var(--surface)',
                         color: jeNaRade
                           ? 'var(--accent)'
                           : jeHotovo
-                            ? 'var(--text-3)'
-                            : 'var(--text-1)',
+                            ? 'var(--muted)'
+                            : 'var(--foreground)',
                         cursor: 'pointer'
                       }}
                     >
                       {jeHotovo && (
-                        <span style={{ color: 'var(--text-3)', fontSize: 12, lineHeight: 1 }}>✓</span>
+                        <span style={{ color: 'var(--muted)', fontSize: 12, lineHeight: 1 }}>✓</span>
                       )}
                       {jeNaRade && !jeHotovo && (
                         <span style={{
@@ -934,7 +918,7 @@ function NoveMereni({
                         }} />
                       )}
                       {jz.cislo}. jízda
-                      <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ fontSize: 12, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
                         ({jz.filled})
                       </span>
                     </button>
@@ -944,9 +928,9 @@ function NoveMereni({
             )}
             {/* Legenda */}
             {jizdy.length > 0 && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 14, fontSize: 11.5, color: 'var(--text-3)' }}>
+              <div style={{ marginTop: 10, display: 'flex', gap: 14, fontSize: 11.5, color: 'var(--muted)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ color: 'var(--text-3)' }}>✓</span> hotovo
+                  <span style={{ color: 'var(--muted)' }}>✓</span> hotovo
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{
@@ -963,7 +947,7 @@ function NoveMereni({
         <div
           style={{
             padding: '14px 24px',
-            borderTop: '0.5px solid var(--hairline)',
+            borderTop: '0.5px solid var(--border)',
             display: 'flex',
             justifyContent: 'flex-end',
             gap: 8
@@ -1044,7 +1028,7 @@ function KategorieSelect({
     <div style={{ position: 'relative', width: '100%' }}>
       <button
         ref={triggerRef}
-        className="btn btn--bezel"
+        className="bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-btn)] hover:bg-black/[.06] dark:hover:bg-white/[.16] active:bg-black/[.11] dark:active:bg-white/[.22] border-none cursor-pointer transition-[background,filter,box-shadow] duration-[130ms] ease-linear focus-visible:outline-none focus-visible:ring-[3px] disabled:opacity-40 disabled:pointer-events-none"
         onClick={() => open ? setOpen(false) : openDropdown()}
         style={{
           width: '100%',
@@ -1053,7 +1037,7 @@ function KategorieSelect({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderRadius: 'var(--r-ctrl)',
+          borderRadius: 'var(--radius)',
           fontSize: 13.5,
           fontWeight: 450
         }}
@@ -1067,7 +1051,7 @@ function KategorieSelect({
           style={{
             transform: open ? 'rotate(270deg)' : 'rotate(90deg)',
             transition: 'transform 0.15s ease',
-            color: 'var(--text-3)',
+            color: 'var(--muted)',
             flexShrink: 0,
             marginLeft: 6
           }}
@@ -1083,8 +1067,8 @@ function KategorieSelect({
             left: coords.left,
             width: coords.width,
             zIndex: 9999,
-            background: 'var(--card)',
-            border: '0.5px solid var(--hairline)',
+            background: 'var(--surface)',
+            border: '0.5px solid var(--border)',
             borderRadius: 'var(--r-card)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.16), 0 2px 6px rgba(0,0,0,0.08)',
             maxHeight: coords.maxH,
@@ -1095,7 +1079,7 @@ function KategorieSelect({
           {items.map((k) => (
             <button
               key={k.id}
-              className="menu-item"
+              className="w-full text-left border-none cursor-pointer bg-transparent text-[var(--foreground)] transition-[background,color] duration-[120ms] hover:bg-[var(--accent)] hover:text-white focus-visible:bg-[var(--accent)] focus-visible:text-white focus-visible:outline-none"
               onClick={() => {
                 onChange(k.id)
                 setOpen(false)
@@ -1121,7 +1105,7 @@ function KategorieSelect({
 
 function Prazdno({ onNove }: { onNove: () => void }): React.JSX.Element {
   return (
-    <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--text-3)' }}>
+    <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 14, marginBottom: 12 }}>Žádné měření. Založ ho pro vybranou jízdu.</div>
         <Btn variant="primary" icon="plus" onClick={onNove}>
@@ -1153,10 +1137,10 @@ function RostNahled({
         width: 300,
         minWidth: 300,
         flexShrink: 0,
-        borderLeft: '0.5px solid var(--hairline)',
+        borderLeft: '0.5px solid var(--border)',
         padding: '18px 18px 22px',
         overflowY: 'auto',
-        background: 'var(--content-bg)'
+        background: 'var(--background)'
       }}
     >
       <div
@@ -1171,7 +1155,7 @@ function RostNahled({
         {obsazeno > 0 && (
           <span
             className="tnum"
-            style={{ fontSize: 12, color: 'var(--text-3)' }}
+            style={{ fontSize: 12, color: 'var(--muted)' }}
             title="Přiřazených k naměřenému času / celkem na roštu"
           >
             {hotovoPocet} / {obsazeno}
@@ -1185,7 +1169,7 @@ function RostNahled({
             style={{
               padding: '24px 14px',
               fontSize: 12.5,
-              color: 'var(--text-3)',
+              color: 'var(--muted)',
               textAlign: 'center',
               lineHeight: 1.55
             }}
@@ -1214,13 +1198,13 @@ function RostNahled({
                 return (
                   <tr
                     key={slot.pozice}
-                    className={i % 2 ? 'trow trow--zebra' : 'trow'}
+                    className={`transition-colors duration-[80ms] hover:bg-black/[.04] dark:hover:bg-white/[.05]${i % 2 ? ' bg-[var(--surface-secondary)]' : ''}`}
                     style={{ opacity: hotovo ? 0.42 : 1, transition: 'opacity 0.15s' }}
                   >
                     <td
                       style={{
                         ...rostTd,
-                        color: 'var(--text-3)',
+                        color: 'var(--muted)',
                         fontVariantNumeric: 'tabular-nums'
                       }}
                     >
@@ -1248,14 +1232,14 @@ function RostNahled({
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
                               fontWeight: 580,
-                              color: 'var(--text-1)'
+                              color: 'var(--foreground)'
                             }}
                           >
                             {slot.jezdec.prijmeni}
                             {slot.jezdec.jmeno && (
                               <>
                                 {' '}
-                                <span style={{ color: 'var(--text-2)', fontWeight: 440 }}>
+                                <span style={{ color: 'var(--muted)', fontWeight: 440 }}>
                                   {slot.jezdec.jmeno}
                                 </span>
                               </>
@@ -1265,7 +1249,7 @@ function RostNahled({
                             <div
                               style={{
                                 fontSize: 11,
-                                color: 'var(--text-3)',
+                                color: 'var(--muted)',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1297,16 +1281,16 @@ function RostNahled({
 // vešel na druhý řádek pod jméno a řádky nebyly přebujelé.
 const rostTd: React.CSSProperties = {
   padding: '8px 12px',
-  borderBottom: '0.5px solid var(--divider)',
+  borderBottom: '0.5px solid var(--separator)',
   fontSize: 12.5,
-  color: 'var(--text-1)',
+  color: 'var(--foreground)',
   verticalAlign: 'top'
 }
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 580,
-  color: 'var(--text-2)',
+  color: 'var(--muted)',
   letterSpacing: '0.01em',
   marginBottom: 7,
   textTransform: 'uppercase' as const
@@ -1317,7 +1301,7 @@ const labelStyle: React.CSSProperties = {
 const bunka: React.CSSProperties = {
   padding: '0 14px',
   height: 48,
-  borderBottom: '0.5px solid var(--divider)',
+  borderBottom: '0.5px solid var(--separator)',
   verticalAlign: 'middle'
 }
 
@@ -1328,7 +1312,7 @@ function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => voi
   if (!edit) {
     return (
       <button
-        className="btn btn--plain"
+        className="bg-transparent text-[var(--accent)] hover:bg-black/[.045] dark:hover:bg-white/[.06] border-none cursor-pointer transition-[background] duration-[130ms] ease-linear focus-visible:outline-none"
         onClick={() => {
           setV(fmtTime(cas))
           setEdit(true)
@@ -1342,7 +1326,7 @@ function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => voi
           fontSize: 17,
           fontWeight: 560,
           fontVariantNumeric: 'tabular-nums',
-          color: 'var(--text-1)'
+          color: 'var(--foreground)'
         }}
       >
         {fmtTime(cas)}
@@ -1373,8 +1357,8 @@ function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => voi
         font: 'inherit',
         fontSize: 16,
         fontVariantNumeric: 'tabular-nums',
-        background: 'var(--window)',
-        color: 'var(--text-1)',
+        background: 'var(--surface)',
+        color: 'var(--foreground)',
         outline: 'none',
         boxSizing: 'border-box'
       }}
@@ -1405,7 +1389,7 @@ function CisloInput({
   useEffect(() => {
     setV(row.st_cislo != null ? String(row.st_cislo) : '')
   }, [row.st_cislo])
-  const border = focused ? 'var(--accent)' : warn ? '#c93636' : 'var(--hairline)'
+  const border = focused ? 'var(--accent)' : warn ? 'var(--danger)' : 'var(--border)'
   return (
     <input
       ref={setRef}
@@ -1442,8 +1426,8 @@ function CisloInput({
         fontSize: 15,
         fontVariantNumeric: 'tabular-nums',
         fontWeight: 600,
-        background: focused ? 'var(--window)' : 'var(--card)',
-        color: warn ? '#c93636' : 'var(--text-1)',
+        background: focused ? 'var(--surface)' : 'var(--surface)',
+        color: warn ? 'var(--danger)' : 'var(--foreground)',
         outline: 'none',
         boxShadow: focused ? '0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent)' : 'none',
         boxSizing: 'border-box'

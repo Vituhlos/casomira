@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+﻿import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Jezdec, KoloTyp, RostKolo, RostNavrh } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { Btn } from '../components/ui'
@@ -178,7 +178,7 @@ export function RostGrid({
               alignItems: 'center',
               gap: 7,
               fontSize: 12,
-              color: 'var(--text-3)'
+              color: 'var(--muted)'
             }}
           >
             <span
@@ -186,8 +186,8 @@ export function RostGrid({
                 width: 10,
                 height: 10,
                 borderRadius: 3,
-                background: 'var(--card-alt)',
-                border: '0.5px solid var(--hairline)'
+                background: 'var(--surface-secondary)',
+                border: '0.5px solid var(--border)'
               }}
             />
             odvozená pole
@@ -201,7 +201,7 @@ export function RostGrid({
           style={{
             margin: '0 22px 12px',
             padding: '10px 14px',
-            borderRadius: 'var(--r-ctrl)',
+            borderRadius: 'var(--radius)',
             background: 'rgba(255,159,10,0.14)',
             color: '#9a6400',
             fontSize: 13
@@ -212,7 +212,7 @@ export function RostGrid({
       )}
 
       {rost && rost.jizdy.length === 0 && (
-        <div style={{ padding: '0 22px 22px', color: 'var(--text-3)', fontSize: 13, lineHeight: 1.5 }}>
+        <div style={{ padding: '0 22px 22px', color: 'var(--muted)', fontSize: 13, lineHeight: 1.5 }}>
           Rošt zatím není vytvořený — klikni na <b>„{generateLabel}"</b> nahoře. Po vygenerování
           ho můžeš ručně upravit (přehodit jezdce / pozice).
         </div>
@@ -234,8 +234,8 @@ export function RostGrid({
             <div
               key={jz.id}
               style={{
-                background: 'var(--card)',
-                border: '0.5px solid var(--hairline)',
+                background: 'var(--surface)',
+                border: '0.5px solid var(--border)',
                 borderRadius: 'var(--r-card)',
                 overflow: 'hidden',
                 boxShadow: 'var(--shadow-card)',
@@ -249,13 +249,13 @@ export function RostGrid({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '10px 15px',
-                  borderBottom: '0.5px solid var(--hairline)'
+                  borderBottom: '0.5px solid var(--border)'
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: 620, letterSpacing: '-0.01em' }}>
                   {titulekJizdy(jz.cislo, pocetJizdCelkem)}
                 </span>
-                <span className="tnum" style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                <span className="tnum" style={{ fontSize: 11.5, color: 'var(--muted)' }}>
                   {filled}/{jz.sloty.length}
                 </span>
               </div>
@@ -298,9 +298,9 @@ export function RostGrid({
                                 fontWeight: 620,
                                 fontSize: 11.5,
                                 letterSpacing: '0.04em',
-                                color: 'var(--text-3)',
-                                background: 'var(--card-alt)',
-                                borderTop: '0.5px solid var(--hairline)'
+                                color: 'var(--muted)',
+                                background: 'var(--surface-secondary)',
+                                borderTop: '0.5px solid var(--border)'
                               }}
                             >
                               NÁHRADNÍCI
@@ -312,7 +312,7 @@ export function RostGrid({
                             style={{
                               ...tdStyle,
                               height: 38,
-                              color: 'var(--text-2)',
+                              color: 'var(--muted)',
                               fontVariantNumeric: 'tabular-nums',
                               fontSize: 12.5
                             }}
@@ -328,19 +328,19 @@ export function RostGrid({
                           </td>
                           <td style={{ ...tdStyle, height: 38 }}>
                             {d ? (
-                              <span style={{ color: 'var(--text-3)' }}>
-                                <b style={{ color: 'var(--text-2)', fontWeight: 590 }}>{d.prijmeni}</b>{' '}
+                              <span style={{ color: 'var(--muted)' }}>
+                                <b style={{ color: 'var(--muted)', fontWeight: 590 }}>{d.prijmeni}</b>{' '}
                                 {d.jmeno}
                               </span>
                             ) : st.warn ? (
-                              <span style={{ color: '#c93636', fontSize: 12.5 }}>
+                              <span style={{ color: 'var(--danger)', fontSize: 12.5 }}>
                                 {st.duvod === 'duplicitni' ? 'už v této jízdě' : 'neznámé číslo'}
                               </span>
                             ) : (
                               <span style={{ color: 'var(--text-4)' }}>—</span>
                             )}
                           </td>
-                          <td style={{ ...tdStyle, height: 38, color: 'var(--text-2)' }}>
+                          <td style={{ ...tdStyle, height: 38, color: 'var(--muted)' }}>
                             {d ? (
                               `${d.znacka} ${d.model}`
                             ) : (
@@ -379,7 +379,7 @@ export function RostGrid({
               style={{
                 margin: '0 0 12px',
                 padding: '9px 12px',
-                borderRadius: 'var(--r-ctrl)',
+                borderRadius: 'var(--radius)',
                 background: 'rgba(255,159,10,0.14)',
                 color: '#9a6400',
                 fontSize: 12.5
@@ -388,7 +388,7 @@ export function RostGrid({
               V tomto roštu už je rozsazení — vygenerování ho přepíše (smaže i zadané výsledky).
             </div>
           )}
-          <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--muted)' }}>
             {previewText ?? 'Takto budou jezdci rozsazeni. Po zapsání můžeš rošt ručně upravit.'}
           </p>
 
@@ -400,8 +400,8 @@ export function RostGrid({
                 gap: 10,
                 margin: '0 0 14px',
                 padding: '8px 12px',
-                borderRadius: 'var(--r-ctrl)',
-                background: 'var(--card-alt)'
+                borderRadius: 'var(--radius)',
+                background: 'var(--surface-secondary)'
               }}
             >
               <span style={{ fontSize: 12.5, fontWeight: 560 }}>Počet jízd:</span>
@@ -410,7 +410,7 @@ export function RostGrid({
                 {navrh.pocetJizd}
               </span>
               <StepButton label="+" onClick={() => zmenPocet(1)} disabled={navrh.pocetJizd >= navrh.maxJizd} />
-              <span style={{ fontSize: 11.5, color: 'var(--text-3)', marginLeft: 'auto' }}>
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
                 max 8 jezdců na jízdu
               </span>
             </div>
@@ -429,28 +429,28 @@ export function RostGrid({
                   <span style={{ color: 'var(--text-4)', width: 22, textAlign: 'right' }}>{label}</span>
                   <span className="tnum" style={{ width: 44, fontWeight: 600 }}>{d.st_cislo}</span>
                   <span style={{ fontWeight: 560 }}>{d.prijmeni}</span>
-                  <span style={{ color: 'var(--text-2)' }}>{d.jmeno}</span>
+                  <span style={{ color: 'var(--muted)' }}>{d.jmeno}</span>
                   {showLos && (
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-3)' }}>los {d.los ?? '—'}</span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--muted)' }}>los {d.los ?? '—'}</span>
                   )}
                 </div>
               )
               return (
                 <div
                   key={jz.cislo}
-                  style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden' }}
+                  style={{ border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}
                 >
                   <div
                     style={{
                       padding: '7px 12px',
-                      background: 'var(--card-alt)',
+                      background: 'var(--surface-secondary)',
                       fontSize: 12.5,
                       fontWeight: 620,
-                      borderBottom: '0.5px solid var(--hairline)'
+                      borderBottom: '0.5px solid var(--border)'
                     }}
                   >
                     {titulekJizdy(jz.cislo, navrh.jizdy.length)}{' '}
-                    <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>· {finaliste.length} jezdců</span>
+                    <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {finaliste.length} jezdců</span>
                   </div>
                   <div style={{ padding: '6px 12px' }}>
                     {finaliste.map((d, i) => renderRadek(d, `${i + 1}.`))}
@@ -460,12 +460,12 @@ export function RostGrid({
                       <div
                         style={{
                           padding: '5px 12px',
-                          background: 'var(--card-alt)',
+                          background: 'var(--surface-secondary)',
                           fontSize: 11.5,
                           fontWeight: 620,
                           letterSpacing: '0.04em',
-                          color: 'var(--text-3)',
-                          borderTop: '0.5px solid var(--hairline)'
+                          color: 'var(--muted)',
+                          borderTop: '0.5px solid var(--border)'
                         }}
                       >
                         NÁHRADNÍCI
@@ -496,7 +496,7 @@ function StepButton({
 }): React.JSX.Element {
   return (
     <button
-      className="btn btn--bezel"
+      className="bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-btn)] hover:bg-black/[.06] dark:hover:bg-white/[.16] active:bg-black/[.11] dark:active:bg-white/[.22] border-none cursor-pointer transition-[background,filter,box-shadow] duration-[130ms] ease-linear focus-visible:outline-none focus-visible:ring-[3px] disabled:opacity-40 disabled:pointer-events-none"
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -525,7 +525,7 @@ function SlotInput({ value, warn, onCommit }: SlotInputProps): React.JSX.Element
   const [v, setV] = useState(value)
   const [focused, setFocused] = useState(false)
   useEffect(() => setV(value), [value])
-  const border = focused ? 'var(--accent)' : warn ? '#c93636' : 'transparent'
+  const border = focused ? 'var(--accent)' : warn ? 'var(--danger)' : 'transparent'
   return (
     <input
       value={v}
@@ -543,7 +543,7 @@ function SlotInput({ value, warn, onCommit }: SlotInputProps): React.JSX.Element
       style={{
         width: '100%',
         border: `1px solid ${border}`,
-        background: focused ? 'var(--window)' : 'transparent',
+        background: focused ? 'var(--surface)' : 'transparent',
         padding: '5px 7px',
         margin: '0 -7px',
         borderRadius: 5,
@@ -551,7 +551,7 @@ function SlotInput({ value, warn, onCommit }: SlotInputProps): React.JSX.Element
         fontSize: 13,
         fontVariantNumeric: 'tabular-nums',
         fontWeight: 600,
-        color: warn ? '#c93636' : 'var(--text-1)',
+        color: warn ? 'var(--danger)' : 'var(--foreground)',
         outline: 'none',
         boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none',
         boxSizing: 'border-box'

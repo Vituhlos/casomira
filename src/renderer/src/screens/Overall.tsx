@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import type { CelkoveRadek } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { Btn, Medal } from '../components/ui'
@@ -77,7 +77,7 @@ export function Overall({
               <tr>
                 <td
                   colSpan={3 + sloupce.length}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
+                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', height: 80 }}
                 >
                   Zatím není co zobrazit — zadej výsledky kvalifikace (a případně SF/finále).
                 </td>
@@ -90,7 +90,7 @@ export function Overall({
                     ...tdStyle,
                     fontVariantNumeric: 'tabular-nums',
                     fontWeight: 620,
-                    color: r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
+                    color: r.poradi <= 3 ? 'var(--foreground)' : 'var(--muted)'
                   }}
                 >
                   <Medal rank={r.poradi} />
@@ -103,7 +103,7 @@ export function Overall({
                 </td>
                 <td style={tdStyle}>
                   <b style={{ fontWeight: 590 }}>{r.prijmeni}</b>{' '}
-                  <span style={{ color: 'var(--text-2)' }}>{r.jmeno}</span>
+                  <span style={{ color: 'var(--muted)' }}>{r.jmeno}</span>
                 </td>
                 {sloupce.map((s) => {
                   const h = s.hodnota(r)
@@ -139,7 +139,7 @@ function Pos({ hodnota }: { hodnota: number | null }): React.JSX.Element {
       style={{
         ...tdStyle,
         textAlign: 'right',
-        color: hodnota != null ? 'var(--text-2)' : 'var(--text-4)'
+        color: hodnota != null ? 'var(--muted)' : 'var(--text-4)'
       }}
     >
       {hodnota != null ? `${hodnota}.` : '—'}

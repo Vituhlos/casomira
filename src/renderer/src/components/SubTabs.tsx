@@ -1,5 +1,8 @@
 // Malý segmentový přepínač pro podzáložky uvnitř obrazovky (např. Rošt / Výsledky
-// u Semifinále a Finále). Vzhledem navazuje na přepínač fází (.seg-tab).
+// u Semifinále a Finále). Vizuál navazuje na Segmented — pill-track, slide indikátor.
+// Postaveno na HeroUI Tabs. Caller API beze změn (FinaleAB, Finale, Semifinale, QFaze).
+
+import { Tabs } from '@heroui/react'
 
 interface SubTab<T extends string> {
   id: T
@@ -26,39 +29,25 @@ export function SubTabs<T extends string>({
         position: 'sticky',
         top: 0,
         zIndex: 10,
-        background: 'var(--content-bg)'
+        background: 'var(--background)'
       }}
     >
-      <span
-        style={{
-          display: 'inline-flex',
-          gap: 2,
-          background: 'var(--seg-track)',
-          borderRadius: 8,
-          padding: 2
-        }}
+      <Tabs
+        className="subtabs"
+        selectedKey={active}
+        onSelectionChange={(key) => onTab(String(key) as T)}
       >
-        {tabs.map((t) => {
-          const on = t.id === active
-          return (
-            <button
-              key={t.id}
-              onClick={() => onTab(t.id)}
-              className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
-              style={{
-                height: 26,
-                padding: '0 16px',
-                fontSize: 12.5,
-                fontWeight: on ? 590 : 450,
-                color: on ? 'var(--text-1)' : 'var(--text-2)',
-                borderRadius: 6
-              }}
-            >
-              {t.label}
-            </button>
-          )
-        })}
-      </span>
+        <Tabs.ListContainer>
+          <Tabs.List aria-label="Podzáložky">
+            {tabs.map((t) => (
+              <Tabs.Tab key={t.id} id={t.id}>
+                {t.label}
+                <Tabs.Indicator />
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs.ListContainer>
+      </Tabs>
     </div>
   )
 }

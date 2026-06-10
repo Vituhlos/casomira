@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
+import { Toast, toast } from '@heroui/react'
 import type { BackupRestorePreview } from '@shared/backup'
 import { isBackupPreview } from '@shared/backup'
 import type {
@@ -115,8 +116,6 @@ export function App(): React.JSX.Element {
 
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
   const [smazat, setSmazat] = useState<Jezdec | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
-  const [toastSlozka, setToastSlozka] = useState<string | null>(null)
   const [nastaveniOtevreno, setNastaveniOtevreno] = useState(false)
   const [upravaLogOtevreno, setUpravaLogOtevreno] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -130,10 +129,20 @@ export function App(): React.JSX.Element {
   // Zvýší se, když jiné okno změní data → vynutí přenačtení obsahu.
   const [dataNonce, setDataNonce] = useState(0)
 
-  // Krátké oznámení (volitelně s cestou ke složce → tlačítko „Otevřít").
+  // Krátké oznámení (volitelně s cestou ke složce → tlačítko „Otevřít složku").
   const oznam = useCallback((text: string, slozka?: string | null): void => {
-    setToast(text)
-    setToastSlozka(slozka ?? null)
+    if (slozka) {
+      toast(text, {
+        actionProps: {
+          children: 'Otevřít složku',
+          onPress: () => void window.api.openFolder(slozka),
+          variant: 'tertiary',
+        },
+        timeout: 6000,
+      })
+    } else {
+      toast(text)
+    }
   }, [])
 
   const reloadZavody = useCallback(async (): Promise<void> => {
@@ -147,6 +156,7 @@ export function App(): React.JSX.Element {
 
   // Ověření kořenové složky pro PDF (první spuštění / smazaná složka).
   useEffect(() => {
+    if (import.meta.env['VITE_SCREENSHOT_MODE'] === '1') return // přeskočit při screenshot tour
     safeCall(
       window.api.getPdfRootStav().then((s) => {
         if (!s.root || !s.existuje) setRootProblem(s)
@@ -204,16 +214,6 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     setSubView('rost')
   }, [phase, activeCat])
-
-  // Krátká hláška, která sama zmizí.
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => {
-      setToast(null)
-      setToastSlozka(null)
-    }, 5000)
-    return () => clearTimeout(t)
-  }, [toast])
 
   // Inline editace: uloží přes DB. Vrací true/false — při kolizi (duplicitní
   // startovní číslo nebo los) se neuloží, oznámí se a buňka se označí.
@@ -453,6 +453,108 @@ export function App(): React.JSX.Element {
     onToggleHelp: () => setHelpOpen((o) => !o)
   })
 
+  // ── Screenshot tour ───────────────────────────────────────────────────────
+  // Spustí se jen když VITE_SCREENSHOT_MODE=1 (nastavuje scripts/run-screenshots.mjs).
+  // Projde všechny obrazovky + klíčové modály a uloží PNG přes IPC.
+  useEffect(() => {
+    if (import.meta.env['VITE_SCREENSHOT_MODE'] !== '1') return
+
+    const sleep = (ms: number): Promise<void> =>
+      new Promise((r) => setTimeout(r, ms))
+
+    const cap = async (name: string): Promise<void> => {
+      await sleep(900) // čekáme na re-render + dokončení async dat z DB
+      await window.api.screenshotCapture(name)
+    }
+
+    async function runTour(): Promise<void> {
+      await sleep(2500) // počkáme na první načtení race listu
+
+      // 1. Home — seznam závodů
+      await cap('01-home')
+
+      // 2. Dialog nový závod
+      setNovyOtevreno(true)
+      await cap('02-dialog-novy-zavod')
+      setNovyOtevreno(false)
+      await sleep(200)
+
+      // Otevřeme první závod (ze screenshot seedu)
+      const zavody = await window.api.listZavody()
+      if (!zavody.length) { await window.api.screenshotDone(); return }
+      await otevriZavod(zavody[0].id)
+      await sleep(1200)
+
+      // 3. Startovní listina
+      setPhase('start')
+      await cap('03-startovni-listina')
+
+      // 4–6. Q1 (Rošt → Výsledky → Agregát)
+      setPhase('q1'); setSubView('rost'); await cap('04-q1-rost')
+      setSubView('res');     await cap('05-q1-vysledky')
+      setSubView('res_agg'); await cap('06-q1-agregat')
+
+      // 7–9. Q2
+      setPhase('q2'); setSubView('rost'); await cap('07-q2-rost')
+      setSubView('res');     await cap('08-q2-vysledky')
+      setSubView('res_agg'); await cap('09-q2-agregat')
+
+      // 10. Klasifikace po Q2
+      setPhase('class_q2'); await cap('10-klasifikace-q2')
+
+      // 11–12. Q3
+      setPhase('q3'); setSubView('rost'); await cap('11-q3-rost')
+      setSubView('res'); await cap('12-q3-vysledky')
+
+      // 13. Klasifikace po Q3
+      setPhase('class_q3'); await cap('13-klasifikace-q3')
+
+      // 14–15. Semifinále
+      setPhase('sf'); setSubView('rost'); await cap('14-sf-rost')
+      setSubView('res'); await cap('15-sf-vysledky')
+
+      // 16–17. Finále
+      setPhase('final'); setSubView('rost'); await cap('16-finale-rost')
+      setSubView('res'); await cap('17-finale-vysledky')
+
+      // 18. Celkově
+      setPhase('overall'); await cap('18-celkove')
+
+      // 19. Stopky (samostatné okno)
+      await window.api.openStopky()
+      await sleep(2000) // čekáme na načtení okna stopek
+      await window.api.screenshotCaptureWindow('19-stopky', 'Stopky')
+      // Okno stopek necháme otevřené, zavře se s app.quit()
+
+      // 20. Nastavení modal
+      setNastaveniOtevreno(true); await cap('20-modal-nastaveni')
+      setNastaveniOtevreno(false); await sleep(200)
+
+      // 21. Klávesové zkratky
+      setHelpOpen(true); await cap('21-modal-klavesove-zkratky')
+      setHelpOpen(false); await sleep(200)
+
+      // Zpět na home
+      zpetNaSeznam()
+      await sleep(800)
+
+      // 22. Edit závod dialog
+      if (zavody.length > 0) {
+        const zavodPlny = await window.api.listZavody()
+        setEditZavod(zavodPlny[0] as Zavod)
+        await cap('22-dialog-edit-zavod')
+        setEditZavod(null)
+        await sleep(200)
+      }
+
+      await window.api.screenshotDone()
+    }
+
+    void runTour()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // ── /Screenshot tour ──────────────────────────────────────────────────────
+
   // Obsah podle vybrané fáze. Rošty/Výsledky/Klasifikace si data tahají samy
   // z databáze podle kategorie a kola.
   const renderPhase = (): React.JSX.Element => {
@@ -536,7 +638,7 @@ export function App(): React.JSX.Element {
               minWidth: 0,
               display: 'flex',
               flexDirection: 'column',
-              background: 'var(--content-bg)'
+              background: 'var(--background)'
             }}
           >
             <Toolbar
@@ -590,7 +692,6 @@ export function App(): React.JSX.Element {
           preview={restorePreview}
           onClose={() => setRestorePreview(null)}
           onDone={(id) => void onRestoreHotovo(id)}
-          onToast={oznam}
         />
       )}
 
@@ -613,7 +714,7 @@ export function App(): React.JSX.Element {
           <p style={{ margin: 0, fontSize: 13.5 }}>
             Opravdu smazat závod <b>{smazatZavod.nazev}</b>?
           </p>
-          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--muted)' }}>
             Smažou se i všechny jeho kategorie, jezdci, rošty a výsledky. Tuto akci nelze vrátit.
           </p>
         </Modal>
@@ -631,7 +732,6 @@ export function App(): React.JSX.Element {
         <Settings
           kategorie={kategorie}
           onClose={() => setNastaveniOtevreno(false)}
-          onToast={oznam}
           onEditZavod={
             zavod
               ? () => {
@@ -708,7 +808,7 @@ export function App(): React.JSX.Element {
               ? 'Nastavená kořenová složka pro PDF už neexistuje (byla smazána nebo přesunuta).'
               : 'Vyber kořenovou složku, kam se budou ukládat generovaná PDF.'}
           </p>
-          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.55 }}>
             Appka v ní sama vytvoří podsložky <b>závod / kategorie</b>. Data závodů jsou v databázi
             — tohle je jen místo pro PDF. Změnit ji můžeš kdykoliv v <b>Nastavení</b> (ozubené kolo).
           </p>
@@ -746,55 +846,13 @@ export function App(): React.JSX.Element {
             </b>
             {smazat.st_cislo != null && <> (č. {smazat.st_cislo})</>}?
           </p>
-          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--muted)' }}>
             Tuto akci nelze vrátit.
           </p>
         </Modal>
       )}
 
-      {toast && (
-        <div
-          className="no-print"
-          style={{
-            position: 'fixed',
-            bottom: 22,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 200,
-            background: 'var(--card)',
-            color: 'var(--text-1)',
-            border: '0.5px solid var(--hairline)',
-            boxShadow: 'var(--shadow-win)',
-            borderRadius: 'var(--r-ctrl)',
-            padding: '10px 16px',
-            fontSize: 13,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            maxWidth: '80vw'
-          }}
-        >
-          <span style={{ minWidth: 0 }}>{toast}</span>
-          {toastSlozka && (
-            <button
-              className="btn btn--plain"
-              onClick={() => void window.api.openFolder(toastSlozka)}
-              style={{
-                flexShrink: 0,
-                height: 24,
-                padding: '0 10px',
-                borderRadius: 6,
-                font: 'inherit',
-                fontSize: 12.5,
-                fontWeight: 530,
-                color: 'var(--accent-text)'
-              }}
-            >
-              Otevřít složku
-            </button>
-          )}
-        </div>
-      )}
+      <Toast.Provider placement="bottom" />
     </>
   )
 }
@@ -808,13 +866,13 @@ function Placeholder({ label }: { label: string }): React.JSX.Element {
         height: '100%',
         display: 'grid',
         placeItems: 'center',
-        color: 'var(--text-3)',
+        color: 'var(--muted)',
         fontSize: 14,
         textAlign: 'center'
       }}
     >
       <div>
-        <div style={{ fontSize: 15, fontWeight: 590, color: 'var(--text-2)' }}>{label}</div>
+        <div style={{ fontSize: 15, fontWeight: 590, color: 'var(--muted)' }}>{label}</div>
         <div style={{ marginTop: 6 }}>Tuto fázi doplníme v dalším kroku.</div>
       </div>
     </div>

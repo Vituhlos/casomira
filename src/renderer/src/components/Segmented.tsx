@@ -1,3 +1,4 @@
+import { Tabs } from '@heroui/react'
 import type { Phase } from '../data/phases'
 
 interface SegmentedProps {
@@ -7,63 +8,33 @@ interface SegmentedProps {
   onTab: (id: string) => void
 }
 
+// Fázový přepínač (Startovní listina, Q1, Q2, …) postavený na HeroUI Tabs.
+// Vizuál: pill-track s animovaným indikátorem (slide 250ms ease-out-fluid).
+// Přetékání: scroll v .segmented .tabs__list-container, scrollbar skrytý.
+// Caller API beze změn — App.tsx nedotčen.
 export function Segmented({ active, phases, onTab }: SegmentedProps): React.JSX.Element {
   return (
     <div
       className="no-print"
       style={{ padding: '12px 22px 4px', textAlign: 'center', flexShrink: 0 }}
     >
-      <div
-        style={{
-          display: 'inline-flex',
-          maxWidth: '100%',
-          alignItems: 'center',
-          gap: 2,
-          background: 'var(--seg-track)',
-          borderRadius: 9,
-          padding: 2,
-          overflowX: 'auto',
-          scrollbarWidth: 'none'
-        }}
+      <Tabs
+        className="segmented"
+        selectedKey={active}
+        onSelectionChange={(key) => onTab(String(key))}
       >
-        {phases.map((p, i) => {
-          const on = p.id === active
-          const prevOn = i > 0 && phases[i - 1].id === active
-          return (
-            <button
-              key={p.id}
-              onClick={() => onTab(p.id)}
-              className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
-              style={{
-                position: 'relative',
-                height: 28,
-                padding: '0 13px',
-                whiteSpace: 'nowrap',
-                font: 'inherit',
-                fontSize: 12.5,
-                fontWeight: on ? 590 : 450,
-                color: on ? 'var(--text-1)' : 'var(--text-2)',
-                borderRadius: 7,
-                flexShrink: 0
-              }}
-            >
-              {!on && !prevOn && i !== 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    left: -1,
-                    top: 7,
-                    bottom: 7,
-                    width: 1,
-                    background: 'var(--divider)'
-                  }}
-                />
-              )}
-              {p.label}
-            </button>
-          )
-        })}
-      </div>
+        <Tabs.ListContainer>
+          <Tabs.List aria-label="Fáze závodu">
+            {phases.map((p, i) => (
+              <Tabs.Tab key={p.id} id={p.id}>
+                {i > 0 && <Tabs.Separator />}
+                {p.label}
+                <Tabs.Indicator />
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs.ListContainer>
+      </Tabs>
     </div>
   )
 }

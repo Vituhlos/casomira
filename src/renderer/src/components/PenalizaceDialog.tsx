@@ -1,4 +1,5 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+﻿import { useEffect, useState } from 'react'
+import { Alert, Input, Label, ListBox, Select, TextArea, TextField } from '@heroui/react'
 import type { VysledekRadek } from '@shared/types'
 import { Modal } from './Modal'
 import { Btn } from './ui'
@@ -20,16 +21,6 @@ interface PenalizaceDialogProps {
   onSaved: () => void
 }
 
-const inputStyle: CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: '0.5px solid var(--hairline)',
-  background: 'var(--window)',
-  font: 'inherit',
-  fontSize: 13,
-  color: 'var(--text-1)'
-}
 
 function formatDelta(n: number): string {
   return n >= 0 ? `+${n}` : String(n)
@@ -202,55 +193,63 @@ export function PenalizaceDialog({
         </>
       }
     >
-      <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-2)' }}>
-        <strong style={{ color: 'var(--text-1)' }}>
+      <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--muted)' }}>
+        <strong style={{ color: 'var(--foreground)' }}>
           {radek.st_cislo} — {radek.prijmeni} {radek.jmeno}
         </strong>
         {radek.poradi != null && (
-          <span style={{ color: 'var(--text-3)', fontWeight: 450 }}>
+          <span style={{ color: 'var(--muted)', fontWeight: 450 }}>
             {' '}
             (aktuálně {radek.poradi}. v jízdě)
           </span>
         )}
       </p>
 
-      <label style={{ display: 'block', marginBottom: 14 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-          Druh zásahu
-        </span>
-        <select
-          value={druh}
-          onChange={(e) => setDruh(e.target.value as DruhPenalizace)}
-          style={inputStyle}
-        >
-          <option value="CASOVA">Časová (+ sekundy k času)</option>
-          <option value="BODOVA">Bodová (úprava bodů v jízdě)</option>
-          <option value="POSUN">Posun pořadí (degradace / přesun)</option>
-        </select>
-      </label>
+      <Select
+        fullWidth
+        value={druh}
+        onChange={(val) => { if (val) setDruh(val as DruhPenalizace) }}
+        className="mb-[14px]"
+      >
+        <Label style={{ fontSize: 12, color: 'var(--muted)' }}>Druh zásahu</Label>
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            <ListBox.Item id="CASOVA" textValue="Časová (+ sekundy k času)">
+              Časová (+ sekundy k času)
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+            <ListBox.Item id="BODOVA" textValue="Bodová (úprava bodů v jízdě)">
+              Bodová (úprava bodů v jízdě)
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+            <ListBox.Item id="POSUN" textValue="Posun pořadí (degradace / přesun)">
+              Posun pořadí (degradace / přesun)
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
       {druh === 'CASOVA' && (
         <>
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--muted)' }}>
             Přičte sekundy k naměřenému času. Pořadí a body v jízdě se přepočítají; naměřený čas
             zůstane v záznamu.
           </p>
-          <label style={{ display: 'block', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-              Penalizace (sekundy)
-            </span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={sekundy}
-              onChange={(e) => setSekundy(e.target.value)}
-              placeholder="např. 10"
-              style={inputStyle}
-              autoFocus
-            />
-          </label>
+          <TextField
+            value={sekundy}
+            onChange={setSekundy}
+            className="mb-[14px]"
+          >
+            <Label style={{ fontSize: 12, color: 'var(--muted)' }}>Penalizace (sekundy)</Label>
+            <Input inputMode="decimal" placeholder="např. 10" autoFocus />
+          </TextField>
           {radek.namereny_cas_ms != null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-2)' }}>
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--muted)' }}>
               Naměřeno: <span className="tnum">{fmtTime(radek.namereny_cas_ms)}</span>
               {efektivni != null && maCasovou && (
                 <>
@@ -265,37 +264,31 @@ export function PenalizaceDialog({
 
       {druh === 'BODOVA' && (
         <>
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--muted)' }}>
             Upraví body v této jízdě o zadanou hodnotu vůči automatickým bodům z pořadí/času.
             Promítne se do klasifikace; pořadí v jízdě se nemění.
           </p>
-          <label style={{ display: 'block', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-              Úprava bodů (delta)
-            </span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={delta}
-              onChange={(e) => setDelta(e.target.value)}
-              placeholder="např. −5"
-              style={inputStyle}
-              autoFocus
-            />
-          </label>
+          <TextField
+            value={delta}
+            onChange={setDelta}
+            className="mb-[14px]"
+          >
+            <Label style={{ fontSize: 12, color: 'var(--muted)' }}>Úprava bodů (delta)</Label>
+            <Input inputMode="numeric" placeholder="např. −5" autoFocus />
+          </TextField>
           {autoBody === null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-3)' }}>
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--muted)' }}>
               Automatická body zatím nejsou k dispozici — zadej nejdřív čas nebo stav v jízdě.
             </p>
           )}
           {autoBody != null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-2)' }}>
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--muted)' }}>
               Automat z jízdy: <span className="tnum">{autoBody}</span>
               {deltaPreview != null && Number.isFinite(deltaNum) && (
                 <>
                   {' '}
                   → po úpravě: <span className="tnum">{deltaPreview}</span>
-                  <span style={{ color: 'var(--text-3)' }}> ({formatDelta(deltaNum)})</span>
+                  <span style={{ color: 'var(--muted)' }}> ({formatDelta(deltaNum)})</span>
                 </>
               )}
             </p>
@@ -305,53 +298,65 @@ export function PenalizaceDialog({
 
       {druh === 'POSUN' && (
         <>
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--muted)' }}>
             Přesune jezdce na zvolené pořadí v jízdě; ostatní se posunou. Body dojetých se přepočítají
             z žebříčku podle nového pořadí (čas se nemění).
           </p>
           {radek.poradi == null ? (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: '#c93636' }}>
-              Nejprve zadej čas nebo stav — bez pořadí v jízdě nelze posunout.
-            </p>
+            <Alert status="warning" className="mb-[14px]">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Title>Nejprve zadej čas nebo stav — bez pořadí v jízdě nelze posunout.</Alert.Title>
+              </Alert.Content>
+            </Alert>
           ) : (
-            <label style={{ display: 'block', marginBottom: 14 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-                Cílové pořadí v jízdě
-              </span>
-              <select
-                value={pozice}
-                onChange={(e) => setPozice(e.target.value)}
-                style={inputStyle}
-                autoFocus
-              >
-                {poziceOptions.map((p) => (
-                  <option key={p} value={String(p)}>
-                    {p}. místo
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Select
+              fullWidth
+              value={pozice}
+              onChange={(val) => { if (val) setPozice(String(val)) }}
+              className="mb-[14px]"
+            >
+              <Label style={{ fontSize: 12, color: 'var(--muted)' }}>Cílové pořadí v jízdě</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {poziceOptions.map((p) => (
+                    <ListBox.Item key={p} id={String(p)} textValue={`${p}. místo`}>
+                      {p}. místo
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
           )}
         </>
       )}
 
-      <label style={{ display: 'block', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-          Důvod / poznámka (povinné)
-        </span>
-        <textarea
-          value={duvod}
-          onChange={(e) => setDuvod(e.target.value)}
+      <TextField
+        value={duvod}
+        onChange={setDuvod}
+        className="mb-2"
+      >
+        <Label style={{ fontSize: 12, color: 'var(--muted)' }}>Důvod / poznámka (povinné)</Label>
+        <TextArea
           rows={3}
           placeholder="např. předjetí, nesportovní chování…"
-          style={{ ...inputStyle, resize: 'vertical', minHeight: 72 }}
+          className="resize-y"
+          style={{ minHeight: 72 }}
         />
-      </label>
+      </TextField>
 
       {chyba && (
-        <p style={{ margin: '8px 0 0', fontSize: 12.5, color: '#c93636' }} role="alert">
-          {chyba}
-        </p>
+        <Alert status="danger" className="mt-2">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>{chyba}</Alert.Title>
+          </Alert.Content>
+        </Alert>
       )}
     </Modal>
   )

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
+import { Input, Separator, toast } from '@heroui/react'
 import type {
   Kategorie,
   SportityEventView,
@@ -17,15 +18,13 @@ interface SportityModalProps {
   zavod: Zavod
   kategorie: Kategorie[]
   onClose: () => void
-  onToast: (msg: string) => void
 }
 
 export function SportityModal({
   zavodId,
   zavod,
   kategorie,
-  onClose,
-  onToast
+  onClose
 }: SportityModalProps): React.JSX.Element {
   // API key section
   const [apiKeySet, setApiKeySet] = useState(false)
@@ -71,7 +70,7 @@ export function SportityModal({
         setApiKeySet(s.apiKeySet)
         setApiKeyHint(s.apiKeyHint)
       }),
-      onToast
+      (msg) => toast.danger(msg)
     )
   }
 
@@ -87,21 +86,21 @@ export function SportityModal({
           loadLog()
         }
       }),
-      onToast
+      (msg) => toast.danger(msg)
     )
   }
 
   const loadKatMaps = (): void => {
     safeCall(
       window.api.getSportityKategorieMap(zavodId).then(setKatMaps),
-      onToast
+      (msg) => toast.danger(msg)
     )
   }
 
   const loadLog = (): void => {
     safeCall(
       window.api.getSportityPublishLog(zavodId).then((entries) => setLog(entries.slice(0, 20))),
-      onToast
+      (msg) => toast.danger(msg)
     )
   }
 
@@ -113,9 +112,9 @@ export function SportityModal({
       setApiKeyInput('')
       setTestResult(null)
       loadSettings()
-      onToast('API klíč uložen.')
+      toast.success('API klíč uložen.')
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Chyba při ukládání klíče.')
+      toast.danger(e instanceof Error ? e.message : 'Chyba při ukládání klíče.')
     } finally {
       setSavingKey(false)
     }
@@ -126,7 +125,7 @@ export function SportityModal({
     setApiKeySet(false)
     setApiKeyHint(null)
     setTestResult(null)
-    onToast('API klíč odstraněn.')
+    toast('API klíč odstraněn.')
   }
 
   const testConn = async (): Promise<void> => {
@@ -144,7 +143,7 @@ export function SportityModal({
         setSelectedEventId(evs[0].id)
       }
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Chyba při načítání kanálů.')
+      toast.danger(e instanceof Error ? e.message : 'Chyba při načítání kanálů.')
     } finally {
       setLoadingEvents(false)
     }
@@ -157,7 +156,7 @@ export function SportityModal({
       const docs = await window.api.sportityListDocuments(selectedPassword, selectedEventId || null)
       setFolders(docs.filter((d) => d.type === 'Folder'))
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Chyba při načítání složek.')
+      toast.danger(e instanceof Error ? e.message : 'Chyba při načítání složek.')
     } finally {
       setLoadingFolders(false)
     }
@@ -177,9 +176,9 @@ export function SportityModal({
         folder?.name ?? selectedFolderId
       )
       loadZavodMap()
-      onToast(`Závod namapován na kanál ${ev?.name ?? selectedPassword}.`)
+      toast.success(`Závod namapován na kanál ${ev?.name ?? selectedPassword}.`)
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Chyba při ukládání mapování.')
+      toast.danger(e instanceof Error ? e.message : 'Chyba při ukládání mapování.')
     } finally {
       setSavingZavodMap(false)
     }
@@ -191,9 +190,9 @@ export function SportityModal({
       const maps = await window.api.sportityAutoMapCategories(zavodId)
       setKatMaps(maps)
       const matched = maps.filter((m) => m.folderId).length
-      onToast(`Automaticky spárováno ${matched} z ${maps.length} kategorií.`)
+      toast.success(`Automaticky spárováno ${matched} z ${maps.length} kategorií.`)
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Chyba při automatickém párování.')
+      toast.danger(e instanceof Error ? e.message : 'Chyba při automatickém párování.')
     } finally {
       setAutoMapping(false)
     }
@@ -209,10 +208,10 @@ export function SportityModal({
     try {
       const res = await window.api.sportityPublishCategory(kategorieId)
       setPublishResults((p) => ({ ...p, [kategorieId]: res }))
-      onToast(`Publikováno: ${res.created} nových, ${res.updated} aktualizovaných.`)
+      toast.success(`Publikováno: ${res.created} nových, ${res.updated} aktualizovaných.`)
       loadLog()
     } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Chyba při publikování.')
+      toast.danger(e instanceof Error ? e.message : 'Chyba při publikování.')
     } finally {
       setPublishing((p) => ({ ...p, [kategorieId]: false }))
     }
@@ -228,19 +227,19 @@ export function SportityModal({
 
         {/* Section 1: API klíč */}
         <SekceNadpis>API klíč</SekceNadpis>
-        <div style={{ marginBottom: 10, fontSize: 12.5, color: 'var(--text-2)' }}>
+        <div style={{ marginBottom: 10, fontSize: 12.5, color: 'var(--muted)' }}>
           {apiKeySet
-            ? <span>Nastaven: <b style={{ color: 'var(--text-1)', fontFamily: 'monospace' }}>{apiKeyHint}</b></span>
-            : <span style={{ color: 'var(--text-3)' }}>Klíč není nastaven.</span>
+            ? <span>Nastaven: <b style={{ color: 'var(--foreground)', fontFamily: 'monospace' }}>{apiKeyHint}</b></span>
+            : <span style={{ color: 'var(--muted)' }}>Klíč není nastaven.</span>
           }
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <input
+          <Input
             type="password"
             placeholder="Vložit nový API klíč…"
             value={apiKeyInput}
             onChange={(e) => setApiKeyInput(e.target.value)}
-            style={inputStyle}
+            className="flex-1"
             onKeyDown={(e) => { if (e.key === 'Enter') void saveApiKey() }}
           />
           <Btn variant="primary" onClick={() => void saveApiKey()} disabled={savingKey || !apiKeyInput.trim()}>
@@ -254,9 +253,12 @@ export function SportityModal({
           )}
         </div>
         {testResult && (
-          <div style={{ fontSize: 12.5, color: testResult.ok ? '#1a7a35' : '#c93636', marginBottom: 8 }}>
-            {testResult.ok ? '✓ ' : '✗ '}{testResult.message}
-          </div>
+          <Alert status={testResult.ok ? 'success' : 'danger'} className="mb-2">
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Title>{testResult.message}</Alert.Title>
+            </Alert.Content>
+          </Alert>
         )}
 
         <Hairline />
@@ -266,8 +268,8 @@ export function SportityModal({
           <>
             <SekceNadpis>Kanál a složka výsledků</SekceNadpis>
             {zavodMap && (
-              <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 8 }}>
-                Aktuální: <b style={{ color: 'var(--text-1)' }}>{zavodMap.resultsFolderName}</b>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>
+                Aktuální: <b style={{ color: 'var(--foreground)' }}>{zavodMap.resultsFolderName}</b>
                 {' '}(kanál: {zavodMap.channelPassword}{zavodMap.eventId ? `, event: ${zavodMap.eventId}` : ''})
               </div>
             )}
@@ -278,7 +280,7 @@ export function SportityModal({
             </div>
             {events.length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Kanál:</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Kanál:</div>
                 <PickerList
                   items={events.map((ev) => ({ id: `${ev.password}|${ev.id}`, label: ev.name, sub: ev.password }))}
                   selected={`${selectedPassword}|${selectedEventId}`}
@@ -299,7 +301,7 @@ export function SportityModal({
             )}
             {folders.length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Složka Výsledků:</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Složka Výsledků:</div>
                 <PickerList
                   items={folders.map((f) => ({ id: f.id, label: f.name, sub: f.parentId ? 'podsložka' : undefined }))}
                   selected={selectedFolderId}
@@ -329,7 +331,7 @@ export function SportityModal({
                 {autoMapping ? 'Páruji…' : 'Auto-párovat'}
               </Btn>
             </div>
-            <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 16 }}>
               {katMaps.map((m, i) => (
                 <div
                   key={m.kategorieId}
@@ -339,11 +341,11 @@ export function SportityModal({
                     gap: 10,
                     padding: '7px 12px',
                     fontSize: 12.5,
-                    borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)'
+                    borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)'
                   }}
                 >
                   <span style={{ flex: 1, fontWeight: 540 }}>{m.kategorieNazev}</span>
-                  <span style={{ color: m.folderId ? 'var(--text-2)' : 'var(--text-4)', fontSize: 12 }}>
+                  <span style={{ color: m.folderId ? 'var(--muted)' : 'var(--text-4)', fontSize: 12 }}>
                     {m.folderName ?? 'nenalezeno'}
                   </span>
                   {m.folderId && (
@@ -367,11 +369,11 @@ export function SportityModal({
                   <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 540 }}>{k.nazev}</span>
                     {res && (
-                      <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ fontSize: 12, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
                         {res.created > 0 && `nových ${res.created} · `}
                         {res.updated > 0 && `aktualizováno ${res.updated} · `}
                         {res.skipped > 0 && `přeskočeno ${res.skipped}`}
-                        {res.failed > 0 && <span style={{ color: '#c93636' }}>{` · chyby ${res.failed}`}</span>}
+                        {res.failed > 0 && <span style={{ color: 'var(--danger)' }}>{` · chyby ${res.failed}`}</span>}
                       </span>
                     )}
                     <Btn
@@ -393,7 +395,7 @@ export function SportityModal({
         {log.length > 0 && (
           <>
             <SekceNadpis>Poslední akce</SekceNadpis>
-            <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
+            <div style={{ border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
               {log.map((entry, i) => (
                 <div
                   key={entry.id}
@@ -403,16 +405,16 @@ export function SportityModal({
                     gap: 8,
                     padding: '5px 10px',
                     fontSize: 11.5,
-                    borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-                    color: 'var(--text-2)'
+                    borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)',
+                    color: 'var(--muted)'
                   }}
                 >
-                  <span style={{ color: entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? '#1a7a35' : '#c93636', fontSize: 11 }}>
+                  <span style={{ color: entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? 'var(--success)' : 'var(--danger)', fontSize: 11 }}>
                     {entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? '✓' : '✗'}
                   </span>
                   <span style={{ flex: 1 }}>
                     {entry.kategorieNazev ?? '—'}{entry.listKey ? ` / ${entry.listKey}` : ''}{' '}
-                    <span style={{ color: 'var(--text-3)' }}>{entry.action}</span>
+                    <span style={{ color: 'var(--muted)' }}>{entry.action}</span>
                   </span>
                   <span style={{ color: 'var(--text-4)', fontSize: 11 }}>
                     {entry.createdAt.slice(0, 16).replace('T', ' ')}
@@ -425,7 +427,7 @@ export function SportityModal({
 
         {/* Placeholder for zavod without map */}
         {!zavodMap && !apiKeySet && (
-          <p style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4 }}>
+          <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 4 }}>
             Nejprve zadejte API klíč Sportity.
           </p>
         )}
@@ -436,28 +438,16 @@ export function SportityModal({
 
 function SekceNadpis({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
-    <h3 style={{ margin: '0 0 10px', fontSize: 13.5, fontWeight: 620, color: 'var(--text-1)' }}>
+    <h3 style={{ margin: '0 0 10px', fontSize: 13.5, fontWeight: 620, color: 'var(--foreground)' }}>
       {children}
     </h3>
   )
 }
 
 function Hairline(): React.JSX.Element {
-  return <div style={{ height: 1, background: 'var(--hairline)', margin: '14px 0 16px' }} />
+  return <Separator className="my-[15px]" />
 }
 
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  height: 30,
-  padding: '0 10px',
-  fontSize: 12.5,
-  border: '0.5px solid var(--ctrl-stroke)',
-  borderRadius: 'var(--r-ctrl)',
-  background: 'var(--ctrl-bg)',
-  color: 'var(--text-1)',
-  outline: 'none',
-  minWidth: 0
-}
 
 function PickerList({
   items,
@@ -469,7 +459,7 @@ function PickerList({
   onSelect: (id: string) => void
 }): React.JSX.Element {
   return (
-    <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', maxHeight: 160, overflowY: 'auto' }}>
+    <div style={{ border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', maxHeight: 160, overflowY: 'auto' }}>
       {items.map((item, i) => (
         <div
           key={item.id}
@@ -477,16 +467,16 @@ function PickerList({
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '6px 12px', fontSize: 13, cursor: 'pointer',
-            borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
+            borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)',
             background: selected === item.id
               ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
-              : i % 2 === 0 ? 'transparent' : 'var(--card-alt)',
-            color: selected === item.id ? 'var(--accent)' : 'var(--text-1)'
+              : i % 2 === 0 ? 'transparent' : 'var(--surface-secondary)',
+            color: selected === item.id ? 'var(--accent)' : 'var(--foreground)'
           }}
         >
           <span style={{ flex: 1, fontWeight: selected === item.id ? 600 : 430 }}>{item.label}</span>
           {item.sub && (
-            <span style={{ fontSize: 11.5, color: selected === item.id ? 'var(--accent-text)' : 'var(--text-3)' }}>
+            <span style={{ fontSize: 11.5, color: selected === item.id ? 'var(--accent)' : 'var(--muted)' }}>
               {item.sub}
             </span>
           )}

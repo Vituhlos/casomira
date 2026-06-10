@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Modal } from './Modal'
 import { Btn } from './ui'
 
@@ -41,8 +41,8 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
     >
       <div
         style={{
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)',
           overflow: 'hidden'
         }}
       >
@@ -56,8 +56,8 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
               padding: '9px 12px',
               fontSize: 13,
               cursor: 'pointer',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-              background: vybrana === t.name ? 'var(--accent-subtle, color-mix(in srgb, var(--accent) 10%, transparent))' : i % 2 === 0 ? 'transparent' : 'var(--card-alt)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)',
+              background: vybrana === t.name ? 'var(--accent-subtle, color-mix(in srgb, var(--accent) 10%, transparent))' : i % 2 === 0 ? 'transparent' : 'var(--surface-secondary)'
             }}
           >
             <input
@@ -68,11 +68,11 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
               onChange={() => setVybrana(t.name)}
               style={{ accentColor: 'var(--accent)', width: 15, height: 15, flexShrink: 0 }}
             />
-            <span style={{ fontWeight: vybrana === t.name ? 560 : 440, color: 'var(--text-1)' }}>
+            <span style={{ fontWeight: vybrana === t.name ? 560 : 440, color: 'var(--foreground)' }}>
               {t.displayName || t.name}
             </span>
             {t.isDefault && (
-              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-3)' }}>
+              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--muted)' }}>
                 výchozí
               </span>
             )}

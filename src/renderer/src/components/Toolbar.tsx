@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { Dropdown, Label } from '@heroui/react'
 import { Icon } from './Icon'
 import { Btn, DevBadge } from './ui'
 import type { RaceType } from '@shared/types'
@@ -33,34 +32,6 @@ export function Toolbar({
   onPrint,
   onSettings
 }: ToolbarProps): React.JSX.Element {
-  const [menu, setMenu] = useState(false)
-  const pdfSplitRef = useRef<HTMLDivElement>(null)
-  const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null)
-
-  const zavriMenu = (): void => setMenu(false)
-
-  const otevriMenu = (): void => {
-    const r = pdfSplitRef.current?.getBoundingClientRect()
-    if (r) {
-      setMenuAnchor({ top: r.bottom + 4, right: window.innerWidth - r.right })
-    }
-    setMenu(true)
-  }
-
-  const prepniMenu = (): void => {
-    if (menu) zavriMenu()
-    else otevriMenu()
-  }
-
-  useEffect(() => {
-    if (!menu) return
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') zavriMenu()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [menu])
-
   return (
     <div
       className="no-print"
@@ -74,16 +45,19 @@ export function Toolbar({
         background: 'var(--toolbar)',
         backdropFilter: 'blur(50px) saturate(1.8)',
         WebkitBackdropFilter: 'blur(50px) saturate(1.8)',
-        borderBottom: '0.5px solid var(--hairline)'
+        borderBottom: '0.5px solid var(--border)'
       }}
     >
+      {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13.5, minWidth: 0 }}>
         {raceTyp === 'RX' && <DevBadge />}
-        <span style={{ color: 'var(--text-2)' }}>{catLabel}</span>
-        <Icon name="chevron" size={12} style={{ color: 'var(--text-3)' }} />
-        <span style={{ color: 'var(--text-1)', fontWeight: 590 }}>{phaseLabel}</span>
+        <span style={{ color: 'var(--muted)' }}>{catLabel}</span>
+        <Icon name="chevron" size={12} style={{ color: 'var(--muted)' }} />
+        <span style={{ color: 'var(--foreground)', fontWeight: 590 }}>{phaseLabel}</span>
       </div>
       <div style={{ flex: 1 }} />
+
+      {/* Akce */}
       <Btn variant="bezel" icon="gear" onClick={onSettings} title="Nastavení" />
       <Btn
         variant="bezel"
@@ -95,104 +69,53 @@ export function Toolbar({
         Stopky
       </Btn>
       {onPrint && (
-        <Btn variant="bezel" icon="printer" onClick={(e) => onPrint?.(e)} title="Vytisknout tento list (Shift = změnit tiskárnu)" />
+        <Btn
+          variant="bezel"
+          icon="printer"
+          onClick={(e) => onPrint?.(e)}
+          title="Vytisknout tento list (Shift = změnit tiskárnu)"
+        />
       )}
 
-      {/* Uložit PDF + šipka — jeden pill (.pdf-split), hover/active na obalu. */}
-      <div ref={pdfSplitRef} className="pdf-split">
-        <Btn
-          variant="primary"
-          icon="pdf"
-          onClick={onPdf}
-          style={{ borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
-        >
-          Uložit PDF
-        </Btn>
+      {/* Uložit PDF + šipka — jeden primární pill.
+          Dropdown.Trigger dostane className pdf-split__caret → Floating UI pozicování,
+          ESC, klik-mimo a focus management jsou interní v HeroUI Dropdown. */}
+      <div className="pdf-split">
         <button
           type="button"
-          className="pdf-split__caret"
-          title="Další možnosti PDF"
-          aria-expanded={menu}
-          aria-haspopup="menu"
-          onClick={prepniMenu}
+          onClick={onPdf}
+          className="inline-flex items-center gap-[6px] border-none cursor-pointer bg-transparent text-[var(--accent-foreground)] focus-visible:outline-none whitespace-nowrap"
+          style={{ font: 'inherit', fontSize: 13, fontWeight: 510, height: 28, padding: '0 12px' }}
         >
-          <Icon name="chevron" size={13} style={{ transform: 'rotate(90deg)' }} />
+          <Icon name="pdf" size={15} />
+          Uložit PDF
         </button>
-      </div>
 
-      {menu &&
-        menuAnchor &&
-        createPortal(
-          <>
-            <div
-              className="no-print"
-              onMouseDown={zavriMenu}
-              style={{ position: 'fixed', inset: 0, zIndex: 150 }}
-            />
-            <div
-              role="menu"
-              onMouseDown={(e) => e.stopPropagation()}
-              style={{
-                position: 'fixed',
-                top: menuAnchor.top,
-                right: menuAnchor.right,
-                zIndex: 151,
-                minWidth: 200,
-                background: 'var(--card)',
-                border: '0.5px solid var(--hairline)',
-                borderRadius: 'var(--r-ctrl)',
-                boxShadow: 'var(--shadow-win)',
-                padding: 4,
-                display: 'flex',
-                flexDirection: 'column'
+        <Dropdown>
+          <Dropdown.Trigger
+            className="pdf-split__caret"
+            title="Další možnosti PDF"
+            aria-label="Další možnosti PDF"
+          >
+            <Icon name="chevron" size={13} style={{ transform: 'rotate(90deg)' }} />
+          </Dropdown.Trigger>
+          <Dropdown.Popover placement="bottom end">
+            <Dropdown.Menu
+              onAction={(key) => {
+                if (key === 'save-as') onPdfSaveAs?.()
+                else if (key === 'open-folder') onOpenPdfFolder?.()
               }}
             >
-              <MenuItem
-                onClick={() => {
-                  zavriMenu()
-                  onPdfSaveAs?.()
-                }}
-              >
-                Uložit jako…
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  zavriMenu()
-                  onOpenPdfFolder?.()
-                }}
-              >
-                Otevřít složku PDF
-              </MenuItem>
-            </div>
-          </>,
-          document.body
-        )}
+              <Dropdown.Item id="save-as" textValue="Uložit jako…">
+                <Label>Uložit jako…</Label>
+              </Dropdown.Item>
+              <Dropdown.Item id="open-folder" textValue="Otevřít složku PDF">
+                <Label>Otevřít složku PDF</Label>
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
+      </div>
     </div>
-  )
-}
-
-function MenuItem({
-  children,
-  onClick
-}: {
-  children: React.ReactNode
-  onClick: () => void
-}): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      className="menu-item"
-      role="menuitem"
-      onClick={onClick}
-      style={{
-        textAlign: 'left',
-        padding: '7px 10px',
-        borderRadius: 6,
-        font: 'inherit',
-        fontSize: 13
-      }}
-    >
-      {children}
-    </button>
   )
 }

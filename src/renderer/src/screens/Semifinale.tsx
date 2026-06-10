@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import type { ZaverStav } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { SubTabs } from '../components/SubTabs'
@@ -51,7 +51,7 @@ export function Semifinale({
           <div
             style={{
               padding: '12px 16px',
-              borderRadius: 'var(--r-ctrl)',
+              borderRadius: 'var(--radius)',
               background: 'rgba(255,159,10,0.14)',
               color: '#9a6400',
               fontSize: 13,
@@ -108,7 +108,7 @@ export function FinaleToggle({
 }): React.JSX.Element {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>Finále:</span>
+      <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Finále:</span>
       <span style={{ display: 'inline-flex', gap: 2, background: 'var(--seg-track)', borderRadius: 8, padding: 2 }}>
         {[8, 10].map((v) => {
           const on = velikost === v
@@ -116,14 +116,21 @@ export function FinaleToggle({
             <button
               key={v}
               onClick={() => onChange(v)}
-              className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
+              className={[
+                'appearance-none border-none cursor-pointer font-[inherit]',
+                'transition-[background,box-shadow,color] duration-[130ms] ease-linear',
+                'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-offset-0',
+                !on && 'hover:bg-black/[.04] dark:hover:bg-white/[.08]'
+              ].filter(Boolean).join(' ')}
               style={{
                 height: 24,
                 padding: '0 12px',
                 fontSize: 12.5,
                 fontWeight: on ? 590 : 450,
-                color: on ? 'var(--text-1)' : 'var(--text-2)',
-                borderRadius: 6
+                color: on ? 'var(--foreground)' : 'var(--muted)',
+                borderRadius: 6,
+                background: on ? 'var(--segment)' : 'transparent',
+                boxShadow: on ? 'var(--seg-sel-shadow)' : 'none',
               }}
             >
               {v}

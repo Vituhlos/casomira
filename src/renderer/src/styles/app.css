@@ -1,3 +1,57 @@
+@import "@heroui/react/styles";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HEROUI TÉMA — minimální override
+   HeroUI spravuje foreground, muted, surface-*, border, separator,
+   success/warning/danger, default, všechny *-hover, *-soft automaticky.
+   Tady přepisujeme POUZE to, co se skutečně liší od HeroUI výchozích hodnot.
+   POZOR: --field-focus záměrně NEnastavujeme — HeroUI default je správný:
+     var(--field-background, var(--default)) = žádný modrý fill při fokusu.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Accent: Apple Blue (#007AFF — HeroUI default je ~#006FEE) */
+:root {
+  --accent: oklch(0.597 0.202 253.0);
+  --focus:  oklch(0.597 0.202 253.0);
+}
+.dark {
+  --accent: oklch(0.640 0.202 253.0);  /* #0A84FF */
+  --focus:  oklch(0.640 0.202 253.0);
+}
+
+/* ── Dark mode: grafitová pozadí (HeroUI default bg = oklch 12% ≈ #17171a) */
+.dark {
+  --background:        oklch(0.213 0.004 286);  /* #313133 */
+  --surface:           oklch(0.186 0.004 286);  /* #2C2C2E */
+  --surface-secondary: oklch(0.213 0.004 286);
+  --surface-tertiary:  oklch(0.240 0.004 286);  /* #3a3a3c */
+  --overlay:           oklch(0.255 0.004 286);  /* modal/popover — světlejší než surface */
+  --field-background:  oklch(0.240 0.004 286);  /* #3a3a3c */
+  --field-border:      rgba(255, 255, 255, 0.16);
+}
+
+/* ── Field: viditelný border v světlém režimu (HeroUI default = transparent / 0px) */
+:root {
+  --field-border-width: 0.5px;
+  --field-border:       rgba(0, 0, 0, 0.18);
+}
+
+/* ── Segmentové záložky + toggle — app-specifické tokeny (nejsou v HeroUI) */
+:root {
+  --seg-track:      rgba(0, 0, 0, 0.08);
+  --seg-sel-shadow: 0 1px 3px rgba(0,0,0,0.14), 0 0.5px 0.5px rgba(0,0,0,0.06);
+}
+.dark {
+  --seg-track:      rgba(255, 255, 255, 0.09);
+  --seg-sel-shadow: 0 1px 3px rgba(0,0,0,0.40), 0 0.5px 0.5px rgba(0,0,0,0.20);
+}
+
+/* HeroUI Button defaultně používá rounded-3xl (Tailwind pevná hodnota 1.5rem).
+   Přebíjeme na náš --radius token, aby sedel k ostatním komponentám. */
+.button {
+  border-radius: var(--radius) !important;
+}
+
 /* app.css — drobné úpravy proti prototypu + KONZISTENTNÍ INTERAKTIVNÍ STAVY
    (hover / active / focus-visible). Vše přes třídy a tokeny z mac.css, ne ad-hoc
    v komponentách. Ve světlém režimu hover ztmavuje, v tmavém zesvětluje. */
@@ -8,9 +62,8 @@
   overflow: hidden;
 }
 
-/* Místo gradientové „tapety" obsahové pozadí. */
 body {
-  background: var(--content-bg);
+  background: var(--background);
 }
 
 /* Native vibrancy/Mica: body musí být průhledné, aby sidebar/toolbar
@@ -25,7 +78,7 @@ html[data-native-vibrancy="true"] body {
    CSS backdropFilter by rozmazal případně tmavý Mica i v světlém motivu appky.
    Řešení: sidebar a toolbar dostanou solidní barvy — Mica prosvítá přes titlebar
    (stejný přístup jako VS Code, Microsoft Teams, atd.).
-   Main content zůstane solidní var(--content-bg) jak je. */
+   Main content zůstane solidní var(--background) jak je. */
 html[data-platform="win32"][data-native-vibrancy="true"] aside {
   background: var(--sidebar-solid) !important;
   backdrop-filter: none !important;
@@ -37,90 +90,26 @@ html[data-platform="win32"][data-native-vibrancy="true"] header.no-print {
   -webkit-backdrop-filter: none !important;
 }
 
-/* ---- Tokeny interakcí (navazují na mac.css) ---- */
-html[data-theme='light'] {
-  --bezel-hover: #f0f0f2;
-  --bezel-press: #e6e6e9;
-  --icon-hover: rgba(0, 0, 0, 0.06);
-  --icon-press: rgba(0, 0, 0, 0.11);
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent);
-}
-html[data-theme='dark'] {
-  --bezel-hover: rgba(255, 255, 255, 0.16);
-  --bezel-press: rgba(255, 255, 255, 0.22);
-  --icon-hover: rgba(255, 255, 255, 0.1);
-  --icon-press: rgba(255, 255, 255, 0.16);
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
-}
 
-/* ---- Tlačítka ---- */
-.btn {
-  border: none;
-  cursor: pointer;
-  transition:
-    background 0.13s ease,
-    filter 0.13s ease,
-    box-shadow 0.13s ease,
-    transform 0.05s ease;
-}
-.btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.btn:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-.btn--primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.12);
-}
-.btn--primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-.btn--primary:active:not(:disabled) {
-  filter: brightness(0.92);
-  transform: translateY(0.5px);
-}
-
-/* Split „Uložit PDF" + šipka — jedno primární tlačítko (vnitřní díly bez vlastního radius). */
+/* Split „Uložit PDF" + šipka — primární pill. Hover/active na celém kontejneru. */
 .pdf-split {
   display: inline-flex;
   align-items: stretch;
   flex-shrink: 0;
-  border-radius: var(--r-ctrl);
+  border-radius: var(--radius);
   overflow: hidden;
   background: var(--accent);
   box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.12);
 }
 .pdf-split:hover {
-  background: var(--accent-hover);
+  filter: brightness(1.06);
 }
 .pdf-split:active {
   filter: brightness(0.92);
 }
 .pdf-split:focus-within {
   outline: none;
-  box-shadow: var(--focus-ring);
-}
-/* Btn má border-radius inline — přebít !important, jinak vznikají „kousky" mezi segmenty. */
-.pdf-split .btn.btn--primary {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  height: 28px;
-}
-.pdf-split .btn.btn--primary:hover:not(:disabled) {
-  background: transparent !important;
-}
-.pdf-split .btn.btn--primary:active:not(:disabled) {
-  transform: none;
-  filter: none;
-}
-.pdf-split .btn.btn--primary:focus-visible {
-  box-shadow: none !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent);
 }
 .pdf-split__caret {
   display: grid;
@@ -131,255 +120,22 @@ html[data-theme='dark'] {
   padding: 0;
   margin: 0;
   border: none;
-  border-radius: 0 !important;
-  border-left: 1px solid color-mix(in srgb, var(--on-accent) 24%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--accent-foreground) 24%, transparent);
   background: transparent;
-  color: var(--on-accent);
+  color: var(--accent-foreground);
   cursor: pointer;
   flex-shrink: 0;
 }
 .pdf-split__caret:hover {
-  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--accent-foreground) 10%, transparent);
 }
 .pdf-split__caret:active {
-  background: color-mix(in srgb, var(--on-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--accent-foreground) 16%, transparent);
 }
 .pdf-split__caret:focus-visible {
   outline: none;
 }
 
-.btn--danger {
-  background: #e0443e;
-  color: #fff;
-  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.12);
-}
-.btn--danger:hover:not(:disabled) {
-  background: #d2352f;
-}
-.btn--danger:active:not(:disabled) {
-  filter: brightness(0.92);
-  transform: translateY(0.5px);
-}
-
-.btn--bezel {
-  background: var(--ctrl-bg);
-  color: var(--text-1);
-  box-shadow: var(--shadow-btn);
-}
-.btn--bezel:hover:not(:disabled) {
-  background: var(--bezel-hover);
-}
-.btn--bezel:active:not(:disabled) {
-  background: var(--bezel-press);
-  transform: translateY(0.5px);
-}
-
-.btn--plain {
-  background: transparent;
-  color: var(--accent-text);
-}
-.btn--plain:hover:not(:disabled) {
-  background: var(--hover);
-}
-.btn--plain:active:not(:disabled) {
-  background: var(--press);
-}
-
-/* ---- Ikonová tlačítka (× v modalu, šipky, koš, přepínač) ---- */
-.icon-btn {
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  border-radius: 6px;
-  transition:
-    background 0.13s ease,
-    color 0.13s ease;
-}
-.icon-btn:hover {
-  background: var(--icon-hover);
-  color: var(--text-1);
-}
-.icon-btn:active {
-  background: var(--icon-press);
-}
-.icon-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-/* ---- Badge „Ve vývoji" (RX Cup — rozpracovaný formát) ---- */
-.dev-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  padding: 0 7px;
-  border-radius: var(--r-ctrl);
-  font-size: 10px;
-  font-weight: 620;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  flex-shrink: 0;
-  background: rgba(255, 159, 10, 0.14);
-  color: #9a6400;
-}
-html[data-theme='dark'] .dev-badge {
-  background: rgba(255, 159, 10, 0.2);
-  color: #ffb340;
-}
-
-/* ---- Klikací odznak stavu (DNF/DNS/DQ) ve Výsledcích ---- */
-.statbtn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 3px;
-  border-radius: 6px;
-  transition: filter 0.13s ease;
-}
-.statbtn:hover {
-  filter: brightness(0.93); /* světlý režim: jemné ztmavení badge */
-}
-html[data-theme='dark'] .statbtn:hover {
-  filter: brightness(1.22); /* tmavý režim: jemné zesvětlení */
-}
-.statbtn:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-/* ---- Položky kontextové nabídky ---- */
-.menu-item {
-  border: none;
-  background: transparent;
-  color: var(--text-1);
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease;
-}
-.menu-item:hover,
-.menu-item:focus-visible {
-  background: var(--accent);
-  color: #fff;
-  outline: none;
-}
-
-/* ---- Segmentové záložky fází ---- */
-.seg-tab {
-  appearance: none;
-  border: none;
-  background: transparent; /* neaktivní = holá, bez defaultního šedého podkladu tlačítka */
-  cursor: pointer;
-  transition:
-    background 0.13s ease,
-    color 0.13s ease,
-    box-shadow 0.13s ease;
-}
-.seg-tab:hover:not(.seg-tab--active) {
-  background: var(--hover);
-  color: var(--text-1);
-}
-.seg-tab--active {
-  background: var(--seg-sel);
-  box-shadow: var(--seg-sel-shadow);
-}
-.seg-tab:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-/* ---- Položky v levém panelu (kategorie) ---- */
-.side-item {
-  appearance: none;
-  border: none;
-  background: transparent; /* stejný důvod jako u záložek */
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-.side-item:hover:not(.side-item--active) {
-  background: var(--hover);
-}
-.side-item--active {
-  background: var(--accent);
-}
-.side-item:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-/* ---- Řádky tabulek (hover podbarví celý řádek) ---- */
-.trow {
-  transition: background 0.12s ease;
-}
-/* Řádek se zásahem ředitele (penalizace / ruční úprava). */
-.trow--penalized {
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-}
-.trow--penalized.trow--zebra {
-  background: color-mix(in srgb, var(--accent) 8%, var(--card));
-}
-
-.trow--zebra {
-  background: var(--card-alt);
-}
-.trow:hover {
-  background: var(--hover);
-}
-
-/* Akce u řádku (koš) — ukáže se při najetí na řádek. */
-.row-action {
-  opacity: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  border-radius: 6px;
-  transition:
-    opacity 0.12s ease,
-    background 0.12s ease,
-    color 0.12s ease;
-}
-.trow:hover .row-action {
-  opacity: 1;
-}
-.row-action:hover {
-  background: var(--icon-hover);
-  color: #d2352f;
-}
-
-/* Křížek pro zrušení ručního override bodů — malý, šedý, napravo za číslem;
-   objeví se decentně při najetí na řádek, na vlastní hover se zvýrazní. */
-.override-x {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  border-radius: 5px;
-  opacity: 0;
-  transition:
-    opacity 0.12s ease,
-    background 0.12s ease,
-    color 0.12s ease;
-}
-.trow:hover .override-x {
-  opacity: 0.65;
-}
-.override-x:hover {
-  opacity: 1;
-  background: var(--icon-hover);
-  color: var(--text-1);
-}
-.override-x:focus-visible {
-  outline: none;
-  opacity: 1;
-  box-shadow: var(--focus-ring);
-}
 
 /* ---- Karta závodu na úvodní obrazovce ---- */
 .race-card {
@@ -390,11 +146,13 @@ html[data-theme='dark'] .statbtn:hover {
     transform 0.06s ease;
 }
 .race-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.12), 0 8px 28px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 .race-card:active {
-  transform: translateY(0.5px);
+  transform: translateY(0);
+  box-shadow: var(--shadow-card);
 }
 /* Akce na kartě (upravit/smazat) — decentní, na hover karty plně viditelné. */
 .race-card-actions {
@@ -405,37 +163,128 @@ html[data-theme='dark'] .statbtn:hover {
   opacity: 1;
 }
 
-/* ---- Zaklikávací badge kategorie (výběr při zakládání závodu) ---- */
-.chip {
-  appearance: none;
-  border: 1px solid var(--hairline);
-  background: var(--card);
-  color: var(--text-1);
-  cursor: pointer;
-  border-radius: 999px;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease,
-    border-color 0.12s ease;
+/* ── Segmented — fázový přepínač (HeroUI Tabs override) ──────────────────── */
+.segmented {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 0;
 }
-.chip:hover {
-  background: var(--hover);
+.segmented .tabs__list-container {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.chip--on,
-.chip--on:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+.segmented .tabs__list {
+  background: var(--seg-track);
+  border-radius: 9px;
+  padding: 2px;
+  gap: 0;
+  width: max-content;
 }
-.chip:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+.segmented .tabs__tab {
+  height: 28px;
+  padding: 0 13px;
+  font-size: 12.5px;
+  font-weight: 450;
+  border-radius: 7px;
+  color: var(--muted);
+  width: auto;
+  flex-shrink: 0;
+}
+.segmented .tabs__tab[data-selected='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.segmented .tabs__indicator {
+  border-radius: 7px;
+  background: var(--segment);
+  box-shadow: var(--seg-sel-shadow);
+}
+@media (hover: hover) {
+  .segmented .tabs__tab:not([data-selected='true']):hover,
+  .segmented .tabs__tab:not([data-selected='true'])[data-hovered='true'] {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+.dark .segmented .tabs__tab:not([data-selected='true']):hover,
+.dark .segmented .tabs__tab:not([data-selected='true'])[data-hovered='true'] {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* ---- Dashboard stavu závodu ---- */
-.dash-row {
-  transition: background 0.1s ease;
+/* ── SubTabs — podzáložky uvnitř obrazovky (HeroUI Tabs override) ────────── */
+.subtabs {
+  display: inline-flex;
+  gap: 0;
 }
-.dash-row:hover {
-  background: var(--hover);
+.subtabs .tabs__list {
+  background: var(--seg-track);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 0;
+  width: max-content;
 }
+.subtabs .tabs__tab {
+  height: 26px;
+  padding: 0 16px;
+  font-size: 12.5px;
+  font-weight: 450;
+  border-radius: 6px;
+  color: var(--muted);
+  width: auto;
+  flex-shrink: 0;
+}
+.subtabs .tabs__tab[data-selected='true'] {
+  color: var(--foreground);
+  font-weight: 590;
+}
+.subtabs .tabs__indicator {
+  border-radius: 6px;
+  background: var(--segment);
+  box-shadow: var(--seg-sel-shadow);
+}
+@media (hover: hover) {
+  .subtabs .tabs__tab:not([data-selected='true']):hover,
+  .subtabs .tabs__tab:not([data-selected='true'])[data-hovered='true'] {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+.dark .subtabs .tabs__tab:not([data-selected='true']):hover,
+.dark .subtabs .tabs__tab:not([data-selected='true'])[data-hovered='true'] {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Toggle-seg — inline binární přepínač (HeroUI ToggleButtonGroup override) */
+.toggle-seg {
+  background: var(--seg-track);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 0;
+}
+.toggle-seg .toggle-button {
+  height: 28px;
+  padding: 0 16px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 450;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.toggle-seg .toggle-button[data-selected='true'] {
+  background: var(--segment);
+  box-shadow: var(--seg-sel-shadow);
+  color: var(--foreground);
+  font-weight: 590;
+}
+@media (hover: hover) {
+  .toggle-seg .toggle-button:not([data-selected='true']):hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+.dark .toggle-seg .toggle-button:not([data-selected='true']):hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+

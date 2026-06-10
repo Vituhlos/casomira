@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 import { Modal } from './Modal'
 import { Btn } from './ui'
 import { HOTKEY_GROUPS } from '../lib/hotkeys'
@@ -25,7 +25,7 @@ export function HotkeyHelp({ onClose }: { onClose: () => void }): React.JSX.Elem
               style={{
                 fontSize: 11,
                 fontWeight: 640,
-                color: 'var(--text-3)',
+                color: 'var(--muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 margin: '0 0 8px'
@@ -36,7 +36,7 @@ export function HotkeyHelp({ onClose }: { onClose: () => void }): React.JSX.Elem
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {g.items.map((it) => (
                 <div key={it.desc} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text-1)' }}>{it.desc}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--foreground)' }}>{it.desc}</span>
                   <span style={{ display: 'inline-flex', gap: 4, flexShrink: 0 }}>
                     {it.keys.map((k, i) => (
                       <Kbd key={i}>{k}</Kbd>
@@ -65,11 +65,11 @@ function Kbd({ children }: { children: ReactNode }): React.JSX.Element {
         fontSize: 12,
         fontWeight: 600,
         fontFamily: 'inherit',
-        color: 'var(--text-2)',
-        background: 'var(--card-alt)',
-        border: '0.5px solid var(--hairline)',
+        color: 'var(--muted)',
+        background: 'var(--surface-secondary)',
+        border: '0.5px solid var(--border)',
         borderRadius: 6,
-        boxShadow: '0 1px 0 var(--hairline)'
+        boxShadow: '0 1px 0 var(--border)'
       }}
     >
       {children}

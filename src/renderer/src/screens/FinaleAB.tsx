@@ -1,4 +1,4 @@
-// @ts-nocheck — legacy soubor, odpojen z routingu (issue 007). Zachován pro archiv.
+﻿// @ts-nocheck — legacy soubor, odpojen z routingu (issue 007). Zachován pro archiv.
 // Obrazovka Finále A nebo Finále B pro Šotolinu (CLAUDE.md §3c, §8).
 // Šotolina nemá semifinále — místo toho:
 //   Finále B = od 11. místa po Q3,
@@ -102,7 +102,7 @@ export function FinaleAB({
           <div
             style={{
               padding: '12px 16px',
-              borderRadius: 'var(--r-ctrl)',
+              borderRadius: 'var(--radius)',
               background: 'rgba(255,159,10,0.14)',
               color: '#9a6400',
               fontSize: 13,

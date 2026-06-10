@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import type { KoloTyp, QAgregatRadek } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
 import { Badge, Medal } from '../components/ui'
@@ -57,7 +57,7 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
               <tr>
                 <td
                   colSpan={8}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
+                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', height: 80 }}
                 >
                   Zatím žádné výsledky — zadej časy v záložce Výsledky.
                 </td>
@@ -70,7 +70,7 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
                     ...tdStyle,
                     fontVariantNumeric: 'tabular-nums',
                     fontWeight: 620,
-                    color: r.poradi != null && r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
+                    color: r.poradi != null && r.poradi <= 3 ? 'var(--foreground)' : 'var(--muted)'
                   }}
                 >
                   {r.poradi != null ? (
@@ -86,9 +86,9 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
                   <span className="tnum" style={{ fontWeight: 600 }}>{r.st_cislo}</span>
                 </td>
                 <td style={{ ...tdStyle, fontWeight: 590 }}>{r.prijmeni}</td>
-                <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.jmeno}</td>
-                <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.znacka}</td>
-                <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.model}</td>
+                <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.jmeno}</td>
+                <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.znacka}</td>
+                <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.model}</td>
                 <td style={{ ...tdStyle }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                     {r.stav === 'OK' ? (
@@ -171,7 +171,7 @@ function BodyCell({ body, bodyAuto, overridden, deltaZJizdy, onCommit }: BodyCel
         width: 48,
         textAlign: 'right',
         border: `1px solid ${focused ? 'var(--accent)' : 'transparent'}`,
-        background: focused ? 'var(--window)' : 'transparent',
+        background: focused ? 'var(--surface)' : 'transparent',
         padding: '3px 5px',
         borderRadius: 5,
         font: 'inherit',
@@ -179,10 +179,10 @@ function BodyCell({ body, bodyAuto, overridden, deltaZJizdy, onCommit }: BodyCel
         fontVariantNumeric: 'tabular-nums',
         fontWeight: 620,
         color: overridden
-          ? 'var(--accent-text)'
+          ? 'var(--accent)'
           : deltaZJizdy !== 0
-            ? 'color-mix(in srgb, var(--accent-text) 70%, var(--text-2))'
-            : body != null ? 'var(--text-1)' : 'var(--text-3)',
+            ? 'color-mix(in srgb, var(--accent) 70%, var(--muted))'
+            : body != null ? 'var(--foreground)' : 'var(--muted)',
         outline: 'none',
         boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none'
       }}
@@ -196,10 +196,10 @@ function BodyCell({ body, bodyAuto, overridden, deltaZJizdy, onCommit }: BodyCel
         {overridden && (
           <Tooltip text="Zrušit ruční úpravu (zpět na automat)">
             <button
-              className="override-x"
+              className="opacity-0 group-hover:opacity-[.65] hover:!opacity-100 hover:bg-black/[.06] dark:hover:bg-white/[.1] hover:text-[var(--foreground)] bg-transparent border-none cursor-pointer rounded-[5px] transition-[opacity,background,color] duration-[120ms] ease-linear focus-visible:outline-none focus-visible:opacity-100 focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_38%,transparent)]"
+              style={{ width: 16, height: 16, display: 'inline-grid', placeItems: 'center', fontSize: 13, lineHeight: 1, padding: 0, color: 'var(--muted)' }}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onCommit(null)}
-              style={{ width: 16, height: 16, display: 'inline-grid', placeItems: 'center', fontSize: 13, lineHeight: 1, padding: 0 }}
             >
               ×
             </button>

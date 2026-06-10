@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import type { ImportCommit, ImportPolicy, ImportPreview } from '@shared/types'
+import { ToggleButton, ToggleButtonGroup } from '@heroui/react'
 import { Modal } from './Modal'
 import { Btn } from './ui'
 
@@ -61,15 +62,15 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
         </>
       }
     >
-      <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
+      <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--muted)' }}>
         Vyber listy, které chceš naimportovat do příslušných kategorií. Zápis proběhne až
         po potvrzení.
       </p>
 
       <div
         style={{
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)',
           overflow: 'hidden'
         }}
       >
@@ -84,7 +85,7 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
                 alignItems: 'center',
                 gap: 10,
                 padding: '9px 12px',
-                borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
+                borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)',
                 cursor: matched ? 'pointer' : 'default',
                 opacity: matched ? 1 : 0.55
               }}
@@ -98,28 +99,28 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
               />
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 13, fontWeight: 560 }}>{l.sheet}</span>
-                <span style={{ color: 'var(--text-3)' }}> → </span>
+                <span style={{ color: 'var(--muted)' }}> → </span>
                 {matched ? (
                   <span style={{ fontSize: 13 }}>{l.mappedNazev}</span>
                 ) : (
-                  <span style={{ fontSize: 12.5, color: '#c93636' }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--danger)' }}>
                     kategorie „{l.mappedNazev}" nenalezena — přeskočí se
                   </span>
                 )}
                 {l.losKolize.length > 0 && (
-                  <div style={{ fontSize: 11.5, color: '#c93636', marginTop: 3 }}>
+                  <div style={{ fontSize: 11.5, color: 'var(--danger)', marginTop: 3 }}>
                     ⚠ Duplicitní los v listu: {l.losKolize.join(', ')} — oprav v Excelu (los musí být
                     unikátní)
                   </div>
                 )}
                 {l.bezLosu > 0 && (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
                     {l.bezLosu} jezdců bez losu — naimportují se, ale nebudou zařazeni do roštů
                     (neprojeli přejímkou)
                   </div>
                 )}
               </span>
-              <span className="tnum" style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+              <span className="tnum" style={{ fontSize: 12.5, color: 'var(--muted)' }}>
                 {l.pocet} jezdců
               </span>
               {l.konflikty > 0 && (
@@ -152,52 +153,26 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
             gap: 12
           }}
         >
-          <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
             U {kolize} startovních čísel, která už existují:
           </span>
-          <div
-            style={{
-              display: 'flex',
-              gap: 2,
-              background: 'var(--seg-track)',
-              borderRadius: 8,
-              padding: 2
-            }}
+          <ToggleButtonGroup
+            className="toggle-seg"
+            selectionMode="single"
+            disallowEmptySelection
+            selectedKeys={new Set([policy])}
+            onSelectionChange={(keys) => setPolicy([...keys][0] as ImportPolicy)}
           >
-            {(
-              [
-                ['skip', 'Přeskočit'],
-                ['overwrite', 'Přepsat']
-              ] as [ImportPolicy, string][]
-            ).map(([val, label]) => {
-              const active = policy === val
-              return (
-                <button
-                  key={val}
-                  onClick={() => setPolicy(val)}
-                  style={{
-                    height: 26,
-                    padding: '0 12px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    fontSize: 12.5,
-                    fontWeight: active ? 590 : 450,
-                    color: active ? 'var(--text-1)' : 'var(--text-2)',
-                    background: active ? 'var(--seg-sel)' : 'transparent',
-                    borderRadius: 7,
-                    boxShadow: active ? 'var(--seg-sel-shadow)' : 'none'
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+            <ToggleButton id="skip" style={{ fontSize: 12.5 }}>Přeskočit</ToggleButton>
+            <ToggleButton id="overwrite" style={{ fontSize: 12.5 }}>
+              <ToggleButtonGroup.Separator />
+              Přepsat
+            </ToggleButton>
+          </ToggleButtonGroup>
         </div>
       )}
 
-      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--muted)' }}>
         Uloží se {nove} nových
         {kolize > 0 &&
           (policy === 'overwrite'

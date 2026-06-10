@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
+import { Alert, Input, ToggleButton, ToggleButtonGroup } from '@heroui/react'
 import type { Kategorie, RaceType, SportityEventView, SportityNodeView, Zavod } from '@shared/types'
 import { Modal } from '../components/Modal'
 import { Btn, DevBadge } from '../components/ui'
@@ -131,7 +132,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
     setSportityFolderId('')
     try {
       const docs = await window.api.sportityListDocuments(sportityHeslo.trim(), eventId || null)
-      setSportityFolders(docs.filter((d) => d.type === 'folder'))
+      setSportityFolders(docs.filter((d) => d.type === 'Folder'))
     } finally {
       setSportityLoadingFolders(false)
     }
@@ -186,15 +187,15 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   const kategorieSekce = (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '2px 0 8px' }}>
-        <span style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)' }}>
+        <span style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--muted)' }}>
           Kategorie{' '}
-          <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({vybraneNazvy.length} vybráno)</span>
+          <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({vybraneNazvy.length} vybráno)</span>
         </span>
-        <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>klikni pro výběr</span>
+        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>klikni pro výběr</span>
       </div>
 
       {nacita ? (
-        <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-3)' }}>Načítám kategorie…</p>
+        <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--muted)' }}>Načítám kategorie…</p>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {dostupne.map((n) => {
@@ -205,7 +206,14 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
                 key={n}
                 type="button"
                 onClick={() => toggle(n)}
-                className={on ? 'chip chip--on' : 'chip'}
+                className={[
+                  'appearance-none cursor-pointer rounded-full',
+                  'transition-[background,color,border-color] duration-[120ms] ease-linear',
+                  'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_38%,transparent)]',
+                  on
+                    ? 'bg-[var(--accent)] border border-[var(--accent)] text-[var(--accent-foreground)]'
+                    : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--surface-secondary)]'
+                ].join(' ')}
                 style={{ height: 30, padding: '0 13px', fontSize: 13, fontWeight: on ? 560 : 450 }}
                 title={kat && kat.pocet > 0 ? `${kat.pocet} jezdců — odebráním smažeš kategorii` : undefined}
               >
@@ -220,7 +228,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <input
+        <Input
           value={vlastni}
           onChange={(e) => setVlastni(e.target.value)}
           onKeyDown={(e) => {
@@ -230,8 +238,8 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
             }
           }}
           placeholder="přidat vlastní kategorii…"
-          style={{ ...inputStyle, flex: 1 }}
-          disabled={nacita}
+          className="flex-1"
+          isDisabled={nacita}
         />
         <Btn variant="bezel" icon="plus" onClick={pridejVlastni} disabled={vlastni.trim() === '' || nacita}>
           Přidat
@@ -263,25 +271,33 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
       }
     >
       <Pole label="Název závodu">
-        <input
+        <Input
           value={nazev}
           onChange={(e) => setNazev(e.target.value)}
           placeholder="např. MČR Autocross — Přerov"
-          style={inputStyle}
           autoFocus
         />
       </Pole>
 
       <div style={{ display: 'flex', gap: 12 }}>
         <Pole label="Datum" style={{ flex: 1 }}>
-          <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} style={inputStyle} />
+          <input
+            type="date"
+            value={datum}
+            onChange={(e) => setDatum(e.target.value)}
+            style={{
+              width: '100%', height: 32, padding: '0 10px',
+              border: '0.5px solid var(--border)', borderRadius: 'var(--radius)',
+              background: 'var(--surface)', color: 'var(--foreground)',
+              font: 'inherit', fontSize: 13, outline: 'none', boxSizing: 'border-box'
+            }}
+          />
         </Pole>
         <Pole label="Místo (nepovinné)" style={{ flex: 1 }}>
-          <input
+          <Input
             value={misto}
             onChange={(e) => setMisto(e.target.value)}
             placeholder="např. Přerov"
-            style={inputStyle}
           />
         </Pole>
       </div>
@@ -289,44 +305,25 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
       {mode === 'new' ? (
         <>
           <Pole label="Typ závodu">
-            <span
-              style={{
-                display: 'inline-flex',
-                gap: 2,
-                background: 'var(--seg-track)',
-                borderRadius: 8,
-                padding: 2
+            <ToggleButtonGroup
+              className="toggle-seg"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={new Set([typ])}
+              onSelectionChange={(keys) => {
+                const t = [...keys][0] as RaceType
+                if (t) zmenTyp(t)
               }}
             >
-              {(['RAC', 'RX'] as RaceType[]).map((t) => {
-                const on = typ === t
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => zmenTyp(t)}
-                    className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
-                    style={{
-                      height: 28,
-                      padding: '0 16px',
-                      fontSize: 12.5,
-                      fontWeight: on ? 590 : 450,
-                      color: on ? 'var(--text-1)' : 'var(--text-2)',
-                      borderRadius: 6
-                    }}
-                  >
-                    {t === 'RAC' ? (
-                      'RAC Race'
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        RX Cup
-                        <DevBadge />
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </span>
+              <ToggleButton id="RAC">RAC Race</ToggleButton>
+              <ToggleButton id="RX">
+                <ToggleButtonGroup.Separator />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  RX Cup
+                  <DevBadge />
+                </span>
+              </ToggleButton>
+            </ToggleButtonGroup>
           </Pole>
           {kategorieSekce}
           {sportityDostupne && (
@@ -350,23 +347,14 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
             />
           )}
           {typ === 'RX' && (
-            <p
-              style={{
-                margin: '0 0 10px',
-                padding: '8px 10px',
-                fontSize: 11.5,
-                color: 'var(--text-2)',
-                lineHeight: 1.5,
-                background: 'rgba(255, 159, 10, 0.08)',
-                borderRadius: 'var(--r-ctrl)',
-                border: '0.5px solid rgba(255, 159, 10, 0.22)'
-              }}
-            >
-              <b>RX Cup je ve vývoji</b> — bodování do seriálu zatím není finální. Závod můžeš normálně
-              založit a zkoušet.
-            </p>
+            <Alert status="warning" className="mb-[10px]">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Title>RX Cup je ve vývoji — bodování do seriálu zatím není finální. Závod můžeš normálně založit a zkoušet.</Alert.Title>
+              </Alert.Content>
+            </Alert>
           )}
-          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>
             Nabídka je dle typu závodu — klikni na kategorie, které chceš.{' '}
             {typ === 'RAC' ? null : (
               <>
@@ -385,11 +373,11 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
                 alignItems: 'center',
                 height: 28,
                 padding: '0 12px',
-                borderRadius: 'var(--r-ctrl)',
+                borderRadius: 'var(--radius)',
                 fontSize: 12.5,
                 fontWeight: 560,
                 background: 'var(--seg-track)',
-                color: 'var(--text-2)'
+                color: 'var(--muted)'
               }}
             >
               {typ === 'RAC' ? 'RAC Race' : 'RX Cup'}
@@ -399,13 +387,13 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
                 </span>
               )}
             </span>
-            <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.45 }}>
+            <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.45 }}>
               Typ závodu nelze po založení změnit. Kategorie můžeš přidat nebo odebrat (odebrání smaže
               i data kategorie).
             </p>
           </Pole>
           {kategorieSekce}
-          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>
             {typ === 'RAC' ? (
               <>
                 U RAC můžeš přidat <b>Šotolinu</b> nebo vlastní název. Číslo u chipu = počet jezdců v
@@ -438,7 +426,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
         <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
           Odebereš kategorie: <b>{confirmOdebrani}</b>.
         </p>
-        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--muted)' }}>
           Smažou se včetně startovek, roštů, výsledků a PDF dat v databázi. Tuto akci nelze
           vrátit.
         </p>
@@ -459,7 +447,7 @@ function Pole({
 }): React.JSX.Element {
   return (
     <div style={{ margin: '0 0 12px', ...style }}>
-      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)', margin: '0 0 4px' }}>
+      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--muted)', margin: '0 0 4px' }}>
         {label}
       </div>
       {children}
@@ -489,22 +477,22 @@ function SportitySekce({
       style={{
         margin: '4px 0 12px',
         padding: '12px',
-        border: '0.5px solid var(--hairline)',
-        borderRadius: 'var(--r-ctrl)',
-        background: 'var(--card-alt)'
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        background: 'var(--surface-secondary)'
       }}
     >
-      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)', marginBottom: 10 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--muted)', marginBottom: 10 }}>
         Sportity
       </div>
 
       {/* Heslo kanálu + načíst */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input
+        <Input
           value={heslo}
           onChange={(e) => onHeslo(e.target.value)}
           placeholder="Heslo kanálu"
-          style={{ ...inputStyle, flex: 1 }}
+          className="flex-1"
         />
         <Btn
           variant="bezel"
@@ -528,11 +516,11 @@ function SportitySekce({
 
       {/* Folder picker */}
       {loadingFolders && (
-        <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-3)' }}>Načítám složky…</p>
+        <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--muted)' }}>Načítám složky…</p>
       )}
       {folders.length > 0 && (
         <>
-          <div style={{ fontSize: 11.5, color: 'var(--text-2)', marginBottom: 4 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>
             Složka s výsledky:
           </div>
           <PickerList
@@ -547,7 +535,7 @@ function SportitySekce({
       )}
 
       {folderId && (
-        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)' }}>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--muted)' }}>
           Sportity mapování se uloží automaticky po vytvoření závodu.
         </p>
       )}
@@ -574,8 +562,8 @@ function PickerList({
       style={{
         maxHeight: 140,
         overflowY: 'auto',
-        border: '0.5px solid var(--hairline)',
-        borderRadius: 'var(--r-ctrl)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius)',
         ...style
       }}
     >
@@ -593,9 +581,9 @@ function PickerList({
               padding: '7px 12px',
               fontSize: 13,
               font: 'inherit',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-              background: active ? 'var(--accent)' : i % 2 === 0 ? 'transparent' : 'var(--card-alt)',
-              color: active ? 'var(--accent-text)' : 'var(--text-1)',
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)',
+              background: active ? 'var(--accent)' : i % 2 === 0 ? 'transparent' : 'var(--surface-secondary)',
+              color: active ? 'var(--accent)' : 'var(--foreground)',
               fontWeight: active ? 560 : 440,
               cursor: 'pointer'
             }}
@@ -608,16 +596,4 @@ function PickerList({
   )
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  height: 32,
-  padding: '0 10px',
-  border: '0.5px solid var(--hairline)',
-  borderRadius: 'var(--r-ctrl)',
-  background: 'var(--card)',
-  color: 'var(--text-1)',
-  font: 'inherit',
-  fontSize: 13,
-  outline: 'none',
-  boxSizing: 'border-box'
-}
+

@@ -16,6 +16,8 @@ export function useTheme(): { theme: Theme; toggle: () => void } {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
+    // HeroUI v3 vyžaduje třídu `dark` na <html> pro svůj dark mode
+    document.documentElement.classList.toggle('dark', theme === 'dark')
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 

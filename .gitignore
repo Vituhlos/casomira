@@ -22,3 +22,5 @@ bordel/
 # fixtures/*.xls
 # fixtures/*.xlsx
 .claude/worktrees/
+# heroui-agents-md
+.heroui-docs/

@@ -28,6 +28,10 @@ import { getDb } from './db/connection'
 import { migrate } from './db/migrate'
 import { seed } from './db/seed'
 import { registerAppQuitGuard } from './stopkyClose'
+import { seedScreenshotData } from './screenshotSeed'
+import { registerScreenshotIpc } from './screenshotMode'
+
+const SCREENSHOT_MODE = process.env['SCREENSHOT_MODE'] === '1'
 
 // Zapíše krok startu do souboru startup.log v datové složce aplikace. Když start
 // spadne (typicky nativní modul better-sqlite3 na macOS), z logu je přesně vidět,
@@ -171,12 +175,18 @@ app.whenReady().then(() => {
     seed(db)
     logStartup('seed hotový → IPC + okno')
 
+    if (SCREENSHOT_MODE) {
+      logStartup('screenshot mode: seed + register IPC')
+      seedScreenshotData(db)
+      registerScreenshotIpc()
+    }
+
     if (process.platform === 'darwin') setupMacMenu()
     registerIpc()
     registerUpdaterIpc()
     registerAppQuitGuard()
     createWindow()
-    scheduleUpdateCheck()
+    if (!SCREENSHOT_MODE) scheduleUpdateCheck()
     logStartup('start dokončen, okno vytvořeno')
 
     app.on('activate', () => {

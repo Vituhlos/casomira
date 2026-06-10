@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+﻿import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { KoloTyp, Stav, VysledekJizda, VysledekKolo, VysledekRadek } from '@shared/types'
 import { ContentHead } from '../components/ContentHead'
@@ -163,7 +163,7 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
       )}
 
       {prazdne && (
-        <div style={{ padding: '0 22px 22px', color: 'var(--text-3)', fontSize: 13 }}>
+        <div style={{ padding: '0 22px 22px', color: 'var(--muted)', fontSize: 13 }}>
           Nejprve sestav rošty ({label}) — výsledky se zadávají jezdcům z roštu.
         </div>
       )}
@@ -186,9 +186,9 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
                   fontSize: 11,
                   fontWeight: 600,
                   letterSpacing: '0.02em',
-                  color: 'var(--text-2)',
-                  background: 'color-mix(in srgb, var(--text-2) 10%, transparent)',
-                  border: '0.5px solid color-mix(in srgb, var(--text-2) 22%, transparent)'
+                  color: 'var(--muted)',
+                  background: 'color-mix(in srgb, var(--muted) 10%, transparent)',
+                  border: '0.5px solid color-mix(in srgb, var(--muted) 22%, transparent)'
                 }}
               >
                 nekompletní
@@ -221,7 +221,7 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
               <tbody>
                 {jz.vysledky.length === 0 && (
                   <tr>
-                    <td colSpan={bezBodovani ? 7 : 8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)' }}>
+                    <td colSpan={bezBodovani ? 7 : 8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)' }}>
                       Prázdná jízda
                     </td>
                   </tr>
@@ -238,7 +238,7 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
                         ...tdStyle,
                         fontVariantNumeric: 'tabular-nums',
                         fontWeight: 620,
-                        color: r.poradi && r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
+                        color: r.poradi && r.poradi <= 3 ? 'var(--foreground)' : 'var(--muted)'
                       }}
                     >
                       {r.poradi != null ? (
@@ -256,9 +256,9 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
                       </span>
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 590 }}>{r.prijmeni}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.jmeno}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.znacka}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.model}</td>
+                    <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.jmeno}</td>
+                    <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.znacka}</td>
+                    <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.model}</td>
                     <td style={{ ...tdStyle }}>
                       <div
                         style={{
@@ -278,7 +278,7 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
                               padding: '2px 6px',
                               borderRadius: 99,
                               background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-                              color: 'var(--accent-text)',
+                              color: 'var(--accent)',
                               flexShrink: 0
                             }}
                           >
@@ -339,15 +339,15 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
                 top: menu.y,
                 zIndex: 1001,
                 minWidth: 140,
-                background: 'var(--window)',
-                border: '0.5px solid var(--hairline)',
-                borderRadius: 'var(--r-ctrl)',
+                background: 'var(--surface)',
+                border: '0.5px solid var(--border)',
+                borderRadius: 'var(--radius)',
                 boxShadow: 'var(--shadow-win)',
                 padding: 4
               }}
             >
               <MenuItem label="Penalizace ředitele…" onClick={otevriPenalizaci} accent />
-              <div style={{ height: 1, margin: '4px 8px', background: 'var(--hairline)' }} />
+              <div style={{ height: 1, margin: '4px 8px', background: 'var(--border)' }} />
               <MenuItem label="Čas" onClick={() => vyberZMenu('OK')} />
               <MenuItem label="DNF" onClick={() => vyberZMenu('DNF')} />
               <MenuItem label="DNS" onClick={() => vyberZMenu('DNS')} />
@@ -380,7 +380,7 @@ function PenalizaceBadge({ tooltip }: { tooltip: string }): React.JSX.Element {
           padding: '2px 6px',
           borderRadius: 99,
           background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-          color: 'var(--accent-text)',
+          color: 'var(--accent)',
           flexShrink: 0
         }}
       >
@@ -443,7 +443,7 @@ function TimeCell({
     setWarn(true) // neplatný vstup — text necháme, jen jemně upozorníme
   }
 
-  const border = focused ? 'var(--accent)' : warn ? '#c93636' : 'transparent'
+  const border = focused ? 'var(--accent)' : warn ? 'var(--danger)' : 'transparent'
   const inputTitle = warn ? 'Zadej čas (mm:ss.sss) nebo stav: dnf / dns / dq' : undefined
 
   const input = (
@@ -467,13 +467,13 @@ function TimeCell({
         width: hasPen && !focused ? 128 : 112,
         textAlign: 'right',
         border: `1px solid ${border}`,
-        background: focused ? 'var(--window)' : 'transparent',
+        background: focused ? 'var(--surface)' : 'transparent',
         padding: '4px 6px',
         borderRadius: 5,
         font: 'inherit',
         fontSize: 13,
         fontVariantNumeric: 'tabular-nums',
-        color: warn ? '#c93636' : hasPen && !focused ? 'var(--accent-text)' : 'var(--text-1)',
+        color: warn ? 'var(--danger)' : hasPen && !focused ? 'var(--accent)' : 'var(--foreground)',
         fontWeight: hasPen && !focused ? 620 : 500,
         outline: 'none',
         boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none'
@@ -542,14 +542,14 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
           width: 48,
           textAlign: 'right',
           border: `1px solid ${focused ? 'var(--accent)' : 'transparent'}`,
-          background: focused ? 'var(--window)' : 'transparent',
+          background: focused ? 'var(--background)' : 'transparent',
           padding: '3px 5px',
           borderRadius: 5,
           font: 'inherit',
           fontSize: 13.5,
           fontVariantNumeric: 'tabular-nums',
           fontWeight: 620,
-          color: overridden ? 'var(--accent-text)' : body != null ? 'var(--text-1)' : 'var(--text-3)',
+          color: overridden ? 'var(--accent)' : body != null ? 'var(--foreground)' : 'var(--muted)',
           outline: 'none',
           boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none'
         }}
@@ -560,9 +560,7 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
         {overridden && (
           <Tooltip text="Zrušit ruční úpravu (zpět na automat)">
             <button
-              className="override-x"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => onCommit(null)}
+              className="opacity-0 group-hover:opacity-[.65] hover:!opacity-100 hover:bg-black/[.06] dark:hover:bg-white/[.1] hover:text-[var(--foreground)] bg-transparent border-none cursor-pointer rounded-[5px] transition-[opacity,background,color] duration-[120ms] ease-linear focus-visible:outline-none focus-visible:opacity-100 focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_38%,transparent)]"
               style={{
                 width: 16,
                 height: 16,
@@ -570,8 +568,11 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
                 placeItems: 'center',
                 fontSize: 13,
                 lineHeight: 1,
-                padding: 0
+                padding: 0,
+                color: 'var(--muted)'
               }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onCommit(null)}
             >
               ×
             </button>
@@ -587,7 +588,7 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
 function Caret({ onOpen }: { onOpen: (e: React.MouseEvent) => void }): React.JSX.Element {
   return (
     <button
-      className="btn btn--bezel"
+      className="bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-btn)] hover:bg-black/[.06] dark:hover:bg-white/[.16] active:bg-black/[.11] dark:active:bg-white/[.22] border-none cursor-pointer transition-[background,filter,box-shadow] duration-[130ms] ease-linear focus-visible:outline-none focus-visible:ring-[3px]"
       onClick={onOpen}
       title="Změnit: Čas / DNF / DNS / DQ"
       style={{
@@ -596,7 +597,7 @@ function Caret({ onOpen }: { onOpen: (e: React.MouseEvent) => void }): React.JSX
         display: 'inline-grid',
         placeItems: 'center',
         borderRadius: 6,
-        color: 'var(--text-2)',
+        color: 'var(--muted)',
         font: 'inherit',
         fontSize: 10,
         flexShrink: 0
@@ -619,7 +620,10 @@ function StatusBadge({
   onOpen: (e: React.MouseEvent) => void
 }): React.JSX.Element {
   const badge = (
-    <button className="statbtn" onClick={onOpen}>
+    <button
+      className="appearance-none border-none bg-transparent cursor-pointer rounded-[6px] p-[1px_3px] transition-[filter] duration-[130ms] ease-linear hover:brightness-95 dark:hover:brightness-[1.22] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_38%,transparent)]"
+      onClick={onOpen}
+    >
       <Badge status={stav} />
     </button>
   )
@@ -638,18 +642,17 @@ function MenuItem({
 }): React.JSX.Element {
   return (
     <button
-      className="menu-item"
+      className="w-full text-left border-none cursor-pointer bg-transparent rounded-[6px] transition-[background,color] duration-[120ms] hover:bg-[var(--accent)] hover:text-white focus-visible:bg-[var(--accent)] focus-visible:text-white focus-visible:outline-none"
       onClick={onClick}
       style={{
         display: 'flex',
         width: '100%',
         alignItems: 'center',
         padding: '7px 10px',
-        borderRadius: 6,
         font: 'inherit',
         fontSize: 13,
         fontWeight: accent ? 600 : 400,
-        color: accent ? 'var(--accent-text)' : 'var(--text-1)',
+        color: accent ? 'var(--accent)' : 'var(--foreground)',
         textAlign: 'left'
       }}
     >

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+﻿import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 
@@ -39,10 +39,10 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
               pointerEvents: 'none',
               maxWidth: 310,
               whiteSpace: 'normal',
-              background: 'var(--window)',
-              color: 'var(--text-1)',
-              border: '0.5px solid var(--hairline)',
-              borderRadius: 'var(--r-ctrl)',
+              background: 'var(--surface)',
+              color: 'var(--foreground)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius)',
               boxShadow: 'var(--shadow-win)',
               padding: '5px 9px',
               fontSize: 12

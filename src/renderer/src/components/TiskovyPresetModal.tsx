@@ -1,4 +1,5 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
+import { toast } from '@heroui/react'
 import type { Kategorie } from '@shared/types'
 import { Modal } from './Modal'
 import { Btn } from './ui'
@@ -16,10 +17,9 @@ const PRESET_POLOZKY: { nazev: string; kopii: number }[] = [
 interface Props {
   kategorie: Kategorie[]
   onClose: () => void
-  onToast: (zprava: string) => void
 }
 
-export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): React.JSX.Element {
+export function TiskovyPresetModal({ kategorie, onClose }: Props): React.JSX.Element {
   const [vybrane, setVybrane] = useState<Set<number>>(new Set(kategorie.map((k) => k.id)))
   const [probiha, setProbiha] = useState(false)
 
@@ -46,10 +46,10 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
           res.preskoceno > 0
             ? `Vytištěno ${res.vytisteno} úloh · přeskočeno ${res.preskoceno} listů (chybějící data).`
             : `Vytištěno ${res.vytisteno} tiskových úloh.`
-        onToast(zprava)
+        toast.success(zprava)
         onClose()
       } else {
-        onToast(res.chyba ?? 'Tisk se nezdařil.')
+        toast.danger(res.chyba ?? 'Tisk se nezdařil.')
       }
     } finally {
       setProbiha(false)
@@ -77,7 +77,7 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
         </>
       }
     >
-      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
         Vytiskne standardní sadu listin na výchozí tiskárnu. Listy bez dat se přeskočí.
       </p>
 
@@ -92,7 +92,7 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
       >
         <span style={{ fontSize: 12.5, fontWeight: 560 }}>Kategorie ({vybrane.size})</span>
         <button
-          className="btn btn--plain"
+          className="bg-transparent text-[var(--accent)] hover:bg-black/[.045] dark:hover:bg-white/[.06] border-none cursor-pointer transition-[background] duration-[130ms] ease-linear focus-visible:outline-none"
           onClick={prepniVse}
           style={{ height: 22, padding: '0 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 530, borderRadius: 6 }}
         >
@@ -103,8 +103,8 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
         style={{
           maxHeight: 160,
           overflowY: 'auto',
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)',
           marginBottom: 18
         }}
       >
@@ -118,7 +118,7 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
               padding: '7px 12px',
               fontSize: 13,
               cursor: 'pointer',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)'
             }}
           >
             <input
@@ -128,7 +128,7 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
               style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
             />
             <span style={{ fontWeight: 540 }}>{k.nazev}</span>
-            <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 12 }}>
+            <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 12 }}>
               {k.pocet} jezdců
             </span>
           </label>
@@ -136,13 +136,13 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
       </div>
 
       {/* Přehled presetu */}
-      <div style={{ fontSize: 12.5, fontWeight: 560, marginBottom: 8, color: 'var(--text-1)' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 560, marginBottom: 8, color: 'var(--foreground)' }}>
         Bude vytištěno (na kategorii):
       </div>
       <div
         style={{
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)',
           overflow: 'hidden'
         }}
       >
@@ -155,16 +155,16 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
               justifyContent: 'space-between',
               padding: '6px 12px',
               fontSize: 12.5,
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-              background: i % 2 === 0 ? 'transparent' : 'var(--card-alt)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--separator)',
+              background: i % 2 === 0 ? 'transparent' : 'var(--surface-secondary)'
             }}
           >
-            <span style={{ color: 'var(--text-1)' }}>{p.nazev}</span>
+            <span style={{ color: 'var(--foreground)' }}>{p.nazev}</span>
             <span
               style={{
                 fontVariantNumeric: 'tabular-nums',
                 fontWeight: 600,
-                color: p.kopii > 1 ? 'var(--accent)' : 'var(--text-2)'
+                color: p.kopii > 1 ? 'var(--accent)' : 'var(--muted)'
               }}
             >
               {p.kopii}×
