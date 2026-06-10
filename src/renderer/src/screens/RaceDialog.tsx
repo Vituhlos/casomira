@@ -131,7 +131,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
     setSportityFolderId('')
     try {
       const docs = await window.api.sportityListDocuments(sportityHeslo.trim(), eventId || null)
-      setSportityFolders(docs.filter((d) => d.type === 'folder'))
+      setSportityFolders(docs.filter((d) => d.type === 'Folder'))
     } finally {
       setSportityLoadingFolders(false)
     }
