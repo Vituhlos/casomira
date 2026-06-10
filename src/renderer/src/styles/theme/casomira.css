@@ -1,0 +1,162 @@
+/* casomira.css — Časomíra theme pro HeroUI v3 (macOS-inspired, cross-platform).
+ *
+ * Jediný zdroj pravdy pro barvy a vzhled (plan-heroui-native.md, Fáze 2).
+ * Bloky jsou záměrně NEvrstvené (žádný @layer) — přepisují výchozí HeroUI
+ * tokeny z layer(theme) silou unlayered CSS, bez !important.
+ *
+ * Paleta = CLAUDE.md §2c (Apple HIG) převedená do oklch:
+ *   light: pozadí #F7F7F9, panely #FFF, sidebar #F8F8FA, accent #007AFF
+ *   dark (grafit): pozadí #313133, panely #2C2C2E, sidebar #242425, accent #0A84FF
+ */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* macOS ovládací prvky ~7 px (--radius-lg = 1× --radius) */
+  --radius: 0.4375rem;
+  --field-radius: var(--radius);
+
+  /* Base */
+  --background: oklch(97.67% 0.0026 286.35); /* #F7F7F9 */
+  --foreground: oklch(23.16% 0.0038 286.1); /* #1D1D1F */
+
+  /* Surface = panely / inset tabulky */
+  --surface: var(--white);
+  --surface-foreground: var(--foreground);
+  --surface-secondary: oklch(97.67% 0.0026 286.35); /* #F7F7F9 — zebra řádky */
+  --surface-secondary-foreground: var(--foreground);
+  --surface-tertiary: oklch(94.37% 0.0027 286.35); /* #ECECEE */
+  --surface-tertiary-foreground: var(--foreground);
+
+  --overlay: var(--white);
+  --overlay-foreground: var(--foreground);
+
+  --muted: oklch(64.83% 0.0073 286.19); /* #8E8E93 */
+
+  --default: oklch(94.37% 0.0027 286.35); /* bezel tlačítka */
+  --default-foreground: var(--foreground);
+
+  --accent: oklch(60.28% 0.2177 257.42); /* #007AFF */
+  --accent-foreground: var(--white);
+
+  /* Formulářová pole */
+  --field-background: var(--white);
+  --field-foreground: var(--foreground);
+  --field-placeholder: var(--muted);
+
+  /* Status */
+  --success: oklch(55.84% 0.1461 147.5); /* #248A3D */
+  --success-foreground: var(--white);
+  --warning: oklch(78.24% 0.1711 67.22); /* #FF9F0A */
+  --warning-foreground: var(--eclipse);
+  --danger: oklch(66.33% 0.2236 28.29); /* #FF453A */
+  --danger-foreground: var(--white);
+
+  /* Segment pill */
+  --segment: var(--white);
+  --segment-foreground: var(--foreground);
+
+  --border: oklch(92.33% 0.0067 286.27); /* #E5E5EA */
+  --separator: oklch(94.37% 0.0027 286.35);
+  --focus: var(--accent);
+  --link: var(--accent);
+
+  /* ---- App-specific (Časomíra) ---- */
+  --sidebar: oklch(97.97% 0.0026 286.35); /* #F8F8FA */
+
+  /* Stavové odznaky (hodnoty převzaté ze staré ui.tsx Badge) */
+  --stav-dnf: oklch(54.83% 0.1171 72.51); /* #9A6400 */
+  --stav-dnf-soft: rgb(255 159 10 / 0.16);
+  --stav-dns: oklch(64.83% 0.0073 286.19);
+  --stav-dns-soft: rgb(120 120 128 / 0.14);
+  --stav-dq: oklch(55.73% 0.1841 25.49); /* #C93636 */
+  --stav-dq-soft: rgb(255 59 48 / 0.13);
+
+  /* Medailové puntíky (stejné v obou režimech) */
+  --medal-gold: oklch(74.6% 0.1412 82.7); /* #D8A32B */
+  --medal-silver: oklch(70.36% 0.0105 252.84); /* #9BA0A6 */
+  --medal-bronze: oklch(64.08% 0.1094 59.25); /* #BD7B43 */
+}
+
+.dark,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Base — grafit, NE čistá černá */
+  --background: oklch(31.39% 0.0035 286.2); /* #313133 */
+  --foreground: oklch(97.07% 0.0027 286.35); /* #F5F5F7 */
+
+  --surface: oklch(29.39% 0.0036 286.18); /* #2C2C2E */
+  --surface-foreground: var(--foreground);
+  --surface-secondary: oklch(31.39% 0.0035 286.2); /* #313133 — zebra */
+  --surface-secondary-foreground: var(--foreground);
+  --surface-tertiary: oklch(34.92% 0.0034 286.22); /* #3A3A3C */
+  --surface-tertiary-foreground: var(--foreground);
+
+  --overlay: oklch(29.39% 0.0036 286.18);
+  --overlay-foreground: var(--foreground);
+
+  --muted: oklch(68.12% 0.0073 286.21); /* #98989D */
+
+  --default: oklch(34.92% 0.0034 286.22); /* #3A3A3C */
+  --default-foreground: var(--foreground);
+
+  --accent: oklch(62.43% 0.2056 255.49); /* #0A84FF */
+  --accent-foreground: var(--white);
+
+  --field-background: oklch(34.92% 0.0034 286.22);
+  --field-foreground: var(--foreground);
+  --field-placeholder: var(--muted);
+
+  --success: oklch(77.01% 0.2243 144.97); /* #32D74B */
+  --success-foreground: var(--eclipse);
+  --warning: oklch(78.24% 0.1711 67.22);
+  --warning-foreground: var(--eclipse);
+  --danger: oklch(66.33% 0.2236 28.29);
+  --danger-foreground: var(--white);
+
+  --segment: oklch(50.07% 0.0047 286.23); /* #636366 */
+  --segment-foreground: var(--foreground);
+
+  --border: oklch(34.92% 0.0034 286.22); /* #3A3A3C */
+  --separator: oklch(33% 0.003 286.2);
+  --focus: var(--accent);
+  --link: var(--accent);
+
+  /* ---- App-specific (Časomíra) ---- */
+  --sidebar: oklch(26.07% 0.0018 286.27); /* #242425 */
+
+  --stav-dnf: oklch(82.03% 0.1524 73.25); /* #FFB340 */
+  --stav-dnf-soft: rgb(255 159 10 / 0.22);
+  --stav-dns: oklch(68.12% 0.0073 286.21);
+  --stav-dns-soft: rgb(120 120 128 / 0.22);
+  --stav-dq: oklch(70.73% 0.1847 25.94); /* #FF6961 */
+  --stav-dq-soft: rgb(255 69 58 / 0.2);
+}
+
+/* Typografie: SF Pro na macOS, Segoe UI Variable na Windows. Layout konstanty
+   shellu jako Tailwind spacing tokeny (w-sidebar, h-toolbar). */
+@theme {
+  --font-sans:
+    -apple-system, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --spacing-sidebar: 252px;
+  --spacing-toolbar: 52px;
+}
+
+/* App-specific barvy zpřístupněné jako Tailwind utility
+   (bg-sidebar, text-stav-dnf, bg-stav-dnf-soft, bg-medal-gold, …). */
+@theme inline {
+  --color-sidebar: var(--sidebar);
+
+  --color-stav-dnf: var(--stav-dnf);
+  --color-stav-dnf-soft: var(--stav-dnf-soft);
+  --color-stav-dns: var(--stav-dns);
+  --color-stav-dns-soft: var(--stav-dns-soft);
+  --color-stav-dq: var(--stav-dq);
+  --color-stav-dq-soft: var(--stav-dq-soft);
+
+  --color-medal-gold: var(--medal-gold);
+  --color-medal-silver: var(--medal-silver);
+  --color-medal-bronze: var(--medal-bronze);
+}

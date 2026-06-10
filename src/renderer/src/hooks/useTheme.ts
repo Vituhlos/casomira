@@ -16,6 +16,8 @@ export function useTheme(): { theme: Theme; toggle: () => void } {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
+    // HeroUI/Tailwind `dark:` varianty jedou přes třídu .dark — nastavujeme obojí.
+    document.documentElement.classList.toggle('dark', theme === 'dark')
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 

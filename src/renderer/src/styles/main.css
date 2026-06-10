@@ -1,0 +1,7 @@
+/* Vstupní CSS nové HeroUI vrstvy (plan-heroui-native.md).
+ * Stará mac.css/app.css žijí vedle, dokud žije poslední starý screen
+ * (strangler pattern) — importují se v main.tsx PO tomto souboru,
+ * takže si staré obrazovky drží vzhled. */
+@import 'tailwindcss';
+@import '@heroui/styles';
+@import './theme/casomira.css';
