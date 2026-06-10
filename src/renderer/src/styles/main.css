@@ -5,3 +5,4 @@
 @import 'tailwindcss';
 @import '@heroui/styles';
 @import './theme/casomira.css';
+@import './theme/casomira-components.css';

@@ -65,6 +65,10 @@
   /* ---- App-specific (Časomíra) ---- */
   --sidebar: oklch(97.97% 0.0026 286.35); /* #F8F8FA */
 
+  /* Hairline obrys ovládacích prvků (macOS bezel tlačítka, pole) */
+  --control-stroke: rgb(0 0 0 / 0.13);
+  --control-shadow: 0 1px 1.5px rgb(0 0 0 / 0.08);
+
   /* Stavové odznaky (hodnoty převzaté ze staré ui.tsx Badge) */
   --stav-dnf: oklch(54.83% 0.1171 72.51); /* #9A6400 */
   --stav-dnf-soft: rgb(255 159 10 / 0.16);
@@ -126,6 +130,9 @@
 
   /* ---- App-specific (Časomíra) ---- */
   --sidebar: oklch(26.07% 0.0018 286.27); /* #242425 */
+
+  --control-stroke: rgb(255 255 255 / 0.12);
+  --control-shadow: 0 1px 1.5px rgb(0 0 0 / 0.3);
 
   --stav-dnf: oklch(82.03% 0.1524 73.25); /* #FFB340 */
   --stav-dnf-soft: rgb(255 159 10 / 0.22);

@@ -1,0 +1,50 @@
+/* casomira-components.css — dotažení HeroUI komponent do macOS vzhledu.
+ *
+ * Oficiální cesta dle HeroUI docs („Customize Components"): přepis BEM tříd.
+ * Soubor je unlayered → vyhrává nad layer(components) bez !important.
+ * Mění se JEN vzhled (tvar, rozměry, bezel) — chování a stavy nechává HeroUI.
+ */
+
+/* ---- Tlačítka: macOS push button — kompaktní, rohy 7 px, žádná pilulka ---- */
+.button {
+  height: 28px;
+  padding-inline: 12px;
+  border-radius: var(--radius); /* 7px */
+  font-size: 13px;
+}
+
+.button--sm {
+  height: 24px;
+  padding-inline: 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+
+.button--lg {
+  height: 34px;
+  padding-inline: 16px;
+  font-size: 14px;
+}
+
+/* Primární (Uložit PDF) nechává accent výplň — jen jemný stín navíc */
+.button--primary {
+  box-shadow: var(--control-shadow);
+}
+
+/* Sekundární/terciární = macOS bezel: světlý podklad, hairline obrys,
+   jemný stín, text ve --foreground (NE šedá pilulka s accent textem) */
+.button--secondary,
+.button--tertiary {
+  --button-bg: var(--field-background);
+  --button-bg-hover: color-mix(in oklab, var(--field-background) 93%, var(--foreground) 7%);
+  --button-bg-pressed: color-mix(in oklab, var(--field-background) 87%, var(--foreground) 13%);
+  --button-fg: var(--foreground);
+  box-shadow:
+    inset 0 0 0 1px var(--control-stroke),
+    var(--control-shadow);
+}
+
+/* Outline: ponechává průhledný podklad, jen hairline místo plné borderu */
+.button--outline {
+  border-color: var(--control-stroke);
+}
