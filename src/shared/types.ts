@@ -498,12 +498,48 @@ export interface SportityPublishLogEntry {
   createdAt: string
 }
 
+export interface BuildInfo {
+  name: string
+  productName: string
+  version: string
+  commitSha: string
+  shortCommitSha: string
+  buildDate: string
+  releaseChannel: string
+  gitRef: string
+  packagedBy: string
+}
+
+export interface AppDiagnostics {
+  build: BuildInfo
+  runtime: {
+    platform: NodeJS.Platform
+    arch: string
+    electron: string
+    node: string
+    chrome: string
+    v8: string
+    appPackaged: boolean
+  }
+  paths: {
+    userData: string
+    database: string
+    startupLog: string
+  }
+  database: {
+    schemaVersion: number
+    userVersion: number | null
+  }
+}
+
 /** Tvar API, které preload most vystaví do okna jako `window.api`. */
 export interface CasomiraApi {
   /** Platforma hostitele ('darwin' | 'win32' | 'linux') — pro platform-specifické styly. */
   readonly platform: NodeJS.Platform
   /** True pokud okno používá nativní vibrancy/Mica material (macOS vždy, Win11+). */
   readonly nativeVibrancy: boolean
+  /** Build metadata a diagnostika pro podporu. */
+  getDiagnostics(): Promise<AppDiagnostics>
   getAktivniZavod(): Promise<Zavod | null>
   // Správa závodů
   /** Seznam všech závodů (s počty kategorií a jezdců) pro úvodní obrazovku. */

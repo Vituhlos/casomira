@@ -131,8 +131,7 @@ export function FinaleToggle({
             <Button
               key={v}
               size="sm"
-              variant={on ? 'solid' : 'light'}
-              color={on ? 'default' : 'default'}
+              variant={on ? 'secondary' : 'ghost'}
               onPress={() => onChange(v)}
               style={{
                 height: 24,

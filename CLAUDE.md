@@ -313,15 +313,29 @@ GitHub Release, jehož **popis se bere přímo z `CHANGELOG.md`**.
    **Přidáno / Změněno / Opraveno** (formát *Keep a Changelog*, česky, čitelně pro
    uživatele — ne výpis commitů). Doplň i odkaz `[X.Y.Z]: …compare…` dole.
 2. **`package.json`** — zvedni `version` na `X.Y.Z` (zdroj „build N" v O aplikaci).
-3. **Commit** obojí (+ vlastní změny) jednou dávkou.
-4. **Tag** `vX.Y.Z` a `git push origin master --tags` (nebo push tagu).
-5. CI (`.github/workflows/release.yml`) postaví Win `.exe` + macOS `.dmg`, a
+3. **Build metadata** — před buildem/typecheckem se automaticky generuje
+   `src/shared/buildInfo.generated.ts`; ručně ho needituj.
+4. **Ověření release** — spusť `npm run check:release -- vX.Y.Z` (kontrola
+   shody tagu, `package.json` a `CHANGELOG.md`), potom `npm run typecheck` a
+   `npm test`.
+5. **Commit** obojí (+ vlastní změny) jednou dávkou.
+6. **Tag** `vX.Y.Z` a `git push origin master --tags` (nebo push tagu).
+7. CI (`.github/workflows/release.yml`) postaví Win `.exe` + macOS `.dmg`, a
    `scripts/release-notes.mjs` vytáhne sekci `X.Y.Z` z `CHANGELOG.md` jako popis
    Release (+ instalační/Gatekeeper poznámka). Žádné ruční psaní popisu.
 
 Číslo bump: **PATCH** = opravy/drobnosti, **MINOR** = nová funkce, **MAJOR** až po
 `1.0.0`. Předvydání = tag se suffixem (`vX.Y.Z-beta`) → Release se označí jako
 *pre-release* automaticky.
+
+**Profesionální release standard (desktop):**
+- Docker, `/api/version` a `/api/health` se pro offline Electron desktop nepoužívají.
+- Ekvivalent `/api/version` je IPC diagnostika `app:diagnostics` a panel
+  **Nastavení → O aplikaci**.
+- Produktová změna v PR musí upravit `CHANGELOG.md`, nebo mít label
+  `no-changelog-needed` (guardrail `.github/workflows/changelog.yml`).
+- Při bug reportu/supportu používej tlačítko **Kopírovat diagnostiku** z panelu
+  O aplikaci; obsahuje verzi, commit, build date, runtime, DB schema a cesty k datům.
 
 ## Struktura repozitáře (kde co leží)
 

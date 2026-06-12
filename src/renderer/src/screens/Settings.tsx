@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Kategorie, PdfRootStav, Zavod } from '@shared/types'
+import type { AppDiagnostics, Kategorie, PdfRootStav, Zavod } from '@shared/types'
 import { Button } from '@heroui/react'
 import { Modal } from '../components/Modal'
 import { ArrowDownToSquare, FileLetterP, Keyboard, Pencil, TrashBin } from '@gravity-ui/icons'
@@ -48,10 +48,12 @@ export function Settings({
   const [probiha, setProbiha] = useState(false)
   const [ukazPreset, setUkazPreset] = useState(false)
   const [ukazSportity, setUkazSportity] = useState(false)
+  const [diagnostics, setDiagnostics] = useState<AppDiagnostics | null>(null)
 
   useEffect(() => {
     safeCall(window.api.getLogo().then(setLogo), onToast)
     safeCall(window.api.getPdfRootStav().then(setRoot), onToast)
+    safeCall(window.api.getDiagnostics().then(setDiagnostics), onToast)
   }, [])
 
   const zmenitSlozku = async (): Promise<void> => {
@@ -99,6 +101,14 @@ export function Settings({
     } finally {
       setProbiha(false)
     }
+  }
+
+  const kopirovatDiagnostiku = async (): Promise<void> => {
+    const data = diagnostics ?? await window.api.getDiagnostics()
+    setDiagnostics(data)
+    const text = formatDiagnostics(data)
+    await writeClipboard(text)
+    onToast('Diagnostika zkopírována do schránky.')
   }
 
   return (
@@ -366,10 +376,10 @@ export function Settings({
       <SekceNadpis>O aplikaci</SekceNadpis>
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
+          display: 'grid',
+          gridTemplateColumns: '36px minmax(0, 1fr)',
           gap: 12,
-          padding: '10px 12px',
+          padding: '12px',
           border: '0.5px solid var(--color-border)',
           borderRadius: 6,
           background: CARD_ALT
@@ -392,7 +402,7 @@ export function Settings({
         >
           ČM
         </span>
-        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.4 }}>
+        <div style={{ minWidth: 0, lineHeight: 1.4 }}>
           <div style={{ fontSize: 13.5, fontWeight: 600 }}>
             {APP_NAME}{' '}
             <span className="tnum" style={{ color: T3, fontWeight: 500 }}>
@@ -403,13 +413,50 @@ export function Settings({
             Správce závodu autokros / rallycross · © {new Date().getFullYear()}
           </div>
         </div>
-        <span
-          className="tnum"
-          style={{ fontSize: 11.5, color: T4 }}
-          title="Verze z package.json"
+        <div
+          style={{
+            gridColumn: '1 / -1',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '6px 14px',
+            paddingTop: 8,
+            borderTop: '0.5px solid var(--color-border)'
+          }}
         >
-          build {APP_VERSION}
-        </span>
+          <InfoRadek label="Kanál" value={diagnostics?.build.releaseChannel ?? '...'} />
+          <InfoRadek label="Build" value={APP_VERSION} mono />
+          <InfoRadek label="Commit" value={diagnostics?.build.shortCommitSha ?? '...'} mono />
+          <InfoRadek label="Git ref" value={diagnostics?.build.gitRef ?? '...'} mono />
+          <InfoRadek label="Build date" value={formatDate(diagnostics?.build.buildDate)} mono />
+          <InfoRadek
+            label="Runtime"
+            value={
+              diagnostics
+                ? `${diagnostics.runtime.platform}/${diagnostics.runtime.arch} · Electron ${diagnostics.runtime.electron}`
+                : '...'
+            }
+          />
+          <InfoRadek
+            label="DB schema"
+            value={
+              diagnostics
+                ? `${diagnostics.database.userVersion ?? '?'} / ${diagnostics.database.schemaVersion}`
+                : '...'
+            }
+            mono
+          />
+          <InfoRadek
+            label="Data"
+            value={diagnostics?.paths.userData ?? '...'}
+            mono
+            title={diagnostics?.paths.userData}
+          />
+        </div>
+        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+          <Btn variant="bezel" onClick={() => void kopirovatDiagnostiku()}>
+            Kopírovat diagnostiku
+          </Btn>
+        </div>
       </div>
     </Modal>
 
@@ -432,6 +479,94 @@ export function Settings({
     )}
   </>
   )
+}
+
+function InfoRadek({
+  label,
+  value,
+  mono,
+  title
+}: {
+  label: string
+  value: string
+  mono?: boolean
+  title?: string
+}): React.JSX.Element {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 11, color: T4 }}>{label}</div>
+      <div
+        className={mono ? 'tnum' : undefined}
+        title={title ?? value}
+        style={{
+          fontSize: 12,
+          color: 'var(--color-foreground)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontFamily: mono ? 'ui-monospace, SFMono-Regular, Consolas, monospace' : undefined
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function formatDate(value: string | undefined): string {
+  if (!value || value === 'unknown') return 'local'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('cs-CZ')
+}
+
+function formatDiagnostics(d: AppDiagnostics): string {
+  const lines = [
+    `${d.build.productName} ${APP_VERSION_LABEL}`,
+    '',
+    `Version: ${d.build.version}`,
+    `Release channel: ${d.build.releaseChannel}`,
+    `Commit: ${d.build.commitSha}`,
+    `Git ref: ${d.build.gitRef}`,
+    `Build date: ${d.build.buildDate}`,
+    `Packaged by: ${d.build.packagedBy}`,
+    '',
+    `Platform: ${d.runtime.platform}/${d.runtime.arch}`,
+    `Electron: ${d.runtime.electron}`,
+    `Node: ${d.runtime.node}`,
+    `Chrome: ${d.runtime.chrome}`,
+    `V8: ${d.runtime.v8}`,
+    `Packaged app: ${d.runtime.appPackaged ? 'yes' : 'no'}`,
+    '',
+    `DB schema: ${d.database.userVersion ?? '?'} / ${d.database.schemaVersion}`,
+    `User data: ${d.paths.userData}`,
+    `Database: ${d.paths.database}`,
+    `Startup log: ${d.paths.startupLog}`,
+    '',
+    `Client time: ${new Date().toISOString()}`,
+    `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+    `User agent: ${navigator.userAgent}`
+  ]
+  return lines.join('\n')
+}
+
+async function writeClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  document.body.appendChild(textarea)
+  textarea.select()
+  try {
+    document.execCommand('copy')
+  } finally {
+    textarea.remove()
+  }
 }
 
 function SekceNadpis({ children }: { children: React.ReactNode }): React.JSX.Element {

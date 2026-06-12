@@ -35,7 +35,7 @@ export function Btn({
       variant={heroVariant}
       size={size === 'lg' ? 'md' : size ?? 'sm'}
       isDisabled={disabled}
-      title={title}
+      aria-label={title}
       onPress={onClick}
       style={style}
     >

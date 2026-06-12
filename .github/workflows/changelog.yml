@@ -1,0 +1,37 @@
+name: Changelog guardrail
+
+on:
+  pull_request:
+    branches:
+      - master
+      - heroui-native
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  require-changelog:
+    name: Produktová změna má changelog
+    if: ${{ !contains(toJson(github.event.pull_request.labels), 'no-changelog-needed') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Zkontroluj změny
+        shell: bash
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          echo "$changed"
+
+          if echo "$changed" | grep -Eq '^(src/|package(-lock)?\.json|electron-builder\.yml|\.github/workflows/|scripts/)'; then
+            if ! echo "$changed" | grep -Eq '^(CHANGELOG\.md|docs/user/release-notes\.md)$'; then
+              echo "::error::Produktová změna musí upravit CHANGELOG.md nebo mít label no-changelog-needed."
+              exit 1
+            fi
+          fi

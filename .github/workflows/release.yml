@@ -33,6 +33,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Zjisti tag
         id: tag
         run: |
@@ -41,6 +46,9 @@ jobs:
           else
             echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Ověř verzi a changelog
+        run: node scripts/check-release.mjs "${{ steps.tag.outputs.value }}"
 
       - name: Sestav poznámky k Release
         run: node scripts/release-notes.mjs "${{ steps.tag.outputs.value }}" > RELEASE_NOTES.md
@@ -88,6 +96,12 @@ jobs:
         run: npm ci
 
       # node:sqlite je vestavěný v Node.js — žádný nativní modul k rebuildování.
+
+      - name: TypeScript kontrola
+        run: npm run typecheck
+
+      - name: Testy
+        run: npm test
 
       - name: Build installer
         run: npm run ${{ matrix.dist_cmd }}

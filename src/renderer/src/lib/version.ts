@@ -1,11 +1,12 @@
-// Verze aplikace pro UI. Hodnotu plní Vite z `package.json` přes `define`
-// (viz electron.vite.config.ts) — jeden zdroj pravdy, žádné natvrdo opsané
-// číslo. Po změně `version` v package.json se přepíše všude sama.
+import { BUILD_INFO } from '@shared/buildInfo.generated'
 
-export const APP_VERSION: string = __APP_VERSION__
+// Verze aplikace pro UI. Primárně ji nese generovaný build info soubor,
+// který release build doplní o commit, datum a kanál vydání.
+export const APP_VERSION: string = BUILD_INFO.version || __APP_VERSION__
+export const APP_BUILD_INFO = BUILD_INFO
 
 /** „v0.9.0" — pro decentní zobrazení v UI. */
 export const APP_VERSION_LABEL = `v${APP_VERSION}`
 
 /** Veřejný název aplikace (zobrazovaný v patičkách, „O aplikaci" apod.). */
-export const APP_NAME = 'Časomíra'
+export const APP_NAME = BUILD_INFO.productName

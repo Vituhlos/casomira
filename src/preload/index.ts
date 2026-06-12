@@ -30,6 +30,7 @@ import type {
 const api: CasomiraApi = {
   platform: process.platform,
   nativeVibrancy: process.platform === 'darwin' || _isWin11,
+  getDiagnostics: () => ipcRenderer.invoke('app:diagnostics'),
   getAktivniZavod: () => ipcRenderer.invoke('zavod:aktivni'),
   listZavody: () => ipcRenderer.invoke('zavod:list'),
   openZavod: (id: number) => ipcRenderer.invoke('zavod:open', id),

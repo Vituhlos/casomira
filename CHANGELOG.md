@@ -6,6 +6,16 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+### Přidáno
+- **Profesionální release diagnostika** — build nově nese metadata o verzi,
+  commitu, datu buildu, release kanálu a git refu. V Nastavení → O aplikaci je
+  rozšířený panel s tlačítkem „Kopírovat diagnostiku" pro podporu.
+- **Release guardraily v CI** — workflow před vydáním ověřuje shodu tagu,
+  `package.json` a `CHANGELOG.md`, spouští typecheck a testy; PR s produktovou
+  změnou musí upravit changelog nebo mít label `no-changelog-needed`.
+- **Release checklist** — nový GitHub issue template pro vydání verze a
+  technický návod `docs/dev/RELEASE.md`.
+
 ## [0.9.11-beta] – 2026-06-09
 
 ### Přidáno

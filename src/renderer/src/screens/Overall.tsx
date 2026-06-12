@@ -61,8 +61,8 @@ export function Overall({
                 <Table.Column>St. č.</Table.Column>
                 <Table.Column>Jezdec</Table.Column>
                 {sloupce.map((s) => (
-                  <Table.Column key={s.hlavicka} className="text-right" title={s.popis}>
-                    {s.hlavicka}
+                  <Table.Column key={s.hlavicka} className="text-right">
+                    <span title={s.popis}>{s.hlavicka}</span>
                   </Table.Column>
                 ))}
               </Table.Header>

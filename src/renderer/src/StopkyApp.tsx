@@ -814,14 +814,12 @@ function NoveMereni({
                       size="sm"
                       onPress={() => onZalozit(jz.id, `${katNazev} · ${KOLA_LABEL[typ]} · ${jz.cislo}. jízda`)}
                       style={{ opacity: jeHotovo && !jeNaRade ? 0.55 : 1, height: 34 }}
-                      startContent={
-                        jeHotovo ? (
-                          <span style={{ color: T3, fontSize: 12, lineHeight: 1 }}>✓</span>
-                        ) : jeNaRade ? (
-                          <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--color-primary)', flexShrink: 0, display: 'inline-block' }} />
-                        ) : undefined
-                      }
                     >
+                      {jeHotovo ? (
+                        <span style={{ color: T3, fontSize: 12, lineHeight: 1 }}>✓</span>
+                      ) : jeNaRade ? (
+                        <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--color-primary)', flexShrink: 0, display: 'inline-block' }} />
+                      ) : null}
                       {jz.cislo}. jízda
                       <span style={{ fontSize: 12, color: T3, fontVariantNumeric: 'tabular-nums' }}>
                         ({jz.filled})
@@ -1141,7 +1139,7 @@ function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => voi
       <Button
         variant="ghost"
         onPress={() => { setV(fmtTime(cas)); setEdit(true) }}
-        title="Upravit čas"
+        aria-label="Upravit čas"
         style={{ height: 32, minWidth: 'auto', padding: '0 6px', borderRadius: 5, fontSize: 17, fontWeight: 560, fontVariantNumeric: 'tabular-nums' }}
       >
         {fmtTime(cas)}

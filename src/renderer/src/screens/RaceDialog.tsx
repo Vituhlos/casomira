@@ -199,13 +199,16 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
                 <Tag
                   key={n}
                   id={n}
-                  title={
-                    kat && kat.pocet > 0
-                      ? `${kat.pocet} jezdců — odebráním smažeš kategorii`
-                      : undefined
-                  }
                 >
-                  {n}
+                  <span
+                    title={
+                      kat && kat.pocet > 0
+                        ? `${kat.pocet} jezdců — odebráním smažeš kategorii`
+                        : undefined
+                    }
+                  >
+                    {n}
+                  </span>
                   {kat && kat.pocet > 0 && (
                     <span className="ml-1.5 text-[11px] opacity-60">{kat.pocet}</span>
                   )}
@@ -228,7 +231,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
               }
             }}
             placeholder="přidat vlastní kategorii…"
-            isDisabled={nacita}
+            disabled={nacita}
           />
         </TextField>
         <Button
@@ -295,7 +298,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
                           <Button
                             key={t}
                             size="sm"
-                            variant={typ === t ? 'default' : 'ghost'}
+                            variant={typ === t ? 'secondary' : 'ghost'}
                             onPress={() => zmenTyp(t)}
                           >
                             {t === 'RAC' ? (

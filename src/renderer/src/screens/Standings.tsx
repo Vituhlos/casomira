@@ -55,7 +55,11 @@ export function Standings({
                 <Table.Column isRowHeader>Pořadí</Table.Column>
                 <Table.Column>St. č.</Table.Column>
                 <Table.Column>Jezdec</Table.Column>
-                {ukazLos && <Table.Column className="text-right" title="Los do 1. jízdy (tiebreak)">Los</Table.Column>}
+                {ukazLos && (
+                  <Table.Column className="text-right">
+                    <span title="Los do 1. jízdy (tiebreak)">Los</span>
+                  </Table.Column>
+                )}
                 {koloTypy.map((t) => (
                   <Table.Column key={t} className="text-right">{t}</Table.Column>
                 ))}

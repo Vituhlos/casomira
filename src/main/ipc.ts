@@ -27,6 +27,7 @@ import { BackupValidationError } from './backup/import'
 import { exportJeden, exportVse, pdfRootStav, choosePdfRoot, printPreset, printList } from './pdf'
 import { openStopky, broadcast } from './windows'
 import * as sportity from './sportity/service'
+import { getDiagnostics } from './diagnostics'
 import type { BackupRestoreArg } from '../shared/backup'
 
 // Z přípony odvodí MIME typ obrázku (pro data URL loga).
@@ -42,6 +43,7 @@ function mimeObrazku(cesta: string): string {
 // Most mezi oknem (React) a daty. Okno nikdy nesahá do databáze ani na disk
 // přímo — jen pošle zprávu přes tyto kanály a hlavní proces odpoví.
 export function registerIpc(): void {
+  ipcMain.handle('app:diagnostics', () => getDiagnostics())
   ipcMain.handle('zavod:aktivni', () => repo.getAktivniZavod())
   ipcMain.handle('zavod:list', () => repo.listZavody())
   ipcMain.handle('zavod:open', (_e, id: number) => {

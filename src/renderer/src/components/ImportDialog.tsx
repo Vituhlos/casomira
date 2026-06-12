@@ -130,7 +130,7 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
                       <Button
                         key={val}
                         size="sm"
-                        variant={policy === val ? 'default' : 'ghost'}
+                        variant={policy === val ? 'secondary' : 'ghost'}
                         onPress={() => setPolicy(val)}
                       >
                         {label}

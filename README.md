@@ -82,20 +82,25 @@ Podrobný návod k balení a řešení EPERM při buildu: **[docs/dev/BUILD.md](
 Tag `v*` spustí workflow, který **paralelně** sestaví Windows instalátor i macOS DMG a nahraje je do Releases:
 
 ```bash
-# verze v package.json = 0.9.0
-git tag v0.9.0
-git push origin v0.9.0
+# verze v package.json = 0.9.12-beta
+npm run check:release -- v0.9.12-beta
+git tag v0.9.12-beta
+git push origin v0.9.12-beta
 ```
 
-Podrobnosti a ruční spuštění: **[docs/dev/BUILD.md](./docs/dev/BUILD.md)** · workflow: [`.github/workflows/release.yml`](./.github/workflows/release.yml)
+Release workflow před balením ověří verzi, changelog, TypeScript i testy. Build metadata
+(commit, datum buildu, release kanál) jsou vidět v aplikaci v **Nastavení → O aplikaci**
+a dají se zkopírovat jako diagnostika.
+
+Podrobnosti: **[docs/dev/RELEASE.md](./docs/dev/RELEASE.md)** · build: **[docs/dev/BUILD.md](./docs/dev/BUILD.md)** · workflow: [`.github/workflows/release.yml`](./.github/workflows/release.yml)
 
 ---
 
 ## Technologie
 
-Electron · React · Vite · TypeScript · `better-sqlite3` · SheetJS (`xlsx`) · electron-builder (NSIS / DMG)
+Electron · React · Vite · TypeScript · `node:sqlite` · HeroUI v3 · Tailwind CSS v4 · SheetJS (`xlsx`) · electron-builder (NSIS / DMG)
 
-Vizuální základ vychází z prototypu ve složce [`reference/Casomira-macOS/`](./reference/Casomira-macOS/) (designové tokeny `mac.css`); produkční logika bodování a klasifikace je v `src/main/`.
+Klikací prototyp ve složce [`reference/Casomira-macOS/`](./reference/Casomira-macOS/) slouží už jen jako UX reference. Produkční UI běží na HeroUI v3 a produkční logika bodování a klasifikace je v `src/main/`.
 
 ---
 

@@ -106,20 +106,30 @@ Ověření z terminálu (místo dvojkliku):
 ## Obě platformy najednou (GitHub Actions)
 
 Workflow [`.github/workflows/release.yml`](./.github/workflows/release.yml) sestaví **Windows Setup.exe** i **macOS DMG** a přiloží je k [GitHub Release](https://github.com/Vituhlos/casomira/releases).
+Podrobný release proces a diagnostika jsou v [RELEASE.md](./RELEASE.md).
 
 **Postup:**
 
 1. Uprav verzi v `package.json` (např. `0.9.0`).
-2. Commitni a pushni na GitHub.
-3. Vytvoř tag se stejnou verzí (s prefixem `v`):
+2. Doplň sekci stejné verze v `CHANGELOG.md`.
+3. Ověř release metadata:
+
+   ```bash
+   npm run check:release -- v0.9.0
+   npm run typecheck
+   npm test
+   ```
+
+4. Commitni a pushni na GitHub.
+5. Vytvoř tag se stejnou verzí (s prefixem `v`):
 
    ```bash
    git tag v0.9.0
    git push origin v0.9.0
    ```
 
-4. V repu **Actions → Release** sleduj běh (2 joby: Windows + macOS, pak Publish).
-5. Hotové soubory najdeš u **Releases** u daného tagu.
+6. V repu **Actions → Release** sleduj běh (2 joby: Windows + macOS, pak Publish).
+7. Hotové soubory najdeš u **Releases** u daného tagu.
 
 **Ruční spuštění:** Actions → **Release** → **Run workflow** → zadej tag (např. `v0.9.0`). Tag musí na GitHubu existovat (`git push origin v0.9.0`), jinak krok Publish selže.
 
