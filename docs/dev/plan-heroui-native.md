@@ -66,45 +66,25 @@ mění se jen prezentační vrstva.
 **Pozor:** HeroUI v3 vyžaduje Tailwind v4 (CSS-first config, žádný
 `tailwind.config.js`). Vite 7 + electron-vite 5 jsou kompatibilní.
 
-## Fáze 2 — Design systém: theme jako zdroj pravdy (1 den)
+## Fáze 2 — Design systém: app-specific tokeny (½ dne)
 
-`src/renderer/src/styles/theme/casomira.css` — dva bloky dle oficiálního vzoru
-(`[data-theme="light"]` + `.dark, [data-theme="dark"]`), mapování macOS palety
-na HeroUI semantické tokeny:
+HeroUI výchozí téma se **nepřepisuje** — komponenty jedou s výchozími barvami.
+`casomira.css` přidává pouze tokeny specifické pro Časomíru (přes `@theme inline`):
 
-| HeroUI token | Light | Dark (grafit) |
-|---|---|---|
-| `--background` | `#F7F7F9` | `#313133` |
-| `--surface` | `#FFFFFF` | `#2C2C2E` |
-| `--accent` | `#007AFF` | `#0A84FF` |
-| `--foreground` | `#1D1D1F` | `#F5F5F7` |
-| `--muted` | `#8E8E93` | `#98989D` |
-| `--border` / `--separator` | `#E5E5EA` | `#3A3A3C` |
-| `--segment` | white pill | `#3A3A3C`-ish pill |
-| `--field-background` | white | `#2C2C2E` |
-
-Hodnoty zapsat jako `oklch()` (převod z hex), ať sedí do HeroUI konvence a
-`color-mix()` kalkulací (hover/soft varianty dostaneme zdarma).
-
-**App-specific tokeny** (přes `@theme inline`, dle HeroUI návodu „Adding Custom Colors"):
-
-- `--color-sidebar` (light `#F8F8FA` / dark `#242425`)
-- Stavy: `--color-stav-dnf` (oranžová), `--color-stav-dns` (šedá), `--color-stav-dq` (červená)
+**App-specific tokeny:**
+- Stavy: `--color-stav-dnf` (oranžová), `--color-stav-dns` (šedá), `--color-stav-dq` (červená) + soft bg varianty
 - Medaile: `--color-medal-gold/silver/bronze`
-- RAC/RX badge barvy
-- Layout: `--sidebar-w`, `--toolbar-h` (Tailwind spacing tokeny)
+- Layout: `--spacing-sidebar` (252px), `--spacing-toolbar` (52px)
 
-**Typografie:** `system-ui` stack (SF Pro na macOS, Segoe UI Variable na Win),
-běžný text 13–14 px, `tabular-nums` na všech číselných buňkách (časy, body —
-zarovnat vpravo).
+**Typografie:** system-ui stack (SF Pro na macOS, Segoe UI Variable na Win) — již v `casomira.css`.
+`tabular-nums` na všech číselných buňkách (časy, body — zarovnat vpravo).
 
-**Dark mode:** nový `useTheme.ts` nastavuje na `<html>` současně `class="dark"`
+**Dark mode:** `useTheme.ts` nastavuje na `<html>` současně `class="dark"`
 i `data-theme="dark"` (HeroUI vyžaduje obojí). Přepínač v appce, persist do
 localStorage, default dle OS.
 
-**Kitchen-sink obrazovka** (`?dev=kit`, jen v dev): přehled všech tokenů,
-tlačítek, Chip badge, formulářových polí v light i dark — vizuální kontrakt,
-proti kterému se kontroluje každý další krok.
+**Kitchen-sink obrazovka** (DevKit, hash `#kit`): přehled HeroUI komponent, Chip
+badge stavů, formulářových polí v light i dark — vizuální reference pro screens.
 
 ### Gate: prototyp editovatelné HeroUI Table (součást kitchen-sink)
 

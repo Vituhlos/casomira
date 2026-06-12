@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Jezdec, KoloTyp, RostKolo, RostNavrh } from '@shared/types'
-import { ContentHead } from '../components/ContentHead'
-import { Btn } from '../components/ui'
-import { Modal } from '../components/Modal'
-import { thStyle, tdStyle } from '../components/table'
+import { Button, Modal, Table } from '@heroui/react'
+import { ArrowUpArrowDown } from '@gravity-ui/icons'
 import { HK_GENERATE_ROST } from '../lib/hotkeys'
 import { safeCall } from '../lib/api'
 
@@ -35,25 +33,17 @@ interface RostGridProps {
   kategorieId: number
   typ: KoloTyp
   label: string
-  /** Vygeneruje návrh roštu (Q: navrhniRost, SF: navrhSF, F: navrhFinale). */
   navrhFn: (pocetJizd?: number) => Promise<RostNavrh>
-  /** Q má volitelný počet jízd; SF/finále mají počet pevný. */
   allowPocetJizd?: boolean
-  /** Ukázat sloupec „los" v náhledu generování (Q). */
   showLos?: boolean
-  /** Ukázat legendu „odvozená pole" v hlavičce (Q). */
   showLegenda?: boolean
-  /** Další ovládací prvky vlevo od tlačítka generovat (např. přepínač velikosti finále). */
   extraControls?: ReactNode
   headSub?: string
   generateLabel?: string
   previewTitle?: string
   previewText?: string
-  /** Popisek nad kartou jízdy i v náhledu (např. „1. SF JÍZDA", „STARTOVNÍ ROŠT"). */
   jizdaTitle?: (cislo: number, total: number) => string
-  /** Zavolá se po potvrzení generování (parent si může obnovit stav). */
   onChanged?: () => void
-  /** Počet finalistů — pokud zadáno, sloty nad tuto hranici se zobrazí jako NÁHRADNÍCI. */
   finaleVelikost?: number
 }
 
@@ -92,9 +82,7 @@ export function RostGrid({
       }),
       (msg) => { if (live) setZprava(`Nepodařilo se načíst rošt: ${msg}`) }
     )
-    return () => {
-      live = false
-    }
+    return () => { live = false }
   }, [kategorieId, typ])
 
   useEffect(() => {
@@ -131,8 +119,6 @@ export function RostGrid({
     setNavrh(n)
   }
 
-  // Klávesová zkratka ⌘/Ctrl+G z hlavního okna spustí generování právě
-  // zobrazeného roštu (ref drží nejnovější `generuj`, posluchač jen jeden).
   const generujRef = useRef(generuj)
   generujRef.current = generuj
   useEffect(() => {
@@ -161,357 +147,249 @@ export function RostGrid({
     onChanged?.()
   }
 
-  const tlacitkoGeneruj = (
-    <Btn variant="primary" icon="sort" onClick={generuj}>
-      {generateLabel}
-    </Btn>
-  )
-
   return (
     <div>
-      <ContentHead title={`Rošty — ${label}`} sub={headSub}>
-        {extraControls}
-        {showLegenda && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              fontSize: 12,
-              color: 'var(--text-3)'
-            }}
-          >
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: 3,
-                background: 'var(--card-alt)',
-                border: '0.5px solid var(--hairline)'
-              }}
-            />
-            odvozená pole
-          </span>
-        )}
-        {tlacitkoGeneruj}
-      </ContentHead>
+      {/* Hlavička */}
+      <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
+        <div>
+          <h2 className="text-[22px] font-[680] tracking-tight">Rošty — {label}</h2>
+          {headSub && <p className="mt-0.5 text-[12.5px] text-muted">{headSub}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          {extraControls}
+          {showLegenda && (
+            <span className="flex items-center gap-1.5 text-[12px] text-muted">
+              <span className="inline-block size-2.5 rounded-sm border border-border bg-default" />
+              odvozená pole
+            </span>
+          )}
+          <Button size="sm" onPress={() => void generuj()}>
+            <ArrowUpArrowDown width={13} height={13} />
+            {generateLabel}
+          </Button>
+        </div>
+      </div>
 
+      {/* Zpráva (chyba / upozornění) */}
       {zprava && (
-        <div
-          style={{
-            margin: '0 22px 12px',
-            padding: '10px 14px',
-            borderRadius: 'var(--r-ctrl)',
-            background: 'rgba(255,159,10,0.14)',
-            color: '#9a6400',
-            fontSize: 13
-          }}
-        >
+        <div className="mx-5 mb-3 rounded-lg bg-warning/10 px-3.5 py-2.5 text-[13px] text-warning-foreground">
           {zprava}
         </div>
       )}
 
+      {/* Prázdný stav */}
       {rost && rost.jizdy.length === 0 && (
-        <div style={{ padding: '0 22px 22px', color: 'var(--text-3)', fontSize: 13, lineHeight: 1.5 }}>
+        <p className="px-5 pb-5 text-[13px] leading-relaxed text-muted">
           Rošt zatím není vytvořený — klikni na <b>„{generateLabel}"</b> nahoře. Po vygenerování
-          ho můžeš ručně upravit (přehodit jezdce / pozice).
-        </div>
+          ho můžeš ručně upravit.
+        </p>
       )}
 
-      {/* Jízdy pod sebou (jedna na řádek) — stejná šířka i vystředění jako Výsledky. */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 16,
-          padding: '0 22px 22px'
-        }}
-      >
+      {/* Jízdy */}
+      <div className="flex flex-col items-center gap-4 px-5 pb-5">
         {(rost?.jizdy ?? []).map((jz) => {
           const filled = jz.sloty.filter((s) => sloty[key(jz.id, s.pozice)]?.jezdec).length
           return (
-            <div
-              key={jz.id}
-              style={{
-                background: 'var(--card)',
-                border: '0.5px solid var(--hairline)',
-                borderRadius: 'var(--r-card)',
-                overflow: 'hidden',
-                boxShadow: 'var(--shadow-card)',
-                width: '100%',
-                maxWidth: 680
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 15px',
-                  borderBottom: '0.5px solid var(--hairline)'
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 620, letterSpacing: '-0.01em' }}>
+            <div key={jz.id} className="w-full max-w-[680px] overflow-clip rounded-xl border border-border bg-surface shadow-sm">
+              {/* Hlavička jízdy */}
+              <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+                <span className="text-[13px] font-[620] tracking-tight">
                   {titulekJizdy(jz.cislo, pocetJizdCelkem)}
                 </span>
-                <span className="tnum" style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                <span className="tabular-nums text-[11.5px] text-muted">
                   {filled}/{jz.sloty.length}
                 </span>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: 52 }} />
-                  <col style={{ width: 88 }} />
-                  <col />
-                  <col />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th style={{ ...thStyle, height: 28 }}>Poz.</th>
-                    <th style={{ ...thStyle, height: 28 }}>Číslo</th>
-                    <th style={{ ...thStyle, height: 28 }}>Jezdec</th>
-                    <th style={{ ...thStyle, height: 28 }}>Vůz</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jz.sloty.map((s, idx) => {
-                    const st = sloty[key(jz.id, s.pozice)] ?? {
-                      cislo: '',
-                      jezdec: null,
-                      warn: false,
-                      duvod: null
-                    }
-                    const d = st.jezdec
-                    const jeNahradnik = finaleVelikost != null && s.pozice > finaleVelikost
-                    const prvniNahradnik = jeNahradnik && (idx === 0 || jz.sloty[idx - 1].pozice <= finaleVelikost)
-                    const nahradnikPoradi = jeNahradnik ? s.pozice - finaleVelikost : null
-                    return (
-                      <>
-                        {prvniNahradnik && (
-                          <tr key={`nahr-head-${s.pozice}`}>
-                            <td
-                              colSpan={4}
-                              style={{
-                                ...tdStyle,
-                                height: 30,
-                                fontWeight: 620,
-                                fontSize: 11.5,
-                                letterSpacing: '0.04em',
-                                color: 'var(--text-3)',
-                                background: 'var(--card-alt)',
-                                borderTop: '0.5px solid var(--hairline)'
-                              }}
-                            >
-                              NÁHRADNÍCI
-                            </td>
-                          </tr>
-                        )}
-                        <tr key={s.pozice} style={jeNahradnik ? { opacity: 0.75 } : undefined}>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              height: 38,
-                              color: 'var(--text-2)',
-                              fontVariantNumeric: 'tabular-nums',
-                              fontSize: 12.5
-                            }}
+
+              {/* Tabulka slotů */}
+              <Table>
+                <Table.ScrollContainer>
+                  <Table.Content aria-label={titulekJizdy(jz.cislo, pocetJizdCelkem)}>
+                    <Table.Header className="sticky top-0 z-10">
+                      <Table.Column isRowHeader style={{ width: 52 }}>Poz.</Table.Column>
+                      <Table.Column style={{ width: 88 }}>Číslo</Table.Column>
+                      <Table.Column>Jezdec</Table.Column>
+                      <Table.Column>Vůz</Table.Column>
+                    </Table.Header>
+                    <Table.Body>
+                      {jz.sloty.flatMap((s, idx) => {
+                        const st = sloty[key(jz.id, s.pozice)] ?? { cislo: '', jezdec: null, warn: false, duvod: null }
+                        const d = st.jezdec
+                        const jeNahradnik = finaleVelikost != null && s.pozice > finaleVelikost
+                        const prvniNahradnik = jeNahradnik && (idx === 0 || jz.sloty[idx - 1].pozice <= finaleVelikost)
+                        const nahradnikPoradi = jeNahradnik ? s.pozice - finaleVelikost : null
+                        const rows: React.JSX.Element[] = []
+                        if (prvniNahradnik) {
+                          rows.push(
+                            <Table.Row key={`nahr-head-${s.pozice}`} id={`nahr-${jz.id}-${s.pozice}`} className="bg-default/30">
+                              <Table.Cell className="px-3.5 text-[11.5px] font-[620] tracking-widest text-muted" style={{ height: 30 }}>
+                                NÁHRADNÍCI
+                              </Table.Cell>
+                              <Table.Cell style={{ height: 30 }} />
+                              <Table.Cell style={{ height: 30 }} />
+                              <Table.Cell style={{ height: 30 }} />
+                            </Table.Row>
+                          )
+                        }
+                        rows.push(
+                          <Table.Row
+                            id={s.pozice}
+                            key={s.pozice}
+                            style={{ opacity: jeNahradnik ? 0.75 : 1 }}
                           >
-                            {jeNahradnik ? `N${nahradnikPoradi}` : s.pozice}
-                          </td>
-                          <td style={{ ...tdStyle, height: 38, padding: '0 9px' }}>
-                            <SlotInput
-                              value={st.cislo}
-                              warn={st.warn}
-                              onCommit={(raw) => commit(jz.id, s.pozice, raw)}
-                            />
-                          </td>
-                          <td style={{ ...tdStyle, height: 38 }}>
-                            {d ? (
-                              <span style={{ color: 'var(--text-3)' }}>
-                                <b style={{ color: 'var(--text-2)', fontWeight: 590 }}>{d.prijmeni}</b>{' '}
-                                {d.jmeno}
-                              </span>
-                            ) : st.warn ? (
-                              <span style={{ color: '#c93636', fontSize: 12.5 }}>
-                                {st.duvod === 'duplicitni' ? 'už v této jízdě' : 'neznámé číslo'}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-4)' }}>—</span>
-                            )}
-                          </td>
-                          <td style={{ ...tdStyle, height: 38, color: 'var(--text-2)' }}>
-                            {d ? (
-                              `${d.znacka} ${d.model}`
-                            ) : (
-                              <span style={{ color: 'var(--text-4)' }}>—</span>
-                            )}
-                          </td>
-                        </tr>
-                      </>
-                    )
-                  })}
-                </tbody>
-              </table>
+                            <Table.Cell className="h-[38px] px-3.5 tabular-nums text-[12.5px] text-muted">
+                              {jeNahradnik ? `N${nahradnikPoradi}` : s.pozice}
+                            </Table.Cell>
+                            <Table.Cell className="h-[38px] px-2.5">
+                              <SlotInput
+                                value={st.cislo}
+                                warn={st.warn}
+                                onCommit={(raw) => void commit(jz.id, s.pozice, raw)}
+                              />
+                            </Table.Cell>
+                            <Table.Cell className="h-[38px] px-3.5 text-[13px]">
+                              {d ? (
+                                <span className="text-muted">
+                                  <b className="font-[590] text-foreground">{d.prijmeni}</b>{' '}
+                                  {d.jmeno}
+                                </span>
+                              ) : st.warn ? (
+                                <span className="text-[12.5px] text-danger">
+                                  {st.duvod === 'duplicitni' ? 'už v této jízdě' : 'neznámé číslo'}
+                                </span>
+                              ) : (
+                                <span className="text-muted/50">—</span>
+                              )}
+                            </Table.Cell>
+                            <Table.Cell className="h-[38px] px-3.5 text-[13px] text-muted">
+                              {d ? `${d.znacka} ${d.model}` : <span className="text-muted/50">—</span>}
+                            </Table.Cell>
+                          </Table.Row>
+                        )
+                        return rows
+                      })}
+                    </Table.Body>
+                  </Table.Content>
+                </Table.ScrollContainer>
+              </Table>
             </div>
           )
         })}
       </div>
 
+      {/* Návrh roštu — modal */}
       {navrh && (
-        <Modal
-          title={previewTitle ?? `Návrh roštu — ${label}`}
-          width={560}
-          onClose={() => setNavrh(null)}
-          footer={
-            <>
-              <Btn variant="plain" onClick={() => setNavrh(null)}>
-                Zrušit
-              </Btn>
-              <Btn variant="primary" icon="sort" onClick={potvrdGeneraci}>
-                {navrh.obsazeno ? 'Přepsat rošt' : 'Vygenerovat'}
-              </Btn>
-            </>
-          }
-        >
-          {navrh.obsazeno && (
-            <div
-              style={{
-                margin: '0 0 12px',
-                padding: '9px 12px',
-                borderRadius: 'var(--r-ctrl)',
-                background: 'rgba(255,159,10,0.14)',
-                color: '#9a6400',
-                fontSize: 12.5
-              }}
-            >
-              V tomto roštu už je rozsazení — vygenerování ho přepíše (smaže i zadané výsledky).
-            </div>
-          )}
-          <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
-            {previewText ?? 'Takto budou jezdci rozsazeni. Po zapsání můžeš rošt ručně upravit.'}
-          </p>
+        <Modal>
+          <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) setNavrh(null) }}>
+            <Modal.Container>
+              <Modal.Dialog className="w-[560px] max-w-[calc(100vw-2rem)]">
+                <Modal.Header>
+                  <span className="text-base font-semibold">
+                    {previewTitle ?? `Návrh roštu — ${label}`}
+                  </span>
+                </Modal.Header>
 
-          {allowPocetJizd && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                margin: '0 0 14px',
-                padding: '8px 12px',
-                borderRadius: 'var(--r-ctrl)',
-                background: 'var(--card-alt)'
-              }}
-            >
-              <span style={{ fontSize: 12.5, fontWeight: 560 }}>Počet jízd:</span>
-              <StepButton label="−" onClick={() => zmenPocet(-1)} disabled={navrh.pocetJizd <= navrh.minJizd} />
-              <span className="tnum" style={{ fontWeight: 620, minWidth: 20, textAlign: 'center' }}>
-                {navrh.pocetJizd}
-              </span>
-              <StepButton label="+" onClick={() => zmenPocet(1)} disabled={navrh.pocetJizd >= navrh.maxJizd} />
-              <span style={{ fontSize: 11.5, color: 'var(--text-3)', marginLeft: 'auto' }}>
-                max 8 jezdců na jízdu
-              </span>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {navrh.jizdy.map((jz) => {
-              const fv = navrh.finaleVelikost
-              const finaliste = fv != null ? jz.jezdci.slice(0, fv) : jz.jezdci
-              const nahradnici = fv != null ? jz.jezdci.slice(fv) : []
-              const renderRadek = (d: Jezdec, label: string, dimmed = false): React.JSX.Element => (
-                <div
-                  key={d.id}
-                  style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0', opacity: dimmed ? 0.7 : 1 }}
-                >
-                  <span style={{ color: 'var(--text-4)', width: 22, textAlign: 'right' }}>{label}</span>
-                  <span className="tnum" style={{ width: 44, fontWeight: 600 }}>{d.st_cislo}</span>
-                  <span style={{ fontWeight: 560 }}>{d.prijmeni}</span>
-                  <span style={{ color: 'var(--text-2)' }}>{d.jmeno}</span>
-                  {showLos && (
-                    <span style={{ marginLeft: 'auto', color: 'var(--text-3)' }}>los {d.los ?? '—'}</span>
+                <Modal.Body>
+                  {navrh.obsazeno && (
+                    <div className="mb-3 rounded-lg bg-warning/10 px-3 py-2.5 text-[12.5px] text-warning-foreground">
+                      V tomto roštu už je rozsazení — vygenerování ho přepíše (smaže i zadané výsledky).
+                    </div>
                   )}
-                </div>
-              )
-              return (
-                <div
-                  key={jz.cislo}
-                  style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden' }}
-                >
-                  <div
-                    style={{
-                      padding: '7px 12px',
-                      background: 'var(--card-alt)',
-                      fontSize: 12.5,
-                      fontWeight: 620,
-                      borderBottom: '0.5px solid var(--hairline)'
-                    }}
-                  >
-                    {titulekJizdy(jz.cislo, navrh.jizdy.length)}{' '}
-                    <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>· {finaliste.length} jezdců</span>
-                  </div>
-                  <div style={{ padding: '6px 12px' }}>
-                    {finaliste.map((d, i) => renderRadek(d, `${i + 1}.`))}
-                  </div>
-                  {nahradnici.length > 0 && (
-                    <>
-                      <div
-                        style={{
-                          padding: '5px 12px',
-                          background: 'var(--card-alt)',
-                          fontSize: 11.5,
-                          fontWeight: 620,
-                          letterSpacing: '0.04em',
-                          color: 'var(--text-3)',
-                          borderTop: '0.5px solid var(--hairline)'
-                        }}
+
+                  <p className="mb-3 text-[12.5px] text-muted">
+                    {previewText ?? 'Takto budou jezdci rozsazeni. Po zapsání můžeš rošt ručně upravit.'}
+                  </p>
+
+                  {allowPocetJizd && (
+                    <div className="mb-3.5 flex items-center gap-2.5 rounded-lg bg-default/30 px-3 py-2">
+                      <span className="text-[12.5px] font-[560]">Počet jízd:</span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        isIconOnly
+                        isDisabled={navrh.pocetJizd <= navrh.minJizd}
+                        onPress={() => void zmenPocet(-1)}
+                        aria-label="Méně jízd"
                       >
-                        NÁHRADNÍCI
-                      </div>
-                      <div style={{ padding: '6px 12px' }}>
-                        {nahradnici.map((d, i) => renderRadek(d, `N${i + 1}.`, true))}
-                      </div>
-                    </>
+                        −
+                      </Button>
+                      <span className="min-w-5 text-center tabular-nums font-[620]">
+                        {navrh.pocetJizd}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        isIconOnly
+                        isDisabled={navrh.pocetJizd >= navrh.maxJizd}
+                        onPress={() => void zmenPocet(1)}
+                        aria-label="Více jízd"
+                      >
+                        +
+                      </Button>
+                      <span className="ml-auto text-[11.5px] text-muted">max 8 jezdců na jízdu</span>
+                    </div>
                   )}
-                </div>
-              )
-            })}
-          </div>
+
+                  <div className="flex flex-col gap-3">
+                    {navrh.jizdy.map((jz) => {
+                      const fv = navrh.finaleVelikost
+                      const finaliste = fv != null ? jz.jezdci.slice(0, fv) : jz.jezdci
+                      const nahradnici = fv != null ? jz.jezdci.slice(fv) : []
+                      const renderRadek = (d: Jezdec, poradi: string, dimmed = false): React.JSX.Element => (
+                        <div
+                          key={d.id}
+                          className="flex gap-2 py-0.5 text-[12.5px]"
+                          style={{ opacity: dimmed ? 0.7 : 1 }}
+                        >
+                          <span className="w-5.5 text-right text-muted">{poradi}</span>
+                          <span className="w-11 tabular-nums font-[600]">{d.st_cislo}</span>
+                          <span className="font-[560]">{d.prijmeni}</span>
+                          <span className="text-muted">{d.jmeno}</span>
+                          {showLos && (
+                            <span className="ml-auto text-muted">los {d.los ?? '—'}</span>
+                          )}
+                        </div>
+                      )
+                      return (
+                        <div key={jz.cislo} className="overflow-clip rounded-lg border border-border">
+                          <div className="border-b border-border bg-default/30 px-3 py-1.5 text-[12.5px] font-[620]">
+                            {titulekJizdy(jz.cislo, navrh.jizdy.length)}{' '}
+                            <span className="font-normal text-muted">· {finaliste.length} jezdců</span>
+                          </div>
+                          <div className="px-3 py-1.5">
+                            {finaliste.map((d, i) => renderRadek(d, `${i + 1}.`))}
+                          </div>
+                          {nahradnici.length > 0 && (
+                            <>
+                              <div className="border-t border-border bg-default/30 px-3 py-1 text-[11.5px] font-[620] tracking-widest text-muted">
+                                NÁHRADNÍCI
+                              </div>
+                              <div className="px-3 py-1.5">
+                                {nahradnici.map((d, i) => renderRadek(d, `N${i + 1}.`, true))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Modal.Body>
+
+                <Modal.Footer className="flex justify-end gap-2">
+                  <Button variant="secondary" onPress={() => setNavrh(null)}>
+                    Zrušit
+                  </Button>
+                  <Button onPress={() => void potvrdGeneraci()}>
+                    <ArrowUpArrowDown width={13} height={13} />
+                    {navrh.obsazeno ? 'Přepsat rošt' : 'Vygenerovat'}
+                  </Button>
+                </Modal.Footer>
+              </Modal.Dialog>
+            </Modal.Container>
+          </Modal.Backdrop>
         </Modal>
       )}
     </div>
-  )
-}
-
-function StepButton({
-  label,
-  onClick,
-  disabled
-}: {
-  label: string
-  onClick: () => void
-  disabled: boolean
-}): React.JSX.Element {
-  return (
-    <button
-      className="btn btn--bezel"
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        width: 26,
-        height: 26,
-        display: 'inline-grid',
-        placeItems: 'center',
-        borderRadius: 6,
-        font: 'inherit',
-        fontSize: 16,
-        lineHeight: 1
-      }}
-    >
-      {label}
-    </button>
   )
 }
 
@@ -525,7 +403,13 @@ function SlotInput({ value, warn, onCommit }: SlotInputProps): React.JSX.Element
   const [v, setV] = useState(value)
   const [focused, setFocused] = useState(false)
   useEffect(() => setV(value), [value])
-  const border = focused ? 'var(--accent)' : warn ? '#c93636' : 'transparent'
+
+  const borderColor = focused
+    ? 'var(--color-primary)'
+    : warn
+      ? 'var(--color-danger)'
+      : 'transparent'
+
   return (
     <input
       value={v}
@@ -533,17 +417,12 @@ function SlotInput({ value, warn, onCommit }: SlotInputProps): React.JSX.Element
       inputMode="numeric"
       onChange={(e) => setV(e.target.value)}
       onFocus={() => setFocused(true)}
-      onBlur={() => {
-        setFocused(false)
-        onCommit(v)
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-      }}
+      onBlur={() => { setFocused(false); onCommit(v) }}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
       style={{
         width: '100%',
-        border: `1px solid ${border}`,
-        background: focused ? 'var(--window)' : 'transparent',
+        border: `1px solid ${borderColor}`,
+        background: focused ? 'var(--color-background)' : 'transparent',
         padding: '5px 7px',
         margin: '0 -7px',
         borderRadius: 5,
@@ -551,9 +430,11 @@ function SlotInput({ value, warn, onCommit }: SlotInputProps): React.JSX.Element
         fontSize: 13,
         fontVariantNumeric: 'tabular-nums',
         fontWeight: 600,
-        color: warn ? '#c93636' : 'var(--text-1)',
+        color: warn ? 'var(--color-danger)' : 'var(--color-foreground)',
         outline: 'none',
-        boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none',
+        boxShadow: focused
+          ? '0 0 0 3.5px color-mix(in srgb, var(--color-primary) 28%, transparent)'
+          : 'none',
         boxSizing: 'border-box'
       }}
     />

@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Button, Chip, Input, Label, Table, Tabs, TextField } from '@heroui/react'
+import { Button, Dropdown, Input, Label, Table, TextField } from '@heroui/react'
 import { useTheme } from '../hooks/useTheme'
-import { fmtTime, parseTimeLoose } from '../lib/time'
+import { StavBadge, MedalDot, EditableCell, PhaseSegment } from '../ui'
 
 /**
  * DevKit — kitchen-sink design systému (plan-heroui-native.md, Fáze 2).
@@ -31,7 +31,7 @@ const DEMO_ROWS: DemoRow[] = [
   { id: 6, stCislo: 42, jmeno: 'Kučera Pavel', casMs: 87013, stav: 'OK' }
 ]
 
-const STAV_CYCLE: Record<Stav, Stav> = { OK: 'DNF', DNF: 'DNS', DNS: 'DQ', DQ: 'OK' }
+const STAVY: Stav[] = ['OK', 'DNF', 'DNS', 'DQ']
 
 const PHASES = [
   'Startovní listina',
@@ -48,79 +48,6 @@ const PHASES = [
   'Celkově'
 ]
 
-/** Stavový odznak — kompozice HeroUI Chip + stav tokeny (budoucí ui/StavBadge). */
-function StavChip({ stav }: { stav: Stav }): React.JSX.Element | null {
-  if (stav === 'OK') return null
-  const cls: Record<Exclude<Stav, 'OK'>, string> = {
-    DNF: 'bg-stav-dnf-soft text-stav-dnf',
-    DNS: 'bg-stav-dns-soft text-stav-dns',
-    DQ: 'bg-stav-dq-soft text-stav-dq'
-  }
-  return <Chip className={cls[stav]}>{stav}</Chip>
-}
-
-/** Medailový puntík 1./2./3. místo (budoucí ui/MedalDot). */
-function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
-  const cls: Record<number, string> = {
-    1: 'bg-medal-gold',
-    2: 'bg-medal-silver',
-    3: 'bg-medal-bronze'
-  }
-  if (!cls[rank]) return null
-  return <span className={`mr-2 inline-block size-[7px] rounded-full align-middle ${cls[rank]}`} />
-}
-
-/**
- * Inline editace v Table.Cell — zrcadlí chování staré EditableCell:
- * Enter / opuštění potvrdí, Esc vrátí původní hodnotu, odmítnutí → červeně.
- */
-function EditableTimeCell({
-  casMs,
-  onCommit
-}: {
-  casMs: number | null
-  onCommit: (ms: number | null) => void
-}): React.JSX.Element {
-  const [text, setText] = useState(casMs == null ? '' : fmtTime(casMs))
-  const [warn, setWarn] = useState(false)
-
-  const commit = (): void => {
-    if (text.trim() === '') {
-      onCommit(null)
-      setWarn(false)
-      return
-    }
-    const ms = parseTimeLoose(text)
-    if (ms == null) {
-      setWarn(true)
-      return
-    }
-    onCommit(ms)
-    setText(fmtTime(ms))
-    setWarn(false)
-  }
-
-  return (
-    <Input
-      value={text}
-      onChange={(e) => {
-        setText(e.target.value)
-        if (warn) setWarn(false)
-      }}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') {
-          setText(casMs == null ? '' : fmtTime(casMs))
-          setWarn(false)
-          e.currentTarget.blur()
-        }
-      }}
-      placeholder="m:ss.fff"
-      className={`max-w-28 text-right tabular-nums ${warn ? 'text-danger' : ''}`}
-    />
-  )
-}
 
 function Section({
   title,
@@ -173,20 +100,25 @@ export function DevKit(): React.JSX.Element {
         </Button>
       </header>
 
-      <Section title="Tokeny">
+      <Section title="Tokeny — HeroUI defaults">
         <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
           <Swatch label="background" cls="bg-background" />
           <Swatch label="surface" cls="bg-surface" />
-          <Swatch label="surface-2 (zebra)" cls="bg-surface-secondary" />
-          <Swatch label="sidebar" cls="bg-sidebar" />
+          <Swatch label="surface-secondary" cls="bg-surface-secondary border border-border" />
           <Swatch label="accent" cls="bg-accent" />
           <Swatch label="default" cls="bg-default" />
           <Swatch label="muted" cls="bg-muted" />
           <Swatch label="border" cls="bg-border" />
-          <Swatch label="stav DNF" cls="bg-stav-dnf" />
-          <Swatch label="stav DNS" cls="bg-stav-dns" />
-          <Swatch label="stav DQ" cls="bg-stav-dq" />
-          <Swatch label="medaile" cls="bg-medal-gold" />
+          <Swatch label="warning" cls="bg-warning" />
+          <Swatch label="danger" cls="bg-danger" />
+        </div>
+      </Section>
+
+      <Section title="Tokeny — app-specific (casomira.css)">
+        <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
+          <Swatch label="medal-gold" cls="bg-medal-gold" />
+          <Swatch label="medal-silver" cls="bg-medal-silver" />
+          <Swatch label="medal-bronze" cls="bg-medal-bronze" />
         </div>
       </Section>
 
@@ -204,9 +136,9 @@ export function DevKit(): React.JSX.Element {
 
       <Section title="Stavy a medaile">
         <div className="flex flex-wrap items-center gap-4">
-          <StavChip stav="DNF" />
-          <StavChip stav="DNS" />
-          <StavChip stav="DQ" />
+          <StavBadge stav="DNF" />
+          <StavBadge stav="DNS" />
+          <StavBadge stav="DQ" />
           <span className="flex items-center">
             <MedalDot rank={1} /> 1. místo
           </span>
@@ -220,19 +152,14 @@ export function DevKit(): React.JSX.Element {
         </div>
       </Section>
 
-      <Section title="Segment fází (overflow-x test)">
-        <Tabs className="max-w-2xl">
-          <Tabs.ListContainer className="overflow-x-auto">
-            <Tabs.List aria-label="Fáze závodu">
-              {PHASES.map((p) => (
-                <Tabs.Tab key={p} id={p} className="whitespace-nowrap">
-                  {p}
-                  <Tabs.Indicator />
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-          </Tabs.ListContainer>
-        </Tabs>
+      <Section title="PhaseSegment (overflow-x test)">
+        <div className="max-w-2xl">
+          <PhaseSegment
+            phases={PHASES.map((p) => ({ id: p, label: p }))}
+            selectedId={PHASES[0]}
+            onSelect={() => {}}
+          />
+        </div>
       </Section>
 
       <Section title="Formulářové pole">
@@ -247,7 +174,7 @@ export function DevKit(): React.JSX.Element {
       <Section title="GATE: editovatelná tabulka (HeroUI Table)">
         <p className="mb-3 text-muted">
           Checklist: klik do času → editace, Enter potvrdí, Esc vrátí, špatný formát červeně,
-          dvojklik na stav = cyklus OK→DNF→DNS→DQ, zebra, šipky vs. input.
+          klik na stav → Dropdown OK/DNF/DNS/DQ, zebra, šipky vs. input.
         </p>
         <Table className="max-w-3xl">
           <Table.ScrollContainer>
@@ -276,21 +203,29 @@ export function DevKit(): React.JSX.Element {
                       </Table.Cell>
                       <Table.Cell className="tabular-nums">{r.stCislo}</Table.Cell>
                       <Table.Cell>{r.jmeno}</Table.Cell>
-                      <Table.Cell className="text-right">
-                        <EditableTimeCell
-                          casMs={r.casMs}
-                          onCommit={(ms) => update(r.id, { casMs: ms })}
-                        />
-                      </Table.Cell>
+                      <EditableCell
+                        casMs={r.casMs}
+                        onCommit={(ms) => update(r.id, { casMs: ms })}
+                      />
                       <Table.Cell>
-                        <button
-                          type="button"
-                          className="cursor-pointer rounded-md px-1 py-0.5"
-                          title="Dvojklik = změna stavu"
-                          onDoubleClick={() => update(r.id, { stav: STAV_CYCLE[r.stav] })}
-                        >
-                          {r.stav === 'OK' ? <span className="text-muted">OK</span> : <StavChip stav={r.stav} />}
-                        </button>
+                        <Dropdown>
+                          <Dropdown.Trigger>
+                            <Button variant="ghost" size="sm" className="h-auto min-w-0 px-1 py-0.5">
+                              {r.stav === 'OK'
+                                ? <span className="text-muted text-xs">OK</span>
+                                : <StavBadge stav={r.stav} />}
+                            </Button>
+                          </Dropdown.Trigger>
+                          <Dropdown.Popover>
+                            <Dropdown.Menu onAction={(key) => update(r.id, { stav: key as Stav })}>
+                              {STAVY.map((s) => (
+                                <Dropdown.Item key={s} id={s} textValue={s}>
+                                  <Label>{s}</Label>
+                                </Dropdown.Item>
+                              ))}
+                            </Dropdown.Menu>
+                          </Dropdown.Popover>
+                        </Dropdown>
                       </Table.Cell>
                     </Table.Row>
                   )

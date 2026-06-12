@@ -35,7 +35,7 @@ export function QFaze({
       ]
 
   return (
-    <div className="screen-enter" style={{ '--thead-top': '32px' } as React.CSSProperties}>
+    <div>
       <SubTabs tabs={tabs} active={sub} onTab={onSub} />
       {sub === 'rost' && <Grids kategorieId={kategorieId} typ={typ} label={label} />}
       {sub === 'res' && (

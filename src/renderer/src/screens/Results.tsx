@@ -1,10 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { KoloTyp, Stav, VysledekJizda, VysledekKolo, VysledekRadek } from '@shared/types'
-import { ContentHead } from '../components/ContentHead'
+import { Chip, Table } from '@heroui/react'
 import { PenalizaceDialog, type PenalizaceTarget } from '../components/PenalizaceDialog'
-import { Badge, Medal } from '../components/ui'
-import { Card, Row, tdStyle, thStyle } from '../components/table'
 import { Tooltip } from '../components/Tooltip'
 import { fmtTime, parseTimeLoose } from '../lib/time'
 import { jizdaNekompletni } from '../lib/stav'
@@ -14,18 +12,14 @@ interface ResultsProps {
   kategorieId: number
   typ: KoloTyp
   label: string
-  /** Skryje sloupec Body (u Q1/Q2 — bodování je v agregovaném listu). */
   bezBodovani?: boolean
-  /** Další ovládací prvky vpravo v nadpisu (např. přepínač velikosti finále u SF/finále). */
   extraControls?: ReactNode
 }
 
-// Rozpozná stav z textu: dnf/dns/dq i jednopísmenné f/s/q (case-insensitive).
 function maZasahReditele(r: VysledekRadek): boolean {
   return r.penalizace_ms > 0 || r.body_rucni != null || r.rucni_poradi != null
 }
 
-/** Časová penalizace u dojetého jezdce — detail patří k poli času, ne k odznaku. */
 function jenCasovaPenalizace(r: VysledekRadek): boolean {
   return (
     r.penalizace_ms > 0 &&
@@ -46,9 +40,7 @@ function tooltipPenalizace(r: VysledekRadek): string {
   } else if (r.penalizace_ms > 0) {
     parts.push(`Časová penalizace +${r.penalizace_ms / 1000} s`)
   }
-  if (r.rucni_poradi != null) {
-    parts.push(`Posun na ${r.rucni_poradi}. místo`)
-  }
+  if (r.rucni_poradi != null) parts.push(`Posun na ${r.rucni_poradi}. místo`)
   if (r.uprava_typ === 'BODOVA_PENALIZACE' && r.uprava_hodnota != null) {
     const d = r.uprava_hodnota
     parts.push(`Bodová penalizace ${d >= 0 ? '+' : ''}${d} bodů`)
@@ -88,21 +80,13 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
     let live = true
     setLoadError(null)
     safeCall(
-      window.api.getVysledky(kategorieId, typ).then((k) => {
-        if (live) setKolo(k)
-      }),
+      window.api.getVysledky(kategorieId, typ).then((k) => { if (live) setKolo(k) }),
       (msg) => { if (live) setLoadError(msg) }
     )
-    const off = window.api.onDataChanged?.(() => {
-      if (live) nacti()
-    })
-    return () => {
-      live = false
-      off?.()
-    }
+    const off = window.api.onDataChanged?.(() => { if (live) nacti() })
+    return () => { live = false; off?.() }
   }, [kategorieId, typ])
 
-  // Po zápisu přijde přepočtená jízda — vyměníme ji v kole.
   const nahradJizdu = (j: VysledekJizda): void => {
     setKolo((prev) =>
       prev ? { ...prev, jizdy: prev.jizdy.map((x) => (x.id === j.id ? j : x)) } : prev
@@ -140,214 +124,162 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
     setMenu(null)
   }
 
-  const poPenalizaci = (): void => nacti()
-
-  const hlavicky = bezBodovani
-    ? ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas']
-    : ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas', 'Body']
   const prazdne = (kolo?.jizdy ?? []).every((j) => j.vysledky.length === 0)
 
   return (
     <div>
-      <ContentHead
-        title={`Výsledky — ${label}`}
-        sub="Napiš čas (mm:ss.sss) nebo stav (dnf/dns/dq) · nebo klikni na odznak vpravo"
-      >
-        {extraControls}
-      </ContentHead>
+      <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
+        <div>
+          <h2 className="text-[22px] font-[680] tracking-tight">Výsledky — {label}</h2>
+          <p className="mt-0.5 text-[12.5px] text-muted">
+            Napiš čas (mm:ss.sss) nebo stav (dnf/dns/dq) · nebo klikni na odznak vpravo
+          </p>
+        </div>
+        {extraControls && <div className="flex items-center gap-2">{extraControls}</div>}
+      </div>
 
       {loadError && (
-        <div style={{ padding: '0 22px 14px', color: 'var(--danger, #c0392b)', fontSize: 13 }}>
+        <div className="px-5 pb-3.5 text-[13px] text-danger">
           Nepodařilo se načíst výsledky: {loadError}
         </div>
       )}
 
       {prazdne && (
-        <div style={{ padding: '0 22px 22px', color: 'var(--text-3)', fontSize: 13 }}>
+        <div className="px-5 pb-5 text-[13px] text-muted">
           Nejprve sestav rošty ({label}) — výsledky se zadávají jezdcům z roštu.
         </div>
       )}
 
       {(kolo?.jizdy ?? []).map((jz) => {
         const nekompletni = jizdaNekompletni(jz.vysledky)
+        const colHeaders = bezBodovani
+          ? ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas']
+          : ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas', 'Body']
+
         return (
-        <div key={jz.id} style={{ margin: '0 22px 8px', fontSize: 13, fontWeight: 620 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {jz.cislo}. JÍZDA
-            {nekompletni && (
-              <span
-                title="Někteří jezdci nemají čas ani stav (DNF/DNS/DQ)"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  height: 20,
-                  padding: '0 8px',
-                  borderRadius: 'var(--r-pill)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
-                  color: 'var(--text-2)',
-                  background: 'color-mix(in srgb, var(--text-2) 10%, transparent)',
-                  border: '0.5px solid color-mix(in srgb, var(--text-2) 22%, transparent)'
-                }}
-              >
-                nekompletní
+          <div key={jz.id} className="mx-5 mb-4">
+            <div className="mb-2 text-[13px] font-[620]">
+              <span className="inline-flex items-center gap-2">
+                {jz.cislo}. JÍZDA
+                {nekompletni && (
+                  <span className="inline-flex h-5 items-center rounded-full border border-border bg-muted/10 px-2 text-[11px] font-[600] tracking-[0.02em] text-muted">
+                    nekompletní
+                  </span>
+                )}
               </span>
-            )}
-          </span>
-          <Card
-            style={{
-              margin: '8px 0 18px',
-            }}
-          >
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
-              <thead>
-                <tr>
-                  {hlavicky.map((h, i) => {
-                    // Čas i Body mají vpravo rezervované místo (šipka / křížek),
-                    // tak posuneme jejich nadpis o stejně doleva, ať sedí nad hodnotami.
-                    const extra = i === 6 ? (bezBodovani ? 0 : 32) : i === 7 ? 21 : 0
-                    return (
-                      <th
+            </div>
+            <Table>
+              <Table.ScrollContainer>
+                <Table.Content aria-label={`${jz.cislo}. jízda — ${label}`}>
+                  <Table.Header className="sticky top-0 z-10">
+                    {colHeaders.map((h, idx) => (
+                      <Table.Column
                         key={h}
-                        style={{ ...thStyle, textAlign: i >= 6 ? 'right' : 'left', paddingRight: 14 + extra }}
+                        isRowHeader={idx === 0}
+                        className={idx >= 6 ? 'text-right' : ''}
                       >
                         {h}
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {jz.vysledky.length === 0 && (
-                  <tr>
-                    <td colSpan={bezBodovani ? 7 : 8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)' }}>
-                      Prázdná jízda
-                    </td>
-                  </tr>
-                )}
-                {jz.vysledky.map((r, i) => (
-                  <Row
-                    key={r.jezdec_id}
-                    i={i}
-                    zebra
-                    penalized={maZasahReditele(r)}
-                  >
-                    <td
-                      style={{
-                        ...tdStyle,
-                        fontVariantNumeric: 'tabular-nums',
-                        fontWeight: 620,
-                        color: r.poradi && r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
-                      }}
-                    >
-                      {r.poradi != null ? (
-                        <>
-                          <Medal rank={r.poradi} />
-                          {r.poradi}.
-                        </>
-                      ) : (
-                        <span style={{ color: 'var(--text-4)' }}>—</span>
-                      )}
-                    </td>
-                    <td style={tdStyle}>
-                      <span className="tnum" style={{ fontWeight: 600 }}>
-                        {r.st_cislo}
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, fontWeight: 590 }}>{r.prijmeni}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.jmeno}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.znacka}</td>
-                    <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.model}</td>
-                    <td style={{ ...tdStyle }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'flex-end',
-                          gap: 6
-                        }}
-                      >
-                        {jenCasovaPenalizace(r) ? (
-                          <span
-                            className="penalizace-badge"
-                            aria-hidden
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 650,
-                              padding: '2px 6px',
-                              borderRadius: 99,
-                              background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-                              color: 'var(--accent-text)',
-                              flexShrink: 0
-                            }}
-                          >
-                            pen.
-                          </span>
-                        ) : (
-                          maZasahReditele(r) && <PenalizaceBadge tooltip={tooltipPenalizace(r)} />
-                        )}
-                        {r.stav === 'OK' ? (
-                          <TimeCell
-                            ms={r.namereny_cas_ms}
-                            penalizaceMs={r.penalizace_ms}
-                            tooltip={jenCasovaPenalizace(r) ? tooltipPenalizace(r) : undefined}
-                            onTime={(ms) => void setCas(jz.id, r.jezdec_id, ms)}
-                            onStav={(s) => void setStav(jz.id, r.jezdec_id, s)}
-                          />
-                        ) : (
-                          <span style={{ width: 112, display: 'inline-flex', justifyContent: 'flex-end' }}>
-                            <StatusBadge
-                              stav={r.stav}
-                              cas={r.namereny_cas_ms}
-                              onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)}
-                            />
-                          </span>
-                        )}
-                        <Caret onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)} />
-                      </div>
-                    </td>
-                    {!bezBodovani && (
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
-                        <BodyCell
-                          body={r.body}
-                          overridden={r.body_rucni != null}
-                          onCommit={(val) => void setBody(jz.id, r.jezdec_id, val)}
-                        />
-                      </td>
+                      </Table.Column>
+                    ))}
+                  </Table.Header>
+                  <Table.Body
+                    renderEmptyState={() => (
+                      <div className="py-4 text-center text-sm text-muted">Prázdná jízda</div>
                     )}
-                  </Row>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        </div>
+                  >
+                    {jz.vysledky.map((r, i) => (
+                      <Table.Row
+                        key={r.jezdec_id}
+                        id={r.jezdec_id}
+                        className={maZasahReditele(r) ? 'bg-warning/[0.05]' : i % 2 ? 'bg-muted/[0.04]' : ''}
+                      >
+                        <Table.Cell className="tabular-nums font-[620]">
+                          <span style={{
+                            color: r.poradi && r.poradi <= 3
+                              ? 'var(--color-foreground)'
+                              : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
+                          }}>
+                            {r.poradi != null ? (
+                              <>
+                                <MedalDot rank={r.poradi} />
+                                {r.poradi}.
+                              </>
+                            ) : (
+                              <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 22%, transparent)' }}>—</span>
+                            )}
+                          </span>
+                        </Table.Cell>
+                        <Table.Cell className="tabular-nums font-[600]">{r.st_cislo}</Table.Cell>
+                        <Table.Cell className="font-[590]">{r.prijmeni}</Table.Cell>
+                        <Table.Cell className="text-muted">{r.jmeno}</Table.Cell>
+                        <Table.Cell className="text-muted">{r.znacka}</Table.Cell>
+                        <Table.Cell className="text-muted">{r.model}</Table.Cell>
+                        <Table.Cell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {jenCasovaPenalizace(r) ? (
+                              <span style={{
+                                fontSize: 10, fontWeight: 650,
+                                padding: '2px 6px', borderRadius: 99, flexShrink: 0,
+                                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
+                                color: 'var(--color-primary)'
+                              }}>
+                                pen.
+                              </span>
+                            ) : (
+                              maZasahReditele(r) && <PenalizaceBadge tooltip={tooltipPenalizace(r)} />
+                            )}
+                            {r.stav === 'OK' ? (
+                              <TimeCell
+                                ms={r.namereny_cas_ms}
+                                penalizaceMs={r.penalizace_ms}
+                                tooltip={jenCasovaPenalizace(r) ? tooltipPenalizace(r) : undefined}
+                                onTime={(ms) => void setCas(jz.id, r.jezdec_id, ms)}
+                                onStav={(s) => void setStav(jz.id, r.jezdec_id, s)}
+                              />
+                            ) : (
+                              <StatusBadge
+                                stav={r.stav}
+                                cas={r.namereny_cas_ms}
+                                onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)}
+                              />
+                            )}
+                            <Caret onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)} />
+                          </div>
+                        </Table.Cell>
+                        {!bezBodovani && (
+                          <Table.Cell className="text-right">
+                            <BodyCell
+                              body={r.body}
+                              overridden={r.body_rucni != null}
+                              onCommit={(val) => void setBody(jz.id, r.jezdec_id, val)}
+                            />
+                          </Table.Cell>
+                        )}
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
+          </div>
         )
       })}
 
       {menu &&
         createPortal(
           <>
-            <div
-              onMouseDown={() => setMenu(null)}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
-            />
-            <div
-              style={{
-                position: 'fixed',
-                left: menu.x,
-                top: menu.y,
-                zIndex: 1001,
-                minWidth: 140,
-                background: 'var(--window)',
-                border: '0.5px solid var(--hairline)',
-                borderRadius: 'var(--r-ctrl)',
-                boxShadow: 'var(--shadow-win)',
-                padding: 4
-              }}
-            >
+            <div onMouseDown={() => setMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
+            <div style={{
+              position: 'fixed', left: menu.x, top: menu.y, zIndex: 1001,
+              minWidth: 140,
+              background: 'var(--color-background)',
+              border: '0.5px solid var(--color-border)',
+              borderRadius: 8,
+              boxShadow: '0 4px 20px color-mix(in srgb, var(--color-foreground) 14%, transparent)',
+              padding: 4
+            }}>
               <MenuItem label="Penalizace ředitele…" onClick={otevriPenalizaci} accent />
-              <div style={{ height: 1, margin: '4px 8px', background: 'var(--hairline)' }} />
+              <div style={{ height: 1, margin: '4px 8px', background: 'var(--color-border)' }} />
               <MenuItem label="Čas" onClick={() => vyberZMenu('OK')} />
               <MenuItem label="DNF" onClick={() => vyberZMenu('DNF')} />
               <MenuItem label="DNS" onClick={() => vyberZMenu('DNS')} />
@@ -361,52 +293,52 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
         <PenalizaceDialog
           target={penalizace}
           onClose={() => setPenalizace(null)}
-          onSaved={poPenalizaci}
+          onSaved={() => nacti()}
         />
       )}
     </div>
   )
 }
 
+function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
+  const color =
+    rank === 1 ? 'var(--color-medal-gold)' :
+    rank === 2 ? 'var(--color-medal-silver)' :
+    rank === 3 ? 'var(--color-medal-bronze)' : null
+  if (!color) return null
+  return (
+    <span style={{
+      display: 'inline-block', width: 7, height: 7,
+      borderRadius: 99, background: color,
+      marginRight: 8, verticalAlign: 'middle'
+    }} />
+  )
+}
+
 function PenalizaceBadge({ tooltip }: { tooltip: string }): React.JSX.Element {
   return (
     <Tooltip text={tooltip}>
-      <span
-        className="penalizace-badge"
-        style={{
-          fontSize: 10,
-          fontWeight: 650,
-          letterSpacing: 0.2,
-          padding: '2px 6px',
-          borderRadius: 99,
-          background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-          color: 'var(--accent-text)',
-          flexShrink: 0
-        }}
-      >
+      <span style={{
+        fontSize: 10, fontWeight: 650, letterSpacing: 0.2,
+        padding: '2px 6px', borderRadius: 99, flexShrink: 0,
+        background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
+        color: 'var(--color-primary)'
+      }}>
         pen.
       </span>
     </Tooltip>
   )
 }
 
-// --- Pole pro zadání času (přijme i zkratku stavu) ---
 interface TimeCellProps {
   ms: number | null
   penalizaceMs?: number
-  /** Jednotný tooltip (časová penalizace — bez duplicity u odznaku pen.). */
   tooltip?: string
   onTime: (ms: number | null) => void
   onStav: (stav: Stav) => void
 }
 
-function TimeCell({
-  ms,
-  penalizaceMs = 0,
-  tooltip,
-  onTime,
-  onStav
-}: TimeCellProps): React.JSX.Element {
+function TimeCell({ ms, penalizaceMs = 0, tooltip, onTime, onStav }: TimeCellProps): React.JSX.Element {
   const hasPen = penalizaceMs > 0 && ms != null
   const [warn, setWarn] = useState(false)
   const [focused, setFocused] = useState(false)
@@ -423,71 +355,47 @@ function TimeCell({
   const commit = (): void => {
     setFocused(false)
     const t = v.trim()
-    if (t === '') {
-      setWarn(false)
-      onTime(null)
-      return
-    }
+    if (t === '') { setWarn(false); onTime(null); return }
     const stav = stavZeZkratky(t)
-    if (stav) {
-      setWarn(false)
-      onStav(stav)
-      return
-    }
+    if (stav) { setWarn(false); onStav(stav); return }
     const parsed = parseTimeLoose(t)
-    if (parsed !== null) {
-      setWarn(false)
-      onTime(parsed)
-      return
-    }
-    setWarn(true) // neplatný vstup — text necháme, jen jemně upozorníme
+    if (parsed !== null) { setWarn(false); onTime(parsed); return }
+    setWarn(true)
   }
 
-  const border = focused ? 'var(--accent)' : warn ? '#c93636' : 'transparent'
-  const inputTitle = warn ? 'Zadej čas (mm:ss.sss) nebo stav: dnf / dns / dq' : undefined
+  const border = focused ? 'var(--color-primary)' : warn ? 'var(--color-danger)' : 'transparent'
 
   const input = (
     <input
       value={v}
       placeholder="mm:ss.sss"
-      title={inputTitle}
-      onChange={(e) => {
-        setV(e.target.value)
-        if (warn) setWarn(false)
-      }}
-      onFocus={() => {
-        setFocused(true)
-        setV(fmtTime(ms))
-      }}
+      title={warn ? 'Zadej čas (mm:ss.sss) nebo stav: dnf / dns / dq' : undefined}
+      onChange={(e) => { setV(e.target.value); if (warn) setWarn(false) }}
+      onFocus={() => { setFocused(true); setV(fmtTime(ms)) }}
       onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-      }}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
       style={{
         width: hasPen && !focused ? 128 : 112,
         textAlign: 'right',
         border: `1px solid ${border}`,
-        background: focused ? 'var(--window)' : 'transparent',
-        padding: '4px 6px',
-        borderRadius: 5,
-        font: 'inherit',
-        fontSize: 13,
+        background: focused ? 'var(--color-background)' : 'transparent',
+        padding: '4px 6px', borderRadius: 5,
+        font: 'inherit', fontSize: 13,
         fontVariantNumeric: 'tabular-nums',
-        color: warn ? '#c93636' : hasPen && !focused ? 'var(--accent-text)' : 'var(--text-1)',
+        color: warn
+          ? 'var(--color-danger)'
+          : hasPen && !focused ? 'var(--color-primary)' : 'var(--color-foreground)',
         fontWeight: hasPen && !focused ? 620 : 500,
         outline: 'none',
-        boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none'
+        boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--color-primary) 28%, transparent)' : 'none'
       }}
     />
   )
 
-  if (tooltip && !focused) {
-    return <Tooltip text={tooltip}>{input}</Tooltip>
-  }
+  if (tooltip && !focused) return <Tooltip text={tooltip}>{input}</Tooltip>
   return input
 }
 
-// --- Body s možností ručního přepsání (override) ---
 interface BodyCellProps {
   body: number | null
   overridden: boolean
@@ -503,19 +411,11 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
     setFocused(false)
     const orig = body != null ? String(body) : ''
     const t = v.trim()
-    // BEZE ZMĚNY (jen klik dovnitř a ven) → nic neměň. Override se NEzapne;
-    // body zůstanou automatické a dál se přepočítávají.
-    if (t === orig) {
-      setV(orig)
-      return
-    }
-    if (t === '') {
-      onCommit(null) // smazáno → zrušit override (návrat k automatu)
-      return
-    }
+    if (t === orig) { setV(orig); return }
+    if (t === '') { onCommit(null); return }
     const n = Number.parseInt(t, 10)
-    if (!Number.isNaN(n)) onCommit(n) // jiná hodnota → zapnout/změnit override
-    else setV(orig) // neplatné → vrátit
+    if (!Number.isNaN(n)) onCommit(n)
+    else setV(orig)
   }
 
   return (
@@ -533,44 +433,36 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') {
-            setV(body != null ? String(body) : '')
-            e.currentTarget.blur()
-          }
+          if (e.key === 'Escape') { setV(body != null ? String(body) : ''); e.currentTarget.blur() }
         }}
         style={{
-          width: 48,
-          textAlign: 'right',
-          border: `1px solid ${focused ? 'var(--accent)' : 'transparent'}`,
-          background: focused ? 'var(--window)' : 'transparent',
-          padding: '3px 5px',
-          borderRadius: 5,
-          font: 'inherit',
-          fontSize: 13.5,
-          fontVariantNumeric: 'tabular-nums',
-          fontWeight: 620,
-          color: overridden ? 'var(--accent-text)' : body != null ? 'var(--text-1)' : 'var(--text-3)',
+          width: 48, textAlign: 'right',
+          border: `1px solid ${focused ? 'var(--color-primary)' : 'transparent'}`,
+          background: focused ? 'var(--color-background)' : 'transparent',
+          padding: '3px 5px', borderRadius: 5,
+          font: 'inherit', fontSize: 13.5,
+          fontVariantNumeric: 'tabular-nums', fontWeight: 620,
+          color: overridden
+            ? 'var(--color-primary)'
+            : body != null
+              ? 'var(--color-foreground)'
+              : 'color-mix(in srgb, var(--color-foreground) 35%, transparent)',
           outline: 'none',
-          boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none'
+          boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--color-primary) 28%, transparent)' : 'none'
         }}
       />
-      {/* Místo pro křížek je rezervované VŽDY (16px), aby zapnutí/vypnutí
-          override neposunulo číslo bodů. */}
       <span style={{ width: 16, flexShrink: 0, display: 'inline-flex', justifyContent: 'center' }}>
         {overridden && (
           <Tooltip text="Zrušit ruční úpravu (zpět na automat)">
             <button
-              className="override-x"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onCommit(null)}
               style={{
-                width: 16,
-                height: 16,
-                display: 'inline-grid',
-                placeItems: 'center',
-                fontSize: 13,
-                lineHeight: 1,
-                padding: 0
+                width: 16, height: 16,
+                display: 'inline-grid', placeItems: 'center',
+                fontSize: 13, lineHeight: 1, padding: 0,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
               }}
             >
               ×
@@ -582,24 +474,18 @@ function BodyCell({ body, overridden, onCommit }: BodyCellProps): React.JSX.Elem
   )
 }
 
-// --- Šipka pro otevření nabídky Čas / DNF / DNS / DQ ---
-// Stejná u řádku s časem i u řádku se stavem (konzistentní místo i vzhled).
 function Caret({ onOpen }: { onOpen: (e: React.MouseEvent) => void }): React.JSX.Element {
   return (
     <button
-      className="btn btn--bezel"
       onClick={onOpen}
       title="Změnit: Čas / DNF / DNS / DQ"
       style={{
-        width: 26,
-        height: 22,
-        display: 'inline-grid',
-        placeItems: 'center',
-        borderRadius: 6,
-        color: 'var(--text-2)',
-        font: 'inherit',
-        fontSize: 10,
-        flexShrink: 0
+        width: 26, height: 22,
+        display: 'inline-grid', placeItems: 'center',
+        borderRadius: 6, flexShrink: 0,
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        color: 'color-mix(in srgb, var(--color-foreground) 50%, transparent)',
+        font: 'inherit', fontSize: 10
       }}
     >
       ▾
@@ -607,8 +493,6 @@ function Caret({ onOpen }: { onOpen: (e: React.MouseEvent) => void }): React.JSX
   )
 }
 
-// --- Barevný odznak stavu (DNF/DNS/DQ) ---
-// Klikací (otevře nabídku) + tooltip s naměřeným časem, když byl zadán.
 function StatusBadge({
   stav,
   cas,
@@ -619,37 +503,30 @@ function StatusBadge({
   onOpen: (e: React.MouseEvent) => void
 }): React.JSX.Element {
   const badge = (
-    <button className="statbtn" onClick={onOpen}>
-      <Badge status={stav} />
+    <button
+      onClick={onOpen}
+      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+    >
+      <Chip size="sm" variant="soft" color={stav === 'DNF' ? 'warning' : stav === 'DQ' ? 'danger' : 'default'}>
+        {stav}
+      </Chip>
     </button>
   )
   return cas != null ? <Tooltip text={`Naměřený čas: ${fmtTime(cas)}`}>{badge}</Tooltip> : badge
 }
 
-// --- Položka kontextové nabídky ---
-function MenuItem({
-  label,
-  onClick,
-  accent
-}: {
-  label: string
-  onClick: () => void
-  accent?: boolean
-}): React.JSX.Element {
+function MenuItem({ label, onClick, accent }: { label: string; onClick: () => void; accent?: boolean }): React.JSX.Element {
   return (
     <button
-      className="menu-item"
       onClick={onClick}
       style={{
-        display: 'flex',
-        width: '100%',
-        alignItems: 'center',
-        padding: '7px 10px',
+        display: 'flex', width: '100%',
+        alignItems: 'center', padding: '7px 10px',
         borderRadius: 6,
-        font: 'inherit',
-        fontSize: 13,
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        font: 'inherit', fontSize: 13,
         fontWeight: accent ? 600 : 400,
-        color: accent ? 'var(--accent-text)' : 'var(--text-1)',
+        color: accent ? 'var(--color-primary)' : 'var(--color-foreground)',
         textAlign: 'left'
       }}
     >

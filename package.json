@@ -30,6 +30,8 @@
     "docs:word": "npx --yes @mohtasham/md-to-docx docs/user/INSTALACE-MAC.md docs/user/Casomira-instalace-Mac.docx && npx --yes @mohtasham/md-to-docx docs/user/NAVOD-PRO-TESTERY.md docs/user/Casomira-navod-pro-testery.docx"
   },
   "dependencies": {
+    "@fontsource-variable/figtree": "^5.2.10",
+    "@gravity-ui/icons": "^2.18.0",
     "@heroui/react": "3.1.0",
     "@heroui/styles": "3.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

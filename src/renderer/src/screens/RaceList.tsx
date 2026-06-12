@@ -1,6 +1,6 @@
 import type { ZavodInfo } from '@shared/types'
-import { Btn, DevBadge } from '../components/ui'
-import { Icon } from '../components/Icon'
+import { Button, ButtonGroup, Card, Chip, Typography } from '@heroui/react'
+import { ArrowDownToSquare, ArrowUpFromSquare, Flag, LayoutCells, Moon, Pencil, Persons, Plus, Sun, TrashBin } from '@gravity-ui/icons'
 import type { Theme } from '../hooks/useTheme'
 
 function czDate(iso: string): string {
@@ -34,173 +34,135 @@ export function RaceList({
   onToggleTheme
 }: RaceListProps): React.JSX.Element {
   return (
-    <div style={{ height: '100%', overflowY: 'auto', background: 'var(--content-bg)' }}>
-      <div style={{ maxWidth: 940, margin: '0 auto', padding: '44px 28px 60px' }}>
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            gap: 16,
-            marginBottom: 26
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                fontFamily: 'var(--font-display)',
-                fontSize: 30,
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                color: 'var(--text-1)'
-              }}
-            >
-              Závody
-            </h1>
-            <p style={{ margin: '5px 0 0', fontSize: 13.5, color: 'var(--text-2)' }}>
-              Vyber závod a vstup do něj, nebo založ nový.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Btn variant="bezel" icon="import" onClick={onRestore} title="Obnovit ze zálohy">
+    <div className="flex h-full flex-col bg-background">
+      <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-surface px-6 pb-5 pt-6">
+        <div className="flex flex-col gap-2">
+          <Typography type="h1">Správa závodů</Typography>
+          <Typography type="body-sm" color="muted">autokros · rallycross</Typography>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <ButtonGroup variant="tertiary" size="sm">
+            <Button onPress={onRestore}>
+              <ArrowUpFromSquare />
               Obnovit…
-            </Btn>
-            <Btn
-              variant="bezel"
-              icon={theme === 'dark' ? 'sun' : 'moon'}
-              onClick={onToggleTheme}
-              title={theme === 'dark' ? 'Světlý režim' : 'Tmavý režim'}
-            />
-            <Btn variant="primary" icon="flag" onClick={onNew}>
-              Nový závod
-            </Btn>
-          </div>
-        </header>
+            </Button>
+            <Button
+              isIconOnly
+              aria-label={theme === 'dark' ? 'Světlý režim' : 'Tmavý režim'}
+              onPress={onToggleTheme}
+            >
+              <ButtonGroup.Separator />
+              {theme === 'dark' ? <Sun /> : <Moon />}
+            </Button>
+          </ButtonGroup>
+          <Button size="sm" onPress={onNew}>
+            <Flag />
+            Nový závod
+          </Button>
+        </div>
+      </header>
 
-        {zavody.length === 0 ? (
-          <div
-            style={{
-              border: '1px dashed var(--hairline)',
-              borderRadius: 'var(--r-card)',
-              padding: '48px 24px',
-              textAlign: 'center',
-              color: 'var(--text-3)',
-              fontSize: 14
-            }}
-          >
-            Zatím žádný závod. Začni tlačítkem <b>Nový závod</b> vpravo nahoře.
-          </div>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 16
-            }}
-          >
-            {zavody.map((z) => (
-              <div
-                key={z.id}
-                className="race-card"
-                onClick={() => onOpen(z.id)}
-                style={{
-                  position: 'relative',
-                  background: 'var(--card)',
-                  border: '0.5px solid var(--hairline)',
-                  borderRadius: 'var(--r-card)',
-                  boxShadow: 'var(--shadow-card)',
-                  padding: '16px 16px 14px'
-                }}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-[940px] px-7 pb-16 pt-8">
+          {zavody.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+              <Flag width={32} height={32} style={{ color: 'var(--color-muted)', opacity: 0.35 }} />
+              <Typography type="body-sm" weight="medium">Zatím žádný závod</Typography>
+              <Typography type="body-sm" color="muted" className="max-w-[260px]">
+                Začni tím, že založíš nový závod nebo obnovíš zálohu.
+              </Typography>
+              <Button onPress={onNew} className="mt-2">
+                <Flag />
+                Nový závod
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+            >
+              {zavody.map((z) => (
+                <Card
+                  key={z.id}
+                  className="group cursor-pointer transition-[transform,box-shadow] duration-200 motion-reduce:transition-none hover:-translate-y-1 hover:shadow-lg"
+                  onClick={() => onOpen(z.id)}
+                >
+                  <Card.Header className="gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Chip size="sm" variant="soft">
+                          {z.typ === 'RX' ? 'RX CUP' : 'RAC RACE'}
+                        </Chip>
+                        {z.typ === 'RX' && (
+                          <Chip size="sm" variant="soft" color="warning">
+                            Ve vývoji
+                          </Chip>
+                        )}
+                      </div>
+                      <div
+                        className="-mr-1.5 flex shrink-0 gap-0.5 opacity-0 transition-opacity duration-150 motion-reduce:opacity-100 motion-reduce:transition-none group-hover:opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          isIconOnly
+                          aria-label="Zálohovat závod"
+                          onPress={() => onBackup(z)}
+                        >
+                          <ArrowDownToSquare width={14} height={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          isIconOnly
+                          aria-label="Upravit údaje"
+                          onPress={() => onEdit(z)}
+                        >
+                          <Pencil width={14} height={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          isIconOnly
+                          aria-label="Smazat závod"
+                          onPress={() => onDelete(z)}
+                        >
+                          <TrashBin width={14} height={14} />
+                        </Button>
+                      </div>
+                    </div>
+                    <Typography type="h5">{z.nazev}</Typography>
+                    <Typography type="body-sm" color="muted" className="tabular-nums">
+                      {czDate(z.datum)}
+                      {z.misto ? ` · ${z.misto}` : ''}
+                    </Typography>
+                  </Card.Header>
+
+                  <Card.Footer className="mt-auto flex items-center gap-3 border-t border-border pt-2.5">
+                    <Typography type="body-xs" color="muted" className="flex items-center gap-1">
+                      <LayoutCells width={12} height={12} />
+                      {z.pocetKategorii} kategorií
+                    </Typography>
+                    <Typography type="body-xs" color="muted" className="flex items-center gap-1">
+                      <Persons width={12} height={12} />
+                      {z.pocetJezdcu} jezdců
+                    </Typography>
+                  </Card.Footer>
+                </Card>
+              ))}
+              <button
+                type="button"
+                aria-label="Přidat nový závod"
+                onClick={onNew}
+                className="flex min-h-[120px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-sm text-muted transition-[border-color,color] duration-150 motion-reduce:transition-none hover:border-foreground hover:text-foreground"
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        height: 20,
-                        padding: '0 8px',
-                        borderRadius: 'var(--r-ctrl)',
-                        fontSize: 11,
-                        fontWeight: 650,
-                        letterSpacing: '0.03em',
-                        background: 'var(--seg-track)',
-                        color: 'var(--text-2)'
-                      }}
-                    >
-                      {z.typ === 'RX' ? 'RX CUP' : 'RAC RACE'}
-                    </span>
-                    {z.typ === 'RX' && <DevBadge />}
-                  </span>
-                  <div className="race-card-actions" style={{ display: 'flex', gap: 2 }}>
-                    <button
-                      className="icon-btn"
-                      title="Zálohovat závod"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onBackup(z)
-                      }}
-                      style={{ width: 26, height: 26, display: 'grid', placeItems: 'center' }}
-                    >
-                      <Icon name="import" size={15} style={{ transform: 'rotate(180deg)' }} />
-                    </button>
-                    <button
-                      className="icon-btn"
-                      title="Upravit údaje"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEdit(z)
-                      }}
-                      style={{ width: 26, height: 26, display: 'grid', placeItems: 'center' }}
-                    >
-                      <Icon name="pencil" size={15} />
-                    </button>
-                    <button
-                      className="icon-btn"
-                      title="Smazat závod"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(z)
-                      }}
-                      style={{ width: 26, height: 26, display: 'grid', placeItems: 'center' }}
-                    >
-                      <Icon name="trash" size={15} />
-                    </button>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    margin: '12px 0 2px',
-                    fontSize: 17,
-                    fontWeight: 640,
-                    color: 'var(--text-1)',
-                    letterSpacing: '-0.01em',
-                    lineHeight: 1.25
-                  }}
-                >
-                  {z.nazev}
-                </div>
-                <div className="tnum" style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
-                  {czDate(z.datum)}
-                  {z.misto ? ` · ${z.misto}` : ''}
-                </div>
-                <div
-                  style={{
-                    marginTop: 12,
-                    paddingTop: 10,
-                    borderTop: '0.5px solid var(--divider)',
-                    fontSize: 12,
-                    color: 'var(--text-3)'
-                  }}
-                >
-                  {z.pocetKategorii} kategorií · {z.pocetJezdcu} jezdců
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                <Plus width={14} height={14} />
+                Nový závod
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

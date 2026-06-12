@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { KoloTyp, QAgregatRadek } from '@shared/types'
-import { ContentHead } from '../components/ContentHead'
-import { Badge, Medal } from '../components/ui'
-import { Card, Row, tdStyle, thStyle } from '../components/table'
+import { Chip, Table } from '@heroui/react'
 import { Tooltip } from '../components/Tooltip'
 import { fmtTime } from '../lib/time'
 
@@ -29,100 +27,131 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
     setRadky(await window.api.setQAgregatBodyOverride(kategorieId, typ, jezdecId, body))
   }
 
-  const prazdne = radky.length === 0
-
   return (
-    <div className="screen-enter">
-      <ContentHead
-        title={`Výsledky po ${label}`}
-        sub="Všechny jízdy · seřazeno dle nejlepšího času · body lze upravit přímo v tabulce"
-      />
+    <div>
+      <div className="px-5 pb-3 pt-4">
+        <h2 className="text-[22px] font-[680] tracking-tight">Výsledky po {label}</h2>
+        <p className="mt-0.5 text-[12.5px] text-muted">
+          Všechny jízdy · seřazeno dle nejlepšího času · body lze upravit přímo v tabulce
+        </p>
+      </div>
 
-      <Card>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Pořadí</th>
-              <th style={thStyle}>St. č.</th>
-              <th style={thStyle}>Příjmení</th>
-              <th style={thStyle}>Jméno</th>
-              <th style={thStyle}>Značka</th>
-              <th style={thStyle}>Model</th>
-              <th style={{ ...thStyle, textAlign: 'right', paddingRight: 14 + 32 }}>Čas</th>
-              <th style={{ ...thStyle, textAlign: 'right', paddingRight: 14 + 21 }}>Body</th>
-            </tr>
-          </thead>
-          <tbody>
-            {prazdne && (
-              <tr>
-                <td
-                  colSpan={8}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
-                >
-                  Zatím žádné výsledky — zadej časy v záložce Výsledky.
-                </td>
-              </tr>
-            )}
-            {radky.map((r, i) => (
-              <Row key={r.jezdec_id} i={i} zebra penalized={r.body_rucni != null || r.delta_z_jizdy !== 0}>
-                <td
-                  style={{
-                    ...tdStyle,
-                    fontVariantNumeric: 'tabular-nums',
-                    fontWeight: 620,
-                    color: r.poradi != null && r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
-                  }}
-                >
-                  {r.poradi != null ? (
-                    <>
-                      <Medal rank={r.poradi} />
-                      {r.poradi}.
-                    </>
-                  ) : (
-                    <span style={{ color: 'var(--text-4)' }}>—</span>
-                  )}
-                </td>
-                <td style={tdStyle}>
-                  <span className="tnum" style={{ fontWeight: 600 }}>{r.st_cislo}</span>
-                </td>
-                <td style={{ ...tdStyle, fontWeight: 590 }}>{r.prijmeni}</td>
-                <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.jmeno}</td>
-                <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.znacka}</td>
-                <td style={{ ...tdStyle, color: 'var(--text-2)' }}>{r.model}</td>
-                <td style={{ ...tdStyle }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                    {r.stav === 'OK' ? (
-                      <span
-                        className="tnum"
-                        title={`${r.cislo_jizdy}. jízda`}
-                        style={{ fontVariantNumeric: 'tabular-nums', width: 112, textAlign: 'right', display: 'inline-block' }}
-                      >
-                        {r.cas_ms != null ? fmtTime(r.cas_ms + r.penalizace_ms) : <span style={{ color: 'var(--text-4)' }}>—</span>}
-                      </span>
-                    ) : (
-                      <span title={`${r.cislo_jizdy}. jízda`} style={{ width: 112, display: 'inline-flex', justifyContent: 'flex-end' }}>
-                        <Badge status={r.stav} />
-                      </span>
-                    )}
-                    {/* rezervované místo pro caret — konzistentní zarovnání */}
-                    <span style={{ width: 26, flexShrink: 0 }} />
+      <div className="mx-5 mb-5">
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label={`Výsledky po ${label}`}>
+              <Table.Header className="sticky top-0 z-10">
+                <Table.Column isRowHeader>Pořadí</Table.Column>
+                <Table.Column>St. č.</Table.Column>
+                <Table.Column>Příjmení</Table.Column>
+                <Table.Column>Jméno</Table.Column>
+                <Table.Column>Značka</Table.Column>
+                <Table.Column>Model</Table.Column>
+                <Table.Column className="text-right">Čas</Table.Column>
+                <Table.Column className="text-right">Body</Table.Column>
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <div className="py-8 text-center text-sm text-muted">
+                    Zatím žádné výsledky — zadej časy v záložce Výsledky.
                   </div>
-                </td>
-                <td style={{ ...tdStyle, textAlign: 'right' }}>
-                  <BodyCell
-                    body={r.body}
-                    bodyAuto={r.body_auto}
-                    overridden={r.body_rucni != null}
-                    deltaZJizdy={r.delta_z_jizdy}
-                    onCommit={(val) => void setBody(r.jezdec_id, val)}
-                  />
-                </td>
-              </Row>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+                )}
+              >
+                {radky.map((r, i) => (
+                  <Table.Row
+                    key={r.jezdec_id}
+                    id={r.jezdec_id}
+                    className={
+                      r.body_rucni != null || r.delta_z_jizdy !== 0
+                        ? 'bg-warning/[0.05]'
+                        : i % 2 ? 'bg-muted/[0.04]' : ''
+                    }
+                  >
+                    <Table.Cell className="tabular-nums font-[620]">
+                      <span style={{
+                        color: r.poradi != null && r.poradi <= 3
+                          ? 'var(--color-foreground)'
+                          : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
+                      }}>
+                        {r.poradi != null ? (
+                          <>
+                            <MedalDot rank={r.poradi} />
+                            {r.poradi}.
+                          </>
+                        ) : (
+                          <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 22%, transparent)' }}>—</span>
+                        )}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell className="tabular-nums font-[600]">{r.st_cislo}</Table.Cell>
+                    <Table.Cell className="font-[590]">{r.prijmeni}</Table.Cell>
+                    <Table.Cell className="text-muted">{r.jmeno}</Table.Cell>
+                    <Table.Cell className="text-muted">{r.znacka}</Table.Cell>
+                    <Table.Cell className="text-muted">{r.model}</Table.Cell>
+                    <Table.Cell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {r.stav === 'OK' ? (
+                          <span
+                            className="inline-block tabular-nums text-right"
+                            title={`${r.cislo_jizdy}. jízda`}
+                            style={{ minWidth: 100 }}
+                          >
+                            {r.cas_ms != null
+                              ? fmtTime(r.cas_ms + r.penalizace_ms)
+                              : <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 22%, transparent)' }}>—</span>
+                            }
+                          </span>
+                        ) : (
+                          <span className="inline-flex justify-end" title={`${r.cislo_jizdy}. jízda`}>
+                            <StavChip stav={r.stav as 'DNF' | 'DNS' | 'DQ'} />
+                          </span>
+                        )}
+                      </div>
+                    </Table.Cell>
+                    <Table.Cell className="text-right">
+                      <BodyCell
+                        body={r.body}
+                        bodyAuto={r.body_auto}
+                        overridden={r.body_rucni != null}
+                        deltaZJizdy={r.delta_z_jizdy}
+                        onCommit={(val) => void setBody(r.jezdec_id, val)}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+        </Table>
+      </div>
     </div>
+  )
+}
+
+function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
+  const color =
+    rank === 1 ? 'var(--color-medal-gold)' :
+    rank === 2 ? 'var(--color-medal-silver)' :
+    rank === 3 ? 'var(--color-medal-bronze)' : null
+  if (!color) return null
+  return (
+    <span style={{
+      display: 'inline-block', width: 7, height: 7,
+      borderRadius: 99, background: color,
+      marginRight: 8, verticalAlign: 'middle'
+    }} />
+  )
+}
+
+function StavChip({ stav }: { stav: 'DNF' | 'DNS' | 'DQ' }): React.JSX.Element {
+  return (
+    <Chip
+      size="sm"
+      variant="soft"
+      color={stav === 'DNF' ? 'warning' : stav === 'DQ' ? 'danger' : 'default'}
+    >
+      {stav}
+    </Chip>
   )
 }
 
@@ -168,23 +197,21 @@ function BodyCell({ body, bodyAuto, overridden, deltaZJizdy, onCommit }: BodyCel
         if (e.key === 'Escape') { setV(body != null ? String(body) : ''); e.currentTarget.blur() }
       }}
       style={{
-        width: 48,
-        textAlign: 'right',
-        border: `1px solid ${focused ? 'var(--accent)' : 'transparent'}`,
-        background: focused ? 'var(--window)' : 'transparent',
-        padding: '3px 5px',
-        borderRadius: 5,
-        font: 'inherit',
-        fontSize: 13.5,
-        fontVariantNumeric: 'tabular-nums',
-        fontWeight: 620,
+        width: 48, textAlign: 'right',
+        border: `1px solid ${focused ? 'var(--color-primary)' : 'transparent'}`,
+        background: focused ? 'var(--color-background)' : 'transparent',
+        padding: '3px 5px', borderRadius: 5,
+        font: 'inherit', fontSize: 13.5,
+        fontVariantNumeric: 'tabular-nums', fontWeight: 620,
         color: overridden
-          ? 'var(--accent-text)'
+          ? 'var(--color-primary)'
           : deltaZJizdy !== 0
-            ? 'color-mix(in srgb, var(--accent-text) 70%, var(--text-2))'
-            : body != null ? 'var(--text-1)' : 'var(--text-3)',
+            ? 'color-mix(in srgb, var(--color-primary) 80%, var(--color-foreground))'
+            : body != null
+              ? 'var(--color-foreground)'
+              : 'color-mix(in srgb, var(--color-foreground) 35%, transparent)',
         outline: 'none',
-        boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none'
+        boxShadow: focused ? '0 0 0 3.5px color-mix(in srgb, var(--color-primary) 28%, transparent)' : 'none'
       }}
     />
   )
@@ -196,10 +223,15 @@ function BodyCell({ body, bodyAuto, overridden, deltaZJizdy, onCommit }: BodyCel
         {overridden && (
           <Tooltip text="Zrušit ruční úpravu (zpět na automat)">
             <button
-              className="override-x"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onCommit(null)}
-              style={{ width: 16, height: 16, display: 'inline-grid', placeItems: 'center', fontSize: 13, lineHeight: 1, padding: 0 }}
+              style={{
+                width: 16, height: 16,
+                display: 'inline-grid', placeItems: 'center',
+                fontSize: 13, lineHeight: 1, padding: 0,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
+              }}
             >
               ×
             </button>

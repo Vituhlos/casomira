@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Kategorie, RaceType, SportityEventView, SportityNodeView, Zavod } from '@shared/types'
-import { Modal } from '../components/Modal'
-import { Btn, DevBadge } from '../components/ui'
+import { Button, Chip, Input, Label, ListBox, Modal, Tag, TagGroup, TextField } from '@heroui/react'
+import { Flag, Plus } from '@gravity-ui/icons'
 import { VYCHOZI_KATEGORIE } from '../data/raceDefaults'
 import { safeCall } from '../lib/api'
 
@@ -23,7 +23,6 @@ function sjednotDostupne(typ: RaceType, nazvyZKategorie: string[]): string[] {
 }
 
 interface RaceDialogProps {
-  /** edit: údaje závodu + kategorie; new: i volba typu. */
   mode: 'new' | 'edit'
   zavod?: Zavod
   onCancel: () => void
@@ -45,7 +44,6 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   const [nacita, setNacita] = useState(mode === 'edit')
   const [confirmOdebrani, setConfirmOdebrani] = useState<string | null>(null)
 
-  // Sportity — zobrazí se jen pokud je API klíč nastaven a spojení funguje
   const [sportityDostupne, setSportityDostupne] = useState(false)
   const sportityChecked = useRef(false)
   const [sportityHeslo, setSportityHeslo] = useState('')
@@ -94,14 +92,6 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
     setVlastni('')
   }
 
-  const toggle = (n: string): void =>
-    setVybrane((prev) => {
-      const s = new Set(prev)
-      if (s.has(n)) s.delete(n)
-      else s.add(n)
-      return s
-    })
-
   const pridejVlastni = (): void => {
     const n = vlastni.trim()
     if (!n) return
@@ -138,8 +128,7 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   }
 
   const vybraneNazvy = dostupne.filter((n) => vybrane.has(n))
-  const muzeUlozit =
-    nazev.trim() !== '' && datum !== '' && vybraneNazvy.length > 0 && !nacita
+  const muzeUlozit = nazev.trim() !== '' && datum !== '' && vybraneNazvy.length > 0 && !nacita
 
   const ulozSkutecne = async (): Promise<void> => {
     setConfirmOdebrani(null)
@@ -184,293 +173,285 @@ export function RaceDialog({ mode, zavod, onCancel, onSaved }: RaceDialogProps):
   }
 
   const kategorieSekce = (
-    <>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '2px 0 8px' }}>
-        <span style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)' }}>
-          Kategorie{' '}
-          <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({vybraneNazvy.length} vybráno)</span>
+    <div className="mb-3">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-xs font-semibold text-muted">
+          Kategorie <span className="font-normal">({vybraneNazvy.length} vybráno)</span>
         </span>
-        <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>klikni pro výběr</span>
+        <span className="text-xs text-muted">klikni pro výběr</span>
       </div>
 
       {nacita ? (
-        <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-3)' }}>Načítám kategorie…</p>
+        <p className="mb-3 text-sm text-muted">Načítám kategorie…</p>
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {dostupne.map((n) => {
-            const on = vybrane.has(n)
-            const kat = existujici.find((k) => k.nazev === n)
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => toggle(n)}
-                className={on ? 'chip chip--on' : 'chip'}
-                style={{ height: 30, padding: '0 13px', fontSize: 13, fontWeight: on ? 560 : 450 }}
-                title={kat && kat.pocet > 0 ? `${kat.pocet} jezdců — odebráním smažeš kategorii` : undefined}
-              >
-                {n}
-                {kat && kat.pocet > 0 ? (
-                  <span style={{ marginLeft: 6, opacity: 0.75, fontSize: 11 }}>{kat.pocet}</span>
-                ) : null}
-              </button>
-            )
-          })}
-        </div>
+        <TagGroup
+          selectionMode="multiple"
+          selectedKeys={vybrane}
+          onSelectionChange={(keys) => {
+            if (keys === 'all') return
+            setVybrane(new Set(Array.from(keys).map(String)))
+          }}
+        >
+          <TagGroup.List className="flex flex-wrap gap-2">
+            {dostupne.map((n) => {
+              const kat = existujici.find((k) => k.nazev === n)
+              return (
+                <Tag
+                  key={n}
+                  id={n}
+                  title={
+                    kat && kat.pocet > 0
+                      ? `${kat.pocet} jezdců — odebráním smažeš kategorii`
+                      : undefined
+                  }
+                >
+                  {n}
+                  {kat && kat.pocet > 0 && (
+                    <span className="ml-1.5 text-[11px] opacity-60">{kat.pocet}</span>
+                  )}
+                </Tag>
+              )
+            })}
+          </TagGroup.List>
+        </TagGroup>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <input
-          value={vlastni}
-          onChange={(e) => setVlastni(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              pridejVlastni()
-            }
-          }}
-          placeholder="přidat vlastní kategorii…"
-          style={{ ...inputStyle, flex: 1 }}
-          disabled={nacita}
-        />
-        <Btn variant="bezel" icon="plus" onClick={pridejVlastni} disabled={vlastni.trim() === '' || nacita}>
+      <div className="mt-3 flex gap-2">
+        <TextField className="flex-1">
+          <Input
+            value={vlastni}
+            onChange={(e) => setVlastni(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                pridejVlastni()
+              }
+            }}
+            placeholder="přidat vlastní kategorii…"
+            isDisabled={nacita}
+          />
+        </TextField>
+        <Button
+          size="sm"
+          variant="secondary"
+          onPress={pridejVlastni}
+          isDisabled={vlastni.trim() === '' || nacita}
+        >
+          <Plus width={13} height={13} />
           Přidat
-        </Btn>
+        </Button>
       </div>
-    </>
+    </div>
   )
 
   return (
     <>
-    <Modal
-      title={mode === 'edit' ? 'Upravit závod' : 'Nový závod'}
-      width={560}
-      onClose={onCancel}
-      footer={
-        <>
-          <Btn variant="plain" onClick={onCancel}>
-            Zrušit
-          </Btn>
-          <Btn
-            variant="primary"
-            icon="flag"
-            onClick={uloz}
-            disabled={!muzeUlozit || uklada}
-          >
-            {mode === 'edit' ? 'Uložit' : 'Založit závod'}
-          </Btn>
-        </>
-      }
-    >
-      <Pole label="Název závodu">
-        <input
-          value={nazev}
-          onChange={(e) => setNazev(e.target.value)}
-          placeholder="např. MČR Autocross — Přerov"
-          style={inputStyle}
-          autoFocus
-        />
-      </Pole>
-
-      <div style={{ display: 'flex', gap: 12 }}>
-        <Pole label="Datum" style={{ flex: 1 }}>
-          <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} style={inputStyle} />
-        </Pole>
-        <Pole label="Místo (nepovinné)" style={{ flex: 1 }}>
-          <input
-            value={misto}
-            onChange={(e) => setMisto(e.target.value)}
-            placeholder="např. Přerov"
-            style={inputStyle}
-          />
-        </Pole>
-      </div>
-
-      {mode === 'new' ? (
-        <>
-          <Pole label="Typ závodu">
-            <span
-              style={{
-                display: 'inline-flex',
-                gap: 2,
-                background: 'var(--seg-track)',
-                borderRadius: 8,
-                padding: 2
-              }}
-            >
-              {(['RAC', 'RX'] as RaceType[]).map((t) => {
-                const on = typ === t
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => zmenTyp(t)}
-                    className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
-                    style={{
-                      height: 28,
-                      padding: '0 16px',
-                      fontSize: 12.5,
-                      fontWeight: on ? 590 : 450,
-                      color: on ? 'var(--text-1)' : 'var(--text-2)',
-                      borderRadius: 6
-                    }}
-                  >
-                    {t === 'RAC' ? (
-                      'RAC Race'
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        RX Cup
-                        <DevBadge />
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </span>
-          </Pole>
-          {kategorieSekce}
-          {sportityDostupne && (
-            <SportitySekce
-              heslo={sportityHeslo}
-              onHeslo={setSportityHeslo}
-              events={sportityEvents}
-              loadingEvents={sportityLoadingEvents}
-              onNactiEvents={() => void nactiSportityEvents()}
-              eventId={sportityEventId}
-              onEventId={(id) => {
-                setSportityEventId(id)
-                setSportityFolders([])
-                setSportityFolderId('')
-                if (id !== undefined) void nactiSportityFolders(id)
-              }}
-              folders={sportityFolders}
-              loadingFolders={sportityLoadingFolders}
-              folderId={sportityFolderId}
-              onFolderId={(id, name) => { setSportityFolderId(id); setSportityFolderName(name) }}
-            />
-          )}
-          {typ === 'RX' && (
-            <p
-              style={{
-                margin: '0 0 10px',
-                padding: '8px 10px',
-                fontSize: 11.5,
-                color: 'var(--text-2)',
-                lineHeight: 1.5,
-                background: 'rgba(255, 159, 10, 0.08)',
-                borderRadius: 'var(--r-ctrl)',
-                border: '0.5px solid rgba(255, 159, 10, 0.22)'
-              }}
-            >
-              <b>RX Cup je ve vývoji</b> — bodování do seriálu zatím není finální. Závod můžeš normálně
-              založit a zkoušet.
-            </p>
-          )}
-          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
-            Nabídka je dle typu závodu — klikni na kategorie, které chceš.{' '}
-            {typ === 'RAC' ? null : (
-              <>
-                <b>RX Cup</b> nemá kategorii Šotolina.{' '}
-              </>
-            )}
-            Vlastní kategorii přidáš polem výše.
-          </p>
-        </>
-      ) : (
-        <>
-          <Pole label="Typ závodu">
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                height: 28,
-                padding: '0 12px',
-                borderRadius: 'var(--r-ctrl)',
-                fontSize: 12.5,
-                fontWeight: 560,
-                background: 'var(--seg-track)',
-                color: 'var(--text-2)'
-              }}
-            >
-              {typ === 'RAC' ? 'RAC Race' : 'RX Cup'}
-              {typ === 'RX' && (
-                <span style={{ marginLeft: 8 }}>
-                  <DevBadge />
+      <Modal>
+        <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onCancel() }}>
+          <Modal.Container>
+            <Modal.Dialog className="w-[560px] max-w-[calc(100vw-2rem)]">
+              <Modal.Header>
+                <span className="text-base font-semibold">
+                  {mode === 'edit' ? 'Upravit závod' : 'Nový závod'}
                 </span>
-              )}
-            </span>
-            <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.45 }}>
-              Typ závodu nelze po založení změnit. Kategorie můžeš přidat nebo odebrat (odebrání smaže
-              i data kategorie).
-            </p>
-          </Pole>
-          {kategorieSekce}
-          <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
-            {typ === 'RAC' ? (
-              <>
-                U RAC můžeš přidat <b>Šotolinu</b> nebo vlastní název. Číslo u chipu = počet jezdců v
-                kategorii.
-              </>
-            ) : (
-              <>U RX Cup nelze přidat kategorii Šotolina (jiné pravidlo než RAC).</>
-            )}
-          </p>
-        </>
-      )}
-    </Modal>
+              </Modal.Header>
 
-    {confirmOdebrani && (
-      <Modal
-        title="Odebrat kategorie s daty?"
-        width={460}
-        onClose={() => setConfirmOdebrani(null)}
-        footer={
-          <>
-            <Btn variant="plain" onClick={() => setConfirmOdebrani(null)}>
-              Zrušit
-            </Btn>
-            <Btn variant="danger" onClick={() => void ulozSkutecne()}>
-              Odebrat a uložit
-            </Btn>
-          </>
-        }
-      >
-        <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
-          Odebereš kategorie: <b>{confirmOdebrani}</b>.
-        </p>
-        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--text-2)' }}>
-          Smažou se včetně startovek, roštů, výsledků a PDF dat v databázi. Tuto akci nelze
-          vrátit.
-        </p>
+              <Modal.Body>
+                <TextField className="mb-3">
+                  <Label>Název závodu</Label>
+                  <Input
+                    value={nazev}
+                    onChange={(e) => setNazev(e.target.value)}
+                    placeholder="např. MČR Autocross — Přerov"
+                    autoFocus
+                  />
+                </TextField>
+
+                <div className="mb-3 flex gap-3">
+                  <TextField className="flex-1">
+                    <Label>Datum</Label>
+                    <Input
+                      type="date"
+                      value={datum}
+                      onChange={(e) => setDatum(e.target.value)}
+                    />
+                  </TextField>
+                  <TextField className="flex-1">
+                    <Label>Místo (nepovinné)</Label>
+                    <Input
+                      value={misto}
+                      onChange={(e) => setMisto(e.target.value)}
+                      placeholder="např. Přerov"
+                    />
+                  </TextField>
+                </div>
+
+                {mode === 'new' ? (
+                  <>
+                    <div className="mb-3">
+                      <p className="mb-1 text-xs font-semibold text-muted">Typ závodu</p>
+                      <div className="flex w-fit gap-1 rounded-lg border border-border p-0.5">
+                        {(['RAC', 'RX'] as RaceType[]).map((t) => (
+                          <Button
+                            key={t}
+                            size="sm"
+                            variant={typ === t ? 'default' : 'ghost'}
+                            onPress={() => zmenTyp(t)}
+                          >
+                            {t === 'RAC' ? (
+                              'RAC Race'
+                            ) : (
+                              <span className="flex items-center gap-1.5">
+                                RX Cup
+                                <Chip size="sm" variant="soft" color="warning">
+                                  Ve vývoji
+                                </Chip>
+                              </span>
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {kategorieSekce}
+
+                    {sportityDostupne && (
+                      <SportitySekce
+                        heslo={sportityHeslo}
+                        onHeslo={setSportityHeslo}
+                        events={sportityEvents}
+                        loadingEvents={sportityLoadingEvents}
+                        onNactiEvents={() => void nactiSportityEvents()}
+                        eventId={sportityEventId}
+                        onEventId={(id) => {
+                          setSportityEventId(id)
+                          setSportityFolders([])
+                          setSportityFolderId('')
+                          if (id) void nactiSportityFolders(id)
+                        }}
+                        folders={sportityFolders}
+                        loadingFolders={sportityLoadingFolders}
+                        folderId={sportityFolderId}
+                        onFolderId={(id, name) => {
+                          setSportityFolderId(id)
+                          setSportityFolderName(name)
+                        }}
+                      />
+                    )}
+
+                    {typ === 'RX' && (
+                      <p className="mb-2.5 rounded-lg bg-warning/10 px-2.5 py-2 text-[11.5px] leading-relaxed">
+                        <b>RX Cup je ve vývoji</b> — bodování do seriálu zatím není finální. Závod
+                        můžeš normálně založit a zkoušet.
+                      </p>
+                    )}
+
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+                      Nabídka je dle typu závodu — klikni na kategorie, které chceš.{' '}
+                      {typ !== 'RAC' && (
+                        <>
+                          <b>RX Cup</b> nemá kategorii Šotolina.{' '}
+                        </>
+                      )}
+                      Vlastní kategorii přidáš polem výše.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-3">
+                      <p className="mb-1 text-xs font-semibold text-muted">Typ závodu</p>
+                      <div className="flex items-center gap-2">
+                        <Chip size="sm" variant="soft">
+                          {typ === 'RAC' ? 'RAC Race' : 'RX Cup'}
+                        </Chip>
+                        {typ === 'RX' && (
+                          <Chip size="sm" variant="soft" color="warning">
+                            Ve vývoji
+                          </Chip>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted">
+                        Typ závodu nelze po založení změnit. Kategorie můžeš přidat nebo odebrat
+                        (odebrání smaže i data kategorie).
+                      </p>
+                    </div>
+
+                    {kategorieSekce}
+
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+                      {typ === 'RAC' ? (
+                        <>
+                          U RAC můžeš přidat <b>Šotolinu</b> nebo vlastní název. Číslo u chipu =
+                          počet jezdců v kategorii.
+                        </>
+                      ) : (
+                        <>U RX Cup nelze přidat kategorii Šotolina (jiné pravidlo než RAC).</>
+                      )}
+                    </p>
+                  </>
+                )}
+              </Modal.Body>
+
+              <Modal.Footer className="flex justify-end gap-2">
+                <Button variant="secondary" onPress={onCancel}>
+                  Zrušit
+                </Button>
+                <Button onPress={uloz} isDisabled={!muzeUlozit || uklada}>
+                  <Flag width={14} height={14} />
+                  {mode === 'edit' ? 'Uložit' : 'Založit závod'}
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       </Modal>
-    )}
-  </>
-  )
-}
 
-function Pole({
-  label,
-  children,
-  style
-}: {
-  label: string
-  children: React.ReactNode
-  style?: React.CSSProperties
-}): React.JSX.Element {
-  return (
-    <div style={{ margin: '0 0 12px', ...style }}>
-      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)', margin: '0 0 4px' }}>
-        {label}
-      </div>
-      {children}
-    </div>
+      {confirmOdebrani && (
+        <Modal>
+          <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) setConfirmOdebrani(null) }}>
+            <Modal.Container>
+              <Modal.Dialog className="w-[460px] max-w-[calc(100vw-2rem)]">
+                <Modal.Header>
+                  <span className="text-base font-semibold">Odebrat kategorie s daty?</span>
+                </Modal.Header>
+                <Modal.Body>
+                  <p className="mb-2.5 text-[13.5px] leading-relaxed">
+                    Odebereš kategorie: <b>{confirmOdebrani}</b>.
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-muted">
+                    Smažou se včetně startovek, roštů, výsledků a PDF dat v databázi. Tuto akci
+                    nelze vrátit.
+                  </p>
+                </Modal.Body>
+                <Modal.Footer className="flex justify-end gap-2">
+                  <Button variant="secondary" onPress={() => setConfirmOdebrani(null)}>
+                    Zrušit
+                  </Button>
+                  <Button variant="danger" onPress={() => void ulozSkutecne()}>
+                    Odebrat a uložit
+                  </Button>
+                </Modal.Footer>
+              </Modal.Dialog>
+            </Modal.Container>
+          </Modal.Backdrop>
+        </Modal>
+      )}
+    </>
   )
 }
 
 function SportitySekce({
-  heslo, onHeslo,
-  events, loadingEvents, onNactiEvents, eventId, onEventId,
-  folders, loadingFolders, folderId, onFolderId
+  heslo,
+  onHeslo,
+  events,
+  loadingEvents,
+  onNactiEvents,
+  eventId,
+  onEventId,
+  folders,
+  loadingFolders,
+  folderId,
+  onFolderId
 }: {
   heslo: string
   onHeslo: (v: string) => void
@@ -485,56 +466,45 @@ function SportitySekce({
   onFolderId: (id: string, name: string) => void
 }): React.JSX.Element {
   return (
-    <div
-      style={{
-        margin: '4px 0 12px',
-        padding: '12px',
-        border: '0.5px solid var(--hairline)',
-        borderRadius: 'var(--r-ctrl)',
-        background: 'var(--card-alt)'
-      }}
-    >
-      <div style={{ fontSize: 11.5, fontWeight: 560, color: 'var(--text-2)', marginBottom: 10 }}>
-        Sportity
-      </div>
+    <div className="mb-3 rounded-lg border border-border p-3">
+      <p className="mb-2.5 text-xs font-semibold text-muted">Sportity</p>
 
-      {/* Heslo kanálu + načíst */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input
-          value={heslo}
-          onChange={(e) => onHeslo(e.target.value)}
-          placeholder="Heslo kanálu"
-          style={{ ...inputStyle, flex: 1 }}
-        />
-        <Btn
-          variant="bezel"
-          onClick={onNactiEvents}
-          disabled={!heslo.trim() || loadingEvents}
+      <div className="mb-2.5 flex gap-2">
+        <TextField className="flex-1">
+          <Input
+            value={heslo}
+            onChange={(e) => onHeslo(e.target.value)}
+            placeholder="Heslo kanálu"
+          />
+        </TextField>
+        <Button
+          size="sm"
+          variant="secondary"
+          onPress={onNactiEvents}
+          isDisabled={!heslo.trim() || loadingEvents}
         >
           {loadingEvents ? 'Načítám…' : 'Načíst'}
-        </Btn>
+        </Button>
       </div>
 
-      {/* Event picker */}
       {events.length > 0 && (
-        <PickerList
-          items={events.map((e) => ({ id: e.id, label: e.name }))}
-          value={eventId}
-          onChange={onEventId}
-          placeholder="— bez eventu —"
-          style={{ marginBottom: 10 }}
-        />
+        <div className="mb-2.5">
+          <PickerList
+            items={events.map((e) => ({ id: e.id, label: e.name }))}
+            value={eventId}
+            onChange={onEventId}
+            placeholder="— bez eventu —"
+          />
+        </div>
       )}
 
-      {/* Folder picker */}
       {loadingFolders && (
-        <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-3)' }}>Načítám složky…</p>
+        <p className="mb-2.5 text-[12.5px] text-muted">Načítám složky…</p>
       )}
+
       {folders.length > 0 && (
-        <>
-          <div style={{ fontSize: 11.5, color: 'var(--text-2)', marginBottom: 4 }}>
-            Složka s výsledky:
-          </div>
+        <div>
+          <p className="mb-1 text-xs text-muted">Složka s výsledky:</p>
           <PickerList
             items={folders.map((f) => ({ id: f.id, label: f.name }))}
             value={folderId}
@@ -543,11 +513,11 @@ function SportitySekce({
               onFolderId(id, f?.name ?? '')
             }}
           />
-        </>
+        </div>
       )}
 
       {folderId && (
-        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-3)' }}>
+        <p className="mt-2 text-[11.5px] text-muted">
           Sportity mapování se uloží automaticky po vytvoření závodu.
         </p>
       )}
@@ -559,65 +529,34 @@ function PickerList({
   items,
   value,
   onChange,
-  placeholder,
-  style
+  placeholder
 }: {
   items: { id: string; label: string }[]
   value: string
   onChange: (id: string) => void
   placeholder?: string
-  style?: React.CSSProperties
 }): React.JSX.Element {
-  const all = placeholder ? [{ id: '', label: placeholder }, ...items] : items
+  const allItems = placeholder ? [{ id: '', label: placeholder }, ...items] : items
   return (
-    <div
-      style={{
-        maxHeight: 140,
-        overflowY: 'auto',
-        border: '0.5px solid var(--hairline)',
-        borderRadius: 'var(--r-ctrl)',
-        ...style
+    <ListBox
+      selectionMode="single"
+      selectedKeys={value !== '' ? new Set([value]) : new Set()}
+      onSelectionChange={(keys) => {
+        if (keys === 'all') return
+        const arr = Array.from(keys).map(String)
+        onChange(arr[0] ?? '')
       }}
+      className="max-h-[140px] overflow-y-auto rounded-lg border border-border"
     >
-      {all.map((item, i) => {
-        const active = item.id === value
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onChange(item.id)}
-            style={{
-              display: 'block',
-              width: '100%',
-              textAlign: 'left',
-              padding: '7px 12px',
-              fontSize: 13,
-              font: 'inherit',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-              background: active ? 'var(--accent)' : i % 2 === 0 ? 'transparent' : 'var(--card-alt)',
-              color: active ? 'var(--accent-text)' : 'var(--text-1)',
-              fontWeight: active ? 560 : 440,
-              cursor: 'pointer'
-            }}
-          >
-            {item.label}
-          </button>
-        )
-      })}
-    </div>
+      {allItems.map((item) => (
+        <ListBox.Item
+          key={item.id !== '' ? item.id : '__placeholder__'}
+          id={item.id}
+          textValue={item.label}
+        >
+          {item.label}
+        </ListBox.Item>
+      ))}
+    </ListBox>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  height: 32,
-  padding: '0 10px',
-  border: '0.5px solid var(--hairline)',
-  borderRadius: 'var(--r-ctrl)',
-  background: 'var(--card)',
-  color: 'var(--text-1)',
-  font: 'inherit',
-  fontSize: 13,
-  outline: 'none',
-  boxSizing: 'border-box'
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
+import { Printer } from '@gravity-ui/icons'
 import { Btn } from './ui'
 
 interface Tiskarny {
@@ -30,7 +31,7 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
           </Btn>
           <Btn
             variant="primary"
-            icon="printer"
+            icon={<Printer />}
             onClick={() => onPrint(vybrana)}
             disabled={!vybrana}
           >
@@ -41,8 +42,8 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
     >
       <div
         style={{
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--color-border)',
+          borderRadius: 6,
           overflow: 'hidden'
         }}
       >
@@ -56,8 +57,10 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
               padding: '9px 12px',
               fontSize: 13,
               cursor: 'pointer',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-              background: vybrana === t.name ? 'var(--accent-subtle, color-mix(in srgb, var(--accent) 10%, transparent))' : i % 2 === 0 ? 'transparent' : 'var(--card-alt)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--color-border)',
+              background: vybrana === t.name
+                ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)'
+                : i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--color-foreground) 4%, transparent)'
             }}
           >
             <input
@@ -66,13 +69,13 @@ export function PrinterPickerModal({ tiskarny, onPrint, onClose }: Props): React
               value={t.name}
               checked={vybrana === t.name}
               onChange={() => setVybrana(t.name)}
-              style={{ accentColor: 'var(--accent)', width: 15, height: 15, flexShrink: 0 }}
+              style={{ accentColor: 'var(--color-primary)', width: 15, height: 15, flexShrink: 0 }}
             />
-            <span style={{ fontWeight: vybrana === t.name ? 560 : 440, color: 'var(--text-1)' }}>
+            <span style={{ fontWeight: vybrana === t.name ? 560 : 440, color: 'var(--color-foreground)' }}>
               {t.displayName || t.name}
             </span>
             {t.isDefault && (
-              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'var(--text-3)' }}>
+              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)' }}>
                 výchozí
               </span>
             )}

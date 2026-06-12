@@ -36,80 +36,50 @@ přepisují. Pravidla jsou v dokumentu „Časoměřičská bible".
   (nebo přes CI / GitHub Actions). V MVP stačí cílit platformu, na které se
   reálně časoměří.
 
-## 2c. Design (SCHVÁLENO — macOS HIG, jeden vzhled pro obě platformy)
+## 2c. Design (AKTUALIZOVÁNO 2026-06-10 — HeroUI v3 výchozí téma)
 
-Appka „Časomíra" má **jeden vzhled v duchu Apple HIG** na Windows i macOS
-(uživatel to takto zvolil). Vychází ze schválených návrhů z Claude Design.
-Cíl: čistý, profesionální, **NE generický AI vzhled** (žádné fialové gradienty,
-přebujelé stíny, oblé „bubliny", emoji v nadpisech).
+UI je postavené **čistě na HeroUI v3** s výchozím tématem — žádná vlastní macOS
+paleta, žádné přepisování HeroUI tokenů. Cíl: čistý, funkční design bez zbytečného
+visual noise.
 
 **Layout:**
-- **Levý sidebar** (translucent/vibrancy feel): seznam kategorií + počet jezdců
-  vpravo, malá ikonka u každé; vybraná položka = plná modrá „pilulka" s bílým
-  textem. Dole jméno operátora + datum.
+- **Levý sidebar:** seznam kategorií + počet jezdců vpravo; vybraná položka
+  zvýrazněna přes HeroUI `ListBox` selection styl. Dole jméno operátora + datum.
 - **Toolbar nahoře:** vlevo breadcrumb („N1600 → Výsledky Q1"); vpravo **Stopky**
-  (sekundární, obrysové tlačítko) a **Uložit PDF** (primární, modré).
+  (sekundární tlačítko) a **Uložit PDF** (primární tlačítko).
 - Pod toolbarem **segmentový přepínač fází**. Fází je hodně → MUSÍ řešit
-  **přetékání / vodorovný scroll**, ne ořezávat (v návrhu se „Celkově" usekává).
-- Obsah = **inset tabulky** s jemně zaoblenými rohy, zebra řádky, hlavička
-  s velmi jemnou spodní linkou.
+  **přetékání / vodorovný scroll**, ne ořezávat.
+- Obsah = HeroUI `Table` se zebra řádky.
 
-**Barvy — světlý režim:**
-- Pozadí obsahu `#F7F7F9`, panely/řádky `#FFFFFF`, sidebar `#F8F8FA`.
-- Accent (primární akce, aktivní stav) `#007AFF`.
-- Text primární `#1D1D1F`, sekundární/odvozená pole `#8E8E93`.
-- Dělící linky hairline `#E5E5EA`.
-
-**Barvy — tmavý režim (grafit, NE čistá černá):**
-- Pozadí obsahu `#313133`, panely `#2C2C2E`, sidebar `#242425`.
-- Accent `#0A84FF`. Text `#F5F5F7` / sekundární `#98989D`. Linky `#3A3A3C`.
-- Přepínač světlý/tmavý je v appce (uživatel chce oba).
+**Barvy:** HeroUI výchozí light + dark téma. Přepínač světlý/tmavý v appce.
 
 **Typografie:**
-- Font: **SF Pro** na macOS, **Segoe UI Variable / Inter** fallback na Windows
-  (system-ui stack). Běžný text ~13–14 px.
-- **Tabular figures** (čísla pevné šířky) ve všech tabulkách; časy a body
-  zarovnat vpravo.
+- Font: system-ui stack (SF Pro na macOS, Segoe UI Variable na Windows). Běžný text ~13–14 px.
+- **Tabular figures** (čísla pevné šířky) ve všech tabulkách; časy a body zarovnat vpravo.
 
-**Stavové odznaky (badge):** `DNF` oranžová, `DNS` šedá, `DQ` červená — pill tvar.
+**Stavové odznaky (badge):** `DNF` oranžová, `DNS` šedá, `DQ` červená — HeroUI `Chip`.
 
-**Zvýraznění pořadí:** 1./2./3. místo malý medailový puntík (zlatá/stříbrná/
-bronzová) u čísla pozice.
+**Zvýraznění pořadí:** 1./2./3. místo malý medailový puntík (zlatá/stříbrná/bronzová).
 
-**Reference:** schválené screeny „Časomíra" (macOS verze, světlá i tmavá).
+**App-specific tokeny** (jediné rozšíření výchozího tématu):
+- Barvy stavů: `--color-stav-dnf/dns/dq` + soft varianty
+- Barvy medailí: `--color-medal-gold/silver/bronze`
+- Layout: `--spacing-sidebar`, `--spacing-toolbar`
 
-## 2d. Existující prototyp z Claude Design (POUŽÍT jako vizuální základ)
+## 2d. Referenční prototyp (pouze UX reference, NE vizuální základ)
 
-K dispozici je **funkční klikací prototyp** (React/JSX bez build kroku, složka
-`reference/Casomira-macOS/`). Slouží jako **vizuální a strukturní základ** — Claude Code
-z něj přebírá vzhled, ne pravidla.
+Složka `reference/Casomira-macOS/` — klikací prototyp. Slouží **pouze jako UX
+reference** pro interakce (inline editace buněk, autofill, dvojklik stavy, stopky).
+Vizuální styl z prototypu NEpřebíráme — `mac.css` je smazán.
 
-**PŘEVZÍT (skoro 1:1):**
-- `mac.css` — kompletní designové tokeny (light/dark, vibrancy, rohy, stíny,
-  segmentový přepínač, scrollbar). Toto je zdroj pravdy pro vzhled.
-- Rozdělení na moduly: `data` (model) · `m_ui` (primitivy: badge, medaile,
-  tlačítka, ikony) · `m_shell` (sidebar, toolbar, segment fází, hlavička) ·
-  `m_screens` + `m_more` (obrazovky) · `m_intro` (launcher + Nový závod) ·
-  `m_app` (okno, routing) · `tweaks-panel` (přepínač light/dark).
-- UX detaily: inline editace buněk (Enter), autofill odvozených polí v roštech,
-  dvojklik na čas = cyklus DNF/DNS/DQ, stopky (mezerník = záznam, Backspace =
-  vrátit poslední), řazení.
-- Formát času v ms a jeho zobrazení `mm:ss.sss`.
+**UX detaily k zachování:**
+- Inline editace buněk (Enter potvrdí, Esc zruší)
+- Autofill odvozených polí v roštech podle startovního čísla
+- Dvojklik na čas = cyklus DNF/DNS/DQ
+- Stopky: mezerník = záznam, Backspace = vrátit poslední
+- Formát času `mm:ss.sss`
 
-**NEPŘEBÍRAT — nahradit logikou dle bible (§4–§9):**
-- ⚠️ **Bodování v prototypu je ZJEDNODUŠENÉ a NESPRÁVNÉ.** Prototyp počítá
-  `pointsFor()` jako 50/45/42/.../`44−pozice` a penalizace jako `DNS/DQ = 0,
-  DNF = body dle pozice`. To NEodpovídá pravidlům:
-  - RAC/RX (Hobby): DNF = poslední −1, DNS = poslední −5, DQ = poslední −10.
-  - Šotolina: DNS/DNF = 0, DQ = −20; žebříček 14→1 (ne 50/45/…).
-  Skutečné bodování řídí `ruleset` kategorie (§4, §5), ne `pointsFor` z prototypu.
-- Statická ukázková data (ROSTER, RES_Q*) → nahradit reálnými z SQLite.
-- Import z Excelu a PDF jsou v prototypu jen naznačené → implementovat nativně
-  (SheetJS / `webContents.printToPDF`).
-- Šotolina pipeline (Finále A/B, los tiebreak, skupiny) — v prototypu chybí a v aplikaci byla odstraněna (v0.9.7-beta); Šotolina jede jako STANDARD kategorie.
-
-**Postup pro Claude Code:** převzít `mac.css` a komponentní kostru, napojit na
-reálnou datovou/pravidlovou vrstvu (SQLite + ruleset), a teprve pak rozšiřovat.
+**NEPŘEBÍRAT — bodování v prototypu je NESPRÁVNÉ** (viz §4–§5 pro správná pravidla).
 
 ## 3. Hierarchie a formáty (KLÍČOVÉ)
 

@@ -39,11 +39,11 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
               pointerEvents: 'none',
               maxWidth: 310,
               whiteSpace: 'normal',
-              background: 'var(--window)',
-              color: 'var(--text-1)',
-              border: '0.5px solid var(--hairline)',
-              borderRadius: 'var(--r-ctrl)',
-              boxShadow: 'var(--shadow-win)',
+              background: 'var(--color-background)',
+              color: 'var(--color-foreground)',
+              border: '0.5px solid var(--color-border)',
+              borderRadius: 6,
+              boxShadow: '0 4px 16px color-mix(in srgb, var(--color-foreground) 12%, transparent)',
               padding: '5px 9px',
               fontSize: 12
             }}

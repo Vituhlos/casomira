@@ -228,10 +228,10 @@ export function SportityModal({
 
         {/* Section 1: API klíč */}
         <SekceNadpis>API klíč</SekceNadpis>
-        <div style={{ marginBottom: 10, fontSize: 12.5, color: 'var(--text-2)' }}>
+        <div style={{ marginBottom: 10, fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)' }}>
           {apiKeySet
-            ? <span>Nastaven: <b style={{ color: 'var(--text-1)', fontFamily: 'monospace' }}>{apiKeyHint}</b></span>
-            : <span style={{ color: 'var(--text-3)' }}>Klíč není nastaven.</span>
+            ? <span>Nastaven: <b style={{ color: 'var(--color-foreground)', fontFamily: 'monospace' }}>{apiKeyHint}</b></span>
+            : <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)' }}>Klíč není nastaven.</span>
           }
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -266,8 +266,8 @@ export function SportityModal({
           <>
             <SekceNadpis>Kanál a složka výsledků</SekceNadpis>
             {zavodMap && (
-              <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 8 }}>
-                Aktuální: <b style={{ color: 'var(--text-1)' }}>{zavodMap.resultsFolderName}</b>
+              <div style={{ fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)', marginBottom: 8 }}>
+                Aktuální: <b style={{ color: 'var(--color-foreground)' }}>{zavodMap.resultsFolderName}</b>
                 {' '}(kanál: {zavodMap.channelPassword}{zavodMap.eventId ? `, event: ${zavodMap.eventId}` : ''})
               </div>
             )}
@@ -278,7 +278,7 @@ export function SportityModal({
             </div>
             {events.length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Kanál:</div>
+                <div style={{ fontSize: 12, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)', marginBottom: 4 }}>Kanál:</div>
                 <PickerList
                   items={events.map((ev) => ({ id: `${ev.password}|${ev.id}`, label: ev.name, sub: ev.password }))}
                   selected={`${selectedPassword}|${selectedEventId}`}
@@ -299,7 +299,7 @@ export function SportityModal({
             )}
             {folders.length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Složka Výsledků:</div>
+                <div style={{ fontSize: 12, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)', marginBottom: 4 }}>Složka Výsledků:</div>
                 <PickerList
                   items={folders.map((f) => ({ id: f.id, label: f.name, sub: f.parentId ? 'podsložka' : undefined }))}
                   selected={selectedFolderId}
@@ -329,7 +329,7 @@ export function SportityModal({
                 {autoMapping ? 'Páruji…' : 'Auto-párovat'}
               </Btn>
             </div>
-            <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ border: '0.5px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', marginBottom: 16 }}>
               {katMaps.map((m, i) => (
                 <div
                   key={m.kategorieId}
@@ -339,11 +339,11 @@ export function SportityModal({
                     gap: 10,
                     padding: '7px 12px',
                     fontSize: 12.5,
-                    borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)'
+                    borderTop: i === 0 ? 'none' : '0.5px solid var(--color-border)'
                   }}
                 >
                   <span style={{ flex: 1, fontWeight: 540 }}>{m.kategorieNazev}</span>
-                  <span style={{ color: m.folderId ? 'var(--text-2)' : 'var(--text-4)', fontSize: 12 }}>
+                  <span style={{ color: m.folderId ? 'color-mix(in srgb, var(--color-foreground) 55%, transparent)' : 'color-mix(in srgb, var(--color-foreground) 22%, transparent)', fontSize: 12 }}>
                     {m.folderName ?? 'nenalezeno'}
                   </span>
                   {m.folderId && (
@@ -367,7 +367,7 @@ export function SportityModal({
                   <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 540 }}>{k.nazev}</span>
                     {res && (
-                      <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ fontSize: 12, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)', fontVariantNumeric: 'tabular-nums' }}>
                         {res.created > 0 && `nových ${res.created} · `}
                         {res.updated > 0 && `aktualizováno ${res.updated} · `}
                         {res.skipped > 0 && `přeskočeno ${res.skipped}`}
@@ -393,7 +393,7 @@ export function SportityModal({
         {log.length > 0 && (
           <>
             <SekceNadpis>Poslední akce</SekceNadpis>
-            <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
+            <div style={{ border: '0.5px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
               {log.map((entry, i) => (
                 <div
                   key={entry.id}
@@ -403,8 +403,8 @@ export function SportityModal({
                     gap: 8,
                     padding: '5px 10px',
                     fontSize: 11.5,
-                    borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-                    color: 'var(--text-2)'
+                    borderTop: i === 0 ? 'none' : '0.5px solid var(--color-border)',
+                    color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
                   }}
                 >
                   <span style={{ color: entry.status === 'ok' || entry.status === 'created' || entry.status === 'updated' ? '#1a7a35' : '#c93636', fontSize: 11 }}>
@@ -412,9 +412,9 @@ export function SportityModal({
                   </span>
                   <span style={{ flex: 1 }}>
                     {entry.kategorieNazev ?? '—'}{entry.listKey ? ` / ${entry.listKey}` : ''}{' '}
-                    <span style={{ color: 'var(--text-3)' }}>{entry.action}</span>
+                    <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)' }}>{entry.action}</span>
                   </span>
-                  <span style={{ color: 'var(--text-4)', fontSize: 11 }}>
+                  <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 22%, transparent)', fontSize: 11 }}>
                     {entry.createdAt.slice(0, 16).replace('T', ' ')}
                   </span>
                 </div>
@@ -425,7 +425,7 @@ export function SportityModal({
 
         {/* Placeholder for zavod without map */}
         {!zavodMap && !apiKeySet && (
-          <p style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4 }}>
+          <p style={{ fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)', marginTop: 4 }}>
             Nejprve zadejte API klíč Sportity.
           </p>
         )}
@@ -436,14 +436,14 @@ export function SportityModal({
 
 function SekceNadpis({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
-    <h3 style={{ margin: '0 0 10px', fontSize: 13.5, fontWeight: 620, color: 'var(--text-1)' }}>
+    <h3 style={{ margin: '0 0 10px', fontSize: 13.5, fontWeight: 620 }}>
       {children}
     </h3>
   )
 }
 
 function Hairline(): React.JSX.Element {
-  return <div style={{ height: 1, background: 'var(--hairline)', margin: '14px 0 16px' }} />
+  return <div style={{ height: 1, background: 'var(--color-border)', margin: '14px 0 16px' }} />
 }
 
 const inputStyle: React.CSSProperties = {
@@ -451,10 +451,10 @@ const inputStyle: React.CSSProperties = {
   height: 30,
   padding: '0 10px',
   fontSize: 12.5,
-  border: '0.5px solid var(--ctrl-stroke)',
-  borderRadius: 'var(--r-ctrl)',
-  background: 'var(--ctrl-bg)',
-  color: 'var(--text-1)',
+  border: '0.5px solid var(--color-border)',
+  borderRadius: 6,
+  background: 'var(--color-background)',
+  color: 'var(--color-foreground)',
   outline: 'none',
   minWidth: 0
 }
@@ -469,7 +469,7 @@ function PickerList({
   onSelect: (id: string) => void
 }): React.JSX.Element {
   return (
-    <div style={{ border: '0.5px solid var(--hairline)', borderRadius: 'var(--r-ctrl)', overflow: 'hidden', maxHeight: 160, overflowY: 'auto' }}>
+    <div style={{ border: '0.5px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 160, overflowY: 'auto' }}>
       {items.map((item, i) => (
         <div
           key={item.id}
@@ -477,16 +477,16 @@ function PickerList({
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '6px 12px', fontSize: 13, cursor: 'pointer',
-            borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
+            borderTop: i === 0 ? 'none' : '0.5px solid var(--color-border)',
             background: selected === item.id
-              ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
-              : i % 2 === 0 ? 'transparent' : 'var(--card-alt)',
-            color: selected === item.id ? 'var(--accent)' : 'var(--text-1)'
+              ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)'
+              : i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--color-foreground) 4%, transparent)',
+            color: selected === item.id ? 'var(--color-primary)' : 'var(--color-foreground)'
           }}
         >
           <span style={{ flex: 1, fontWeight: selected === item.id ? 600 : 430 }}>{item.label}</span>
           {item.sub && (
-            <span style={{ fontSize: 11.5, color: selected === item.id ? 'var(--accent-text)' : 'var(--text-3)' }}>
+            <span style={{ fontSize: 11.5, color: selected === item.id ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-foreground) 35%, transparent)' }}>
               {item.sub}
             </span>
           )}

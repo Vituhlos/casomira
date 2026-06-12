@@ -1,5 +1,4 @@
-// Malý segmentový přepínač pro podzáložky uvnitř obrazovky (např. Rošt / Výsledky
-// u Semifinále a Finále). Vzhledem navazuje na přepínač fází (.seg-tab).
+import { Tabs } from '@heroui/react'
 
 interface SubTab<T extends string> {
   id: T
@@ -12,53 +11,26 @@ interface SubTabsProps<T extends string> {
   onTab: (id: T) => void
 }
 
+// Sekundární přepínač Rošt/Výsledky — stejný styl jako PhaseSegment nad ním.
 export function SubTabs<T extends string>({
   tabs,
   active,
   onTab
 }: SubTabsProps<T>): React.JSX.Element {
   return (
-    <div
-      className="no-print"
-      style={{
-        display: 'flex',
-        padding: '0 22px 6px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        background: 'var(--content-bg)'
-      }}
-    >
-      <span
-        style={{
-          display: 'inline-flex',
-          gap: 2,
-          background: 'var(--seg-track)',
-          borderRadius: 8,
-          padding: 2
-        }}
-      >
-        {tabs.map((t) => {
-          const on = t.id === active
-          return (
-            <button
-              key={t.id}
-              onClick={() => onTab(t.id)}
-              className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
-              style={{
-                height: 26,
-                padding: '0 16px',
-                fontSize: 12.5,
-                fontWeight: on ? 590 : 450,
-                color: on ? 'var(--text-1)' : 'var(--text-2)',
-                borderRadius: 6
-              }}
-            >
-              {t.label}
-            </button>
-          )
-        })}
-      </span>
+    <div className="no-print">
+      <Tabs selectedKey={active} onSelectionChange={(key) => onTab(key as T)}>
+        <Tabs.ListContainer className="px-5">
+          <Tabs.List aria-label="Podfáze">
+            {tabs.map((t) => (
+              <Tabs.Tab key={t.id} id={t.id}>
+                {t.label}
+                <Tabs.Indicator />
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs.ListContainer>
+      </Tabs>
     </div>
   )
 }

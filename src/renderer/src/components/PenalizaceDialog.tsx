@@ -1,7 +1,6 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import type { VysledekRadek } from '@shared/types'
-import { Modal } from './Modal'
-import { Btn } from './ui'
+import { Button, Modal } from '@heroui/react'
 import { fmtTime } from '../lib/time'
 import { safeCall } from '../lib/api'
 
@@ -20,16 +19,9 @@ interface PenalizaceDialogProps {
   onSaved: () => void
 }
 
-const inputStyle: CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: '0.5px solid var(--hairline)',
-  background: 'var(--window)',
-  font: 'inherit',
-  fontSize: 13,
-  color: 'var(--text-1)'
-}
+const inputCls =
+  'w-full rounded-md border border-border bg-background px-3 py-2 text-[13px] text-foreground font-[inherit] ' +
+  'focus:outline-none focus:ring-[3.5px] focus:ring-primary/25 focus:border-primary'
 
 function formatDelta(n: number): string {
   return n >= 0 ? `+${n}` : String(n)
@@ -60,15 +52,11 @@ export function PenalizaceDialog({
   const maPosun = radek.rucni_poradi != null
 
   const [druh, setDruh] = useState<DruhPenalizace>(() => vychoziDruh(radek))
-  const [sekundy, setSekundy] = useState(
-    maCasovou ? String(radek.penalizace_ms / 1000) : ''
-  )
+  const [sekundy, setSekundy] = useState(maCasovou ? String(radek.penalizace_ms / 1000) : '')
   const [delta, setDelta] = useState(
     maBodovou && radek.uprava_hodnota != null ? String(radek.uprava_hodnota) : ''
   )
-  const [pozice, setPozice] = useState(
-    String(radek.rucni_poradi ?? radek.poradi ?? 1)
-  )
+  const [pozice, setPozice] = useState(String(radek.rucni_poradi ?? radek.poradi ?? 1))
   const [autoBody, setAutoBody] = useState<number | null>(null)
   const [duvod, setDuvod] = useState(radek.uprava_duvod ?? '')
   const [chyba, setChyba] = useState<string | null>(null)
@@ -80,17 +68,12 @@ export function PenalizaceDialog({
     safeCall(window.api.getAutoBodyJizdy(target.jizdaId, radek.jezdec_id).then((b) => {
       if (live) setAutoBody(b)
     }))
-    return () => {
-      live = false
-    }
+    return () => { live = false }
   }, [druh, target.jizdaId, radek.jezdec_id])
 
   const uloz = async (): Promise<void> => {
     const d = duvod.trim()
-    if (!d) {
-      setChyba('Důvod zásahu ředitele je povinný')
-      return
-    }
+    if (!d) { setChyba('Důvod zásahu ředitele je povinný'); return }
     setChyba(null)
     setUklada(true)
     try {
@@ -101,12 +84,7 @@ export function PenalizaceDialog({
           setUklada(false)
           return
         }
-        await window.api.setCasovaPenalizace({
-          jizdaId: target.jizdaId,
-          jezdecId: radek.jezdec_id,
-          sekundy: s,
-          duvod: d
-        })
+        await window.api.setCasovaPenalizace({ jizdaId: target.jizdaId, jezdecId: radek.jezdec_id, sekundy: s, duvod: d })
       } else if (druh === 'BODOVA') {
         const del = Number.parseInt(delta.replace(',', '.'), 10)
         if (!Number.isFinite(del)) {
@@ -114,12 +92,7 @@ export function PenalizaceDialog({
           setUklada(false)
           return
         }
-        await window.api.setBodovaPenalizace({
-          jizdaId: target.jizdaId,
-          jezdecId: radek.jezdec_id,
-          delta: del,
-          duvod: d
-        })
+        await window.api.setBodovaPenalizace({ jizdaId: target.jizdaId, jezdecId: radek.jezdec_id, delta: del, duvod: d })
       } else {
         const p = Number.parseInt(pozice, 10)
         if (!Number.isFinite(p) || p < 1 || p > maxPoradi) {
@@ -127,12 +100,7 @@ export function PenalizaceDialog({
           setUklada(false)
           return
         }
-        await window.api.setPosunPoradi({
-          jizdaId: target.jizdaId,
-          jezdecId: radek.jezdec_id,
-          poradi: p,
-          duvod: d
-        })
+        await window.api.setPosunPoradi({ jizdaId: target.jizdaId, jezdecId: radek.jezdec_id, poradi: p, duvod: d })
       }
       onSaved()
       onClose()
@@ -145,10 +113,7 @@ export function PenalizaceDialog({
 
   const zrus = async (): Promise<void> => {
     const d = duvod.trim()
-    if (!d) {
-      setChyba('Uveď důvod zrušení penalizace')
-      return
-    }
+    if (!d) { setChyba('Uveď důvod zrušení penalizace'); return }
     setChyba(null)
     setUklada(true)
     try {
@@ -176,183 +141,167 @@ export function PenalizaceDialog({
   const deltaPreview =
     autoBody != null && Number.isFinite(deltaNum) ? autoBody + deltaNum : null
 
-  const maAktivni =
-    druh === 'CASOVA' ? maCasovou : druh === 'BODOVA' ? maBodovou : maPosun
-
+  const maAktivni = druh === 'CASOVA' ? maCasovou : druh === 'BODOVA' ? maBodovou : maPosun
   const poziceOptions = Array.from({ length: maxPoradi }, (_, i) => i + 1)
 
   return (
-    <Modal
-      title="Penalizace ředitele"
-      width={480}
-      onClose={onClose}
-      footer={
-        <>
-          {maAktivni && (
-            <Btn variant="plain" onClick={() => void zrus()} disabled={uklada}>
-              Zrušit penalizaci
-            </Btn>
-          )}
-          <Btn variant="plain" onClick={onClose}>
-            Zavřít
-          </Btn>
-          <Btn variant="primary" onClick={() => void uloz()} disabled={uklada}>
-            Uložit
-          </Btn>
-        </>
-      }
-    >
-      <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-2)' }}>
-        <strong style={{ color: 'var(--text-1)' }}>
-          {radek.st_cislo} — {radek.prijmeni} {radek.jmeno}
-        </strong>
-        {radek.poradi != null && (
-          <span style={{ color: 'var(--text-3)', fontWeight: 450 }}>
-            {' '}
-            (aktuálně {radek.poradi}. v jízdě)
-          </span>
-        )}
-      </p>
+    <Modal>
+      <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onClose() }}>
+        <Modal.Container>
+          <Modal.Dialog className="w-[480px] max-w-[calc(100vw-2rem)]">
+            <Modal.Header>
+              <span className="text-base font-semibold">Penalizace ředitele</span>
+            </Modal.Header>
 
-      <label style={{ display: 'block', marginBottom: 14 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-          Druh zásahu
-        </span>
-        <select
-          value={druh}
-          onChange={(e) => setDruh(e.target.value as DruhPenalizace)}
-          style={inputStyle}
-        >
-          <option value="CASOVA">Časová (+ sekundy k času)</option>
-          <option value="BODOVA">Bodová (úprava bodů v jízdě)</option>
-          <option value="POSUN">Posun pořadí (degradace / přesun)</option>
-        </select>
-      </label>
+            <Modal.Body className="flex flex-col gap-3.5">
+              <p className="text-[13px]">
+                <strong className="text-foreground font-[600]">
+                  {radek.st_cislo} — {radek.prijmeni} {radek.jmeno}
+                </strong>
+                {radek.poradi != null && (
+                  <span className="text-muted font-[450]"> (aktuálně {radek.poradi}. v jízdě)</span>
+                )}
+              </p>
 
-      {druh === 'CASOVA' && (
-        <>
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)' }}>
-            Přičte sekundy k naměřenému času. Pořadí a body v jízdě se přepočítají; naměřený čas
-            zůstane v záznamu.
-          </p>
-          <label style={{ display: 'block', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-              Penalizace (sekundy)
-            </span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={sekundy}
-              onChange={(e) => setSekundy(e.target.value)}
-              placeholder="např. 10"
-              style={inputStyle}
-              autoFocus
-            />
-          </label>
-          {radek.namereny_cas_ms != null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-2)' }}>
-              Naměřeno: <span className="tnum">{fmtTime(radek.namereny_cas_ms)}</span>
-              {efektivni != null && maCasovou && (
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] text-muted">Druh zásahu</span>
+                <select
+                  value={druh}
+                  onChange={(e) => setDruh(e.target.value as DruhPenalizace)}
+                  className={inputCls}
+                >
+                  <option value="CASOVA">Časová (+ sekundy k času)</option>
+                  <option value="BODOVA">Bodová (úprava bodů v jízdě)</option>
+                  <option value="POSUN">Posun pořadí (degradace / přesun)</option>
+                </select>
+              </label>
+
+              {druh === 'CASOVA' && (
                 <>
-                  {' '}
-                  → výsledný čas: <span className="tnum">{fmtTime(efektivni)}</span>
+                  <p className="text-[12.5px] text-muted">
+                    Přičte sekundy k naměřenému času. Pořadí a body v jízdě se přepočítají; naměřený čas
+                    zůstane v záznamu.
+                  </p>
+                  <label className="block">
+                    <span className="mb-1.5 block text-[12px] text-muted">Penalizace (sekundy)</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={sekundy}
+                      onChange={(e) => setSekundy(e.target.value)}
+                      placeholder="např. 10"
+                      className={inputCls}
+                      autoFocus
+                    />
+                  </label>
+                  {radek.namereny_cas_ms != null && (
+                    <p className="text-[12px] text-muted">
+                      Naměřeno: <span className="tabular-nums">{fmtTime(radek.namereny_cas_ms)}</span>
+                      {efektivni != null && maCasovou && (
+                        <> → výsledný čas: <span className="tabular-nums">{fmtTime(efektivni)}</span></>
+                      )}
+                    </p>
+                  )}
                 </>
               )}
-            </p>
-          )}
-        </>
-      )}
 
-      {druh === 'BODOVA' && (
-        <>
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)' }}>
-            Upraví body v této jízdě o zadanou hodnotu vůči automatickým bodům z pořadí/času.
-            Promítne se do klasifikace; pořadí v jízdě se nemění.
-          </p>
-          <label style={{ display: 'block', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-              Úprava bodů (delta)
-            </span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={delta}
-              onChange={(e) => setDelta(e.target.value)}
-              placeholder="např. −5"
-              style={inputStyle}
-              autoFocus
-            />
-          </label>
-          {autoBody === null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-3)' }}>
-              Automatická body zatím nejsou k dispozici — zadej nejdřív čas nebo stav v jízdě.
-            </p>
-          )}
-          {autoBody != null && (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-2)' }}>
-              Automat z jízdy: <span className="tnum">{autoBody}</span>
-              {deltaPreview != null && Number.isFinite(deltaNum) && (
+              {druh === 'BODOVA' && (
                 <>
-                  {' '}
-                  → po úpravě: <span className="tnum">{deltaPreview}</span>
-                  <span style={{ color: 'var(--text-3)' }}> ({formatDelta(deltaNum)})</span>
+                  <p className="text-[12.5px] text-muted">
+                    Upraví body v této jízdě o zadanou hodnotu vůči automatickým bodům z pořadí/času.
+                    Promítne se do klasifikace; pořadí v jízdě se nemění.
+                  </p>
+                  <label className="block">
+                    <span className="mb-1.5 block text-[12px] text-muted">Úprava bodů (delta)</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={delta}
+                      onChange={(e) => setDelta(e.target.value)}
+                      placeholder="např. −5"
+                      className={inputCls}
+                      autoFocus
+                    />
+                  </label>
+                  {autoBody === null && (
+                    <p className="text-[12px] text-muted">
+                      Automatická body zatím nejsou k dispozici — zadej nejdřív čas nebo stav v jízdě.
+                    </p>
+                  )}
+                  {autoBody != null && (
+                    <p className="text-[12px] text-muted">
+                      Automat z jízdy: <span className="tabular-nums">{autoBody}</span>
+                      {deltaPreview != null && Number.isFinite(deltaNum) && (
+                        <>
+                          {' '}→ po úpravě: <span className="tabular-nums">{deltaPreview}</span>
+                          <span className="text-muted opacity-60"> ({formatDelta(deltaNum)})</span>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </>
               )}
-            </p>
-          )}
-        </>
-      )}
 
-      {druh === 'POSUN' && (
-        <>
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)' }}>
-            Přesune jezdce na zvolené pořadí v jízdě; ostatní se posunou. Body dojetých se přepočítají
-            z žebříčku podle nového pořadí (čas se nemění).
-          </p>
-          {radek.poradi == null ? (
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: '#c93636' }}>
-              Nejprve zadej čas nebo stav — bez pořadí v jízdě nelze posunout.
-            </p>
-          ) : (
-            <label style={{ display: 'block', marginBottom: 14 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-                Cílové pořadí v jízdě
-              </span>
-              <select
-                value={pozice}
-                onChange={(e) => setPozice(e.target.value)}
-                style={inputStyle}
-                autoFocus
-              >
-                {poziceOptions.map((p) => (
-                  <option key={p} value={String(p)}>
-                    {p}. místo
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </>
-      )}
+              {druh === 'POSUN' && (
+                <>
+                  <p className="text-[12.5px] text-muted">
+                    Přesune jezdce na zvolené pořadí v jízdě; ostatní se posunou. Body dojetých se přepočítají
+                    z žebříčku podle nového pořadí (čas se nemění).
+                  </p>
+                  {radek.poradi == null ? (
+                    <p className="text-[12px] text-danger">
+                      Nejprve zadej čas nebo stav — bez pořadí v jízdě nelze posunout.
+                    </p>
+                  ) : (
+                    <label className="block">
+                      <span className="mb-1.5 block text-[12px] text-muted">Cílové pořadí v jízdě</span>
+                      <select
+                        value={pozice}
+                        onChange={(e) => setPozice(e.target.value)}
+                        className={inputCls}
+                        autoFocus
+                      >
+                        {poziceOptions.map((p) => (
+                          <option key={p} value={String(p)}>{p}. místo</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </>
+              )}
 
-      <label style={{ display: 'block', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
-          Důvod / poznámka (povinné)
-        </span>
-        <textarea
-          value={duvod}
-          onChange={(e) => setDuvod(e.target.value)}
-          rows={3}
-          placeholder="např. předjetí, nesportovní chování…"
-          style={{ ...inputStyle, resize: 'vertical', minHeight: 72 }}
-        />
-      </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] text-muted">Důvod / poznámka (povinné)</span>
+                <textarea
+                  value={duvod}
+                  onChange={(e) => setDuvod(e.target.value)}
+                  rows={3}
+                  placeholder="např. předjetí, nesportovní chování…"
+                  className={`${inputCls} resize-y min-h-[72px]`}
+                />
+              </label>
 
-      {chyba && (
-        <p style={{ margin: '8px 0 0', fontSize: 12.5, color: '#c93636' }} role="alert">
-          {chyba}
-        </p>
-      )}
+              {chyba && (
+                <p className="text-[12.5px] text-danger" role="alert">{chyba}</p>
+              )}
+            </Modal.Body>
+
+            <Modal.Footer className="flex justify-end gap-2">
+              {maAktivni && (
+                <Button variant="ghost" size="sm" onPress={() => void zrus()} isDisabled={uklada}>
+                  Zrušit penalizaci
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onPress={onClose}>
+                Zavřít
+              </Button>
+              <Button size="sm" onPress={() => void uloz()} isDisabled={uklada}>
+                Uložit
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   )
 }

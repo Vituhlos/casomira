@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ZaverStav } from '@shared/types'
-import { ContentHead } from '../components/ContentHead'
+import { Button } from '@heroui/react'
 import { SubTabs } from '../components/SubTabs'
 import { Results } from './Results'
 import { RostGrid } from './RostGrid'
@@ -31,7 +31,7 @@ export function Semifinale({
     await nactiStav()
   }
 
-  if (!stav) return <div className="screen-enter" />
+  if (!stav) return <div />
 
   const toggle = (
     <FinaleToggle velikost={stav.finaleVelikost} onChange={(v) => void setVelikost(v)} />
@@ -40,22 +40,22 @@ export function Semifinale({
   // Semifinále se nekoná → samostatná informační obrazovka (bez přepínače).
   if (!stav.sfSeKona) {
     return (
-      <div className="screen-enter">
-        <ContentHead
-          title="Semifinále"
-          sub={`${stav.kvalifikovani} kvalifikovaných · semifinále od ${stav.prahSF}`}
-        >
-          {toggle}
-        </ContentHead>
-        <div style={{ padding: '0 22px 22px' }}>
+      <div>
+        <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
+          <div>
+            <h2 className="text-[22px] font-[680] tracking-tight">Semifinále</h2>
+            <p className="mt-0.5 text-[12.5px] text-muted">
+              {stav.kvalifikovani} kvalifikovaných · semifinále od {stav.prahSF}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">{toggle}</div>
+        </div>
+        <div className="px-5 pb-5">
           <div
+            className="rounded-lg px-4 py-3 text-[13px] leading-relaxed"
             style={{
-              padding: '12px 16px',
-              borderRadius: 'var(--r-ctrl)',
-              background: 'rgba(255,159,10,0.14)',
-              color: '#9a6400',
-              fontSize: 13,
-              lineHeight: 1.5
+              background: 'color-mix(in srgb, var(--color-warning) 12%, transparent)',
+              color: 'color-mix(in srgb, var(--color-warning) 60%, var(--color-foreground))'
             }}
           >
             <b>Semifinále se nekoná</b> — jen {stav.kvalifikovani} kvalifikovaných (potřeba{' '}
@@ -68,7 +68,7 @@ export function Semifinale({
   }
 
   return (
-    <div className="screen-enter" style={{ '--thead-top': '32px' } as React.CSSProperties}>
+    <div>
       <SubTabs
         tabs={[
           { id: 'rost', label: 'Rošt' },
@@ -108,26 +108,50 @@ export function FinaleToggle({
 }): React.JSX.Element {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>Finále:</span>
-      <span style={{ display: 'inline-flex', gap: 2, background: 'var(--seg-track)', borderRadius: 8, padding: 2 }}>
+      <span
+        style={{
+          fontSize: 12.5,
+          color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
+        }}
+      >
+        Finále:
+      </span>
+      <span
+        style={{
+          display: 'inline-flex',
+          gap: 2,
+          background: 'color-mix(in srgb, var(--color-foreground) 8%, transparent)',
+          borderRadius: 8,
+          padding: 2
+        }}
+      >
         {[8, 10].map((v) => {
           const on = velikost === v
           return (
-            <button
+            <Button
               key={v}
-              onClick={() => onChange(v)}
-              className={on ? 'seg-tab seg-tab--active' : 'seg-tab'}
+              size="sm"
+              variant={on ? 'solid' : 'light'}
+              color={on ? 'default' : 'default'}
+              onPress={() => onChange(v)}
               style={{
                 height: 24,
+                minWidth: 'auto',
                 padding: '0 12px',
                 fontSize: 12.5,
                 fontWeight: on ? 590 : 450,
-                color: on ? 'var(--text-1)' : 'var(--text-2)',
-                borderRadius: 6
+                borderRadius: 6,
+                background: on ? 'var(--color-background)' : 'transparent',
+                color: on
+                  ? 'var(--color-foreground)'
+                  : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)',
+                boxShadow: on
+                  ? '0 1px 3px color-mix(in srgb, var(--color-foreground) 12%, transparent)'
+                  : 'none'
               }}
             >
               {v}
-            </button>
+            </Button>
           )
         })}
       </span>

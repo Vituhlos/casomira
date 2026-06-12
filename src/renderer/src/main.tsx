@@ -1,10 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-// Nová HeroUI vrstva PŘED starými styly — staré obrazovky si během
-// přechodu drží vzhled (pozdější unlayered CSS vyhrává remízy).
 import './styles/main.css'
-import './styles/mac.css'
-import './styles/app.css'
 import { App } from './App'
 import { StopkyApp } from './StopkyApp'
 import { DevKit } from './screens/DevKit'

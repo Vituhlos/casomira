@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { KlasifikaceRadek, KoloTyp } from '@shared/types'
-import { ContentHead } from '../components/ContentHead'
-import { Btn, Medal } from '../components/ui'
-import { Card, Row, tdStyle, thStyle } from '../components/table'
+import { Button, Table } from '@heroui/react'
+import { ArrowUpArrowDown } from '@gravity-ui/icons'
 
 interface StandingsProps {
   kategorieId: number
   koloTypy: KoloTyp[]
   title: string
-  /**
-   * Zobrazit sloupec „Los" (a vysvětlivku v podtitulku). True pro Šotolinu
-   * — tam je los tiebreakem (CLAUDE.md §7). Pro STANDARD se nepoužívá.
-   */
   ukazLos?: boolean
 }
 
@@ -37,110 +32,94 @@ export function Standings({
     ? 'Součet bodů · řazeno sestupně · při shodě rozhoduje los do 1. jízdy'
     : 'Součet bodů ze všech jízd · řazeno sestupně'
 
-  // Šířka sloupce „Jezdec" se mírně zmenší, když přibude Los, aby řádek nepřetekl.
-  const wJezdec = ukazLos ? 210 : 240
-  const colSpanPrazdne = 3 + (ukazLos ? 1 : 0) + koloTypy.length + 1
-
   return (
-    <div className="screen-enter">
-      <ContentHead title={title} sub={sub}>
-        <Btn icon="sort" onClick={() => void nacti()}>
-          Seřadit
-        </Btn>
-      </ContentHead>
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
+        <div>
+          <h2 className="text-[22px] font-[680] tracking-tight">{title}</h2>
+          <p className="mt-0.5 text-[12.5px] text-muted">{sub}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onPress={() => void nacti()}>
+            <ArrowUpArrowDown width={14} height={14} />
+            Seřadit
+          </Button>
+        </div>
+      </div>
 
-      <Card>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Pořadí</th>
-              <th style={thStyle}>St. č.</th>
-              <th style={thStyle}>Jezdec</th>
-              {ukazLos && (
-                <th
-                  style={{ ...thStyle, textAlign: 'right' }}
-                  title="Los do 1. jízdy (tiebreak)"
-                >
-                  Los
-                </th>
-              )}
-              {koloTypy.map((t) => (
-                <th key={t} style={{ ...thStyle, textAlign: 'right' }}>
-                  {t}
-                </th>
-              ))}
-              <th style={{ ...thStyle, textAlign: 'right' }}>Celkem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {radky.length === 0 && (
-              <tr>
-                <td
-                  colSpan={colSpanPrazdne}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
-                >
-                  Zatím žádné body — zadej výsledky v jednotlivých kolech.
-                </td>
-              </tr>
-            )}
-            {radky.map((r, i) => (
-              <Row key={r.jezdec_id} i={i} zebra>
-                <td
-                  style={{
-                    ...tdStyle,
-                    fontVariantNumeric: 'tabular-nums',
-                    fontWeight: 620,
-                    color: r.poradi <= 3 ? 'var(--text-1)' : 'var(--text-2)'
-                  }}
-                >
-                  <Medal rank={r.poradi} />
-                  {r.poradi}.
-                </td>
-                <td style={tdStyle}>
-                  <span className="tnum" style={{ fontWeight: 600 }}>
-                    {r.st_cislo}
-                  </span>
-                </td>
-                <td style={tdStyle}>
-                  <b style={{ fontWeight: 590 }}>{r.prijmeni}</b>{' '}
-                  <span style={{ color: 'var(--text-2)' }}>{r.jmeno}</span>
-                </td>
-                {ukazLos && (
-                  <td
-                    className="tnum"
-                    style={{
-                      ...tdStyle,
-                      textAlign: 'right',
-                      color: r.los != null ? 'var(--text-2)' : 'var(--text-4)'
-                    }}
-                  >
-                    {r.los ?? '—'}
-                  </td>
-                )}
+      <div className="mx-5 mb-5">
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label={title}>
+              <Table.Header className="sticky top-0 z-10">
+                <Table.Column isRowHeader>Pořadí</Table.Column>
+                <Table.Column>St. č.</Table.Column>
+                <Table.Column>Jezdec</Table.Column>
+                {ukazLos && <Table.Column className="text-right" title="Los do 1. jízdy (tiebreak)">Los</Table.Column>}
                 {koloTypy.map((t) => (
-                  <td
-                    key={t}
-                    style={{ ...tdStyle, textAlign: 'right', color: 'var(--text-2)' }}
-                    className="tnum"
-                  >
-                    {r.perKolo[t] ?? 0}
-                  </td>
+                  <Table.Column key={t} className="text-right">{t}</Table.Column>
                 ))}
-                <td
-                  style={{
-                    ...tdStyle,
-                    textAlign: 'right',
-                    fontWeight: 680,
-                    fontVariantNumeric: 'tabular-nums'
-                  }}
-                >
-                  {r.celkem}
-                </td>
-              </Row>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+                <Table.Column className="text-right">Celkem</Table.Column>
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <div className="py-8 text-center text-sm text-muted">
+                    Zatím žádné body — zadej výsledky v jednotlivých kolech.
+                  </div>
+                )}
+              >
+                {radky.map((r, i) => (
+                  <Table.Row key={r.jezdec_id} id={r.jezdec_id} className={i % 2 ? 'bg-muted/[0.04]' : ''}>
+                    <Table.Cell className="tabular-nums font-[620]">
+                      <span style={{
+                        color: r.poradi <= 3
+                          ? 'var(--color-foreground)'
+                          : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
+                      }}>
+                        <MedalDot rank={r.poradi} />
+                        {r.poradi}.
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell className="tabular-nums font-[600]">{r.st_cislo}</Table.Cell>
+                    <Table.Cell>
+                      <b style={{ fontWeight: 590 }}>{r.prijmeni}</b>{' '}
+                      <span className="text-muted">{r.jmeno}</span>
+                    </Table.Cell>
+                    {ukazLos && (
+                      <Table.Cell className="tabular-nums text-right text-muted">
+                        {r.los ?? '—'}
+                      </Table.Cell>
+                    )}
+                    {koloTypy.map((t) => (
+                      <Table.Cell key={t} className="tabular-nums text-right text-muted">
+                        {r.perKolo[t] ?? 0}
+                      </Table.Cell>
+                    ))}
+                    <Table.Cell className="tabular-nums text-right font-[680]">
+                      {r.celkem}
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+        </Table>
+      </div>
     </div>
+  )
+}
+
+function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
+  const color =
+    rank === 1 ? 'var(--color-medal-gold)' :
+    rank === 2 ? 'var(--color-medal-silver)' :
+    rank === 3 ? 'var(--color-medal-bronze)' : null
+  if (!color) return null
+  return (
+    <span style={{
+      display: 'inline-block', width: 7, height: 7,
+      borderRadius: 99, background: color,
+      marginRight: 8, verticalAlign: 'middle'
+    }} />
   )
 }

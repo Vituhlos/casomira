@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Surface } from '@heroui/react'
 import type { BackupRestorePreview } from '@shared/backup'
 import { isBackupPreview } from '@shared/backup'
 import type {
@@ -13,11 +14,12 @@ import type {
   ZavodInfo
 } from '@shared/types'
 import { RestoreBackupModal } from './components/RestoreBackupModal'
-import { Sidebar } from './components/Sidebar'
-import { Toolbar } from './components/Toolbar'
-import { Segmented } from './components/Segmented'
+import { ShellSidebar } from './components/ShellSidebar'
+import { ShellToolbar } from './components/ShellToolbar'
 import { Modal } from './components/Modal'
+import { PhaseSegment } from './ui'
 import { ImportDialog } from './components/ImportDialog'
+import { ArrowDownToSquare, TrashBin } from '@gravity-ui/icons'
 import { Btn } from './components/ui'
 import { StartList } from './screens/StartList'
 import { QFaze } from './screens/QFaze'
@@ -507,7 +509,11 @@ export function App(): React.JSX.Element {
   }
 
   return (
-    <>
+    <div className="flex h-full bg-background p-2">
+      <Surface
+        variant="default"
+        className="relative mx-auto flex h-full w-full max-w-[1440px] flex-col overflow-hidden rounded-xl border border-border"
+      >
       {view === 'list' ? (
         <RaceList
           zavody={zavody}
@@ -521,8 +527,8 @@ export function App(): React.JSX.Element {
           onToggleTheme={toggle}
         />
       ) : (
-        <div style={{ display: 'flex', height: '100%' }}>
-          <Sidebar
+        <div className="flex h-full">
+          <ShellSidebar
             kategorie={kategorie}
             activeCat={activeCat}
             onCat={setActiveCat}
@@ -530,33 +536,25 @@ export function App(): React.JSX.Element {
             operator="Časoměřič"
             datum={zavod ? czDate(zavod.datum) : ''}
           />
-          <main
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              background: 'var(--content-bg)'
-            }}
-          >
-            <Toolbar
+          <main className="flex flex-1 min-w-0 flex-col bg-background">
+            <ShellToolbar
               catLabel={catLabel}
               phaseLabel={phaseLabel}
-              raceTyp={zavod?.typ}
               theme={theme}
               onToggleTheme={toggle}
               onPdf={() => void onPdf()}
               onPdfSaveAs={() => void onPdfSaveAs()}
               onOpenPdfFolder={() => void onOpenPdfFolder()}
-              onPrint={(e) => void onPrint(e?.shiftKey)}
+              onPrint={(shiftKey) => void onPrint(shiftKey)}
               onStopky={() => void window.api.openStopky()}
               onSettings={() => setNastaveniOtevreno(true)}
             />
-            {/* Lišta fází: záložky vystředěné jako kompaktní blok (vodorovný scroll
-                až když se na úzkém okně nevejdou). Seznam fází zužujeme podle
-                typu závodu (RX bez „Klasifikace po Q2"). */}
-            <Segmented active={phase} phases={phases} onTab={onTabPhase} />
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <PhaseSegment
+              phases={phases}
+              selectedId={phase}
+              onSelect={onTabPhase}
+            />
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <div
                 key={dataNonce}
                 style={{ maxWidth: contentMaxW, width: '100%', margin: '0 auto' }}
@@ -604,7 +602,7 @@ export function App(): React.JSX.Element {
               <Btn variant="plain" onClick={() => setSmazatZavod(null)}>
                 Zrušit
               </Btn>
-              <Btn variant="danger" icon="trash" onClick={() => void onConfirmDeleteZavod()}>
+              <Btn variant="danger" icon={<TrashBin />} onClick={() => void onConfirmDeleteZavod()}>
                 Smazat závod
               </Btn>
             </>
@@ -613,7 +611,7 @@ export function App(): React.JSX.Element {
           <p style={{ margin: 0, fontSize: 13.5 }}>
             Opravdu smazat závod <b>{smazatZavod.nazev}</b>?
           </p>
-          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)' }}>
             Smažou se i všechny jeho kategorie, jezdci, rošty a výsledky. Tuto akci nelze vrátit.
           </p>
         </Modal>
@@ -687,7 +685,7 @@ export function App(): React.JSX.Element {
               </Btn>
               <Btn
                 variant="primary"
-                icon="import"
+                icon={<ArrowDownToSquare />}
                 onClick={() => {
                   safeCall(
                     window.api.choosePdfRoot().then((s) => {
@@ -708,7 +706,7 @@ export function App(): React.JSX.Element {
               ? 'Nastavená kořenová složka pro PDF už neexistuje (byla smazána nebo přesunuta).'
               : 'Vyber kořenovou složku, kam se budou ukládat generovaná PDF.'}
           </p>
-          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)', lineHeight: 1.55 }}>
             Appka v ní sama vytvoří podsložky <b>závod / kategorie</b>. Data závodů jsou v databázi
             — tohle je jen místo pro PDF. Změnit ji můžeš kdykoliv v <b>Nastavení</b> (ozubené kolo).
           </p>
@@ -733,7 +731,7 @@ export function App(): React.JSX.Element {
               <Btn variant="plain" onClick={() => setSmazat(null)}>
                 Zrušit
               </Btn>
-              <Btn variant="danger" icon="trash" onClick={onConfirmDelete}>
+              <Btn variant="danger" icon={<TrashBin />} onClick={onConfirmDelete}>
                 Smazat
               </Btn>
             </>
@@ -746,7 +744,7 @@ export function App(): React.JSX.Element {
             </b>
             {smazat.st_cislo != null && <> (č. {smazat.st_cislo})</>}?
           </p>
-          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--text-3)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)' }}>
             Tuto akci nelze vrátit.
           </p>
         </Modal>
@@ -761,11 +759,11 @@ export function App(): React.JSX.Element {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 200,
-            background: 'var(--card)',
-            color: 'var(--text-1)',
-            border: '0.5px solid var(--hairline)',
-            boxShadow: 'var(--shadow-win)',
-            borderRadius: 'var(--r-ctrl)',
+            background: 'var(--color-background)',
+            color: 'var(--color-foreground)',
+            border: '0.5px solid var(--color-border)',
+            boxShadow: '0 4px 20px color-mix(in srgb, var(--color-foreground) 14%, transparent)',
+            borderRadius: 8,
             padding: '10px 16px',
             fontSize: 13,
             display: 'flex',
@@ -777,8 +775,6 @@ export function App(): React.JSX.Element {
           <span style={{ minWidth: 0 }}>{toast}</span>
           {toastSlozka && (
             <button
-              className="btn btn--plain"
-              onClick={() => void window.api.openFolder(toastSlozka)}
               style={{
                 flexShrink: 0,
                 height: 24,
@@ -787,15 +783,20 @@ export function App(): React.JSX.Element {
                 font: 'inherit',
                 fontSize: 12.5,
                 fontWeight: 530,
-                color: 'var(--accent-text)'
+                color: 'var(--color-primary)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer'
               }}
+              onClick={() => void window.api.openFolder(toastSlozka)}
             >
               Otevřít složku
             </button>
           )}
         </div>
       )}
-    </>
+      </Surface>
+    </div>
   )
 }
 
@@ -803,18 +804,17 @@ export function App(): React.JSX.Element {
 function Placeholder({ label }: { label: string }): React.JSX.Element {
   return (
     <div
-      className="screen-enter"
       style={{
         height: '100%',
         display: 'grid',
         placeItems: 'center',
-        color: 'var(--text-3)',
+        color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)',
         fontSize: 14,
         textAlign: 'center'
       }}
     >
       <div>
-        <div style={{ fontSize: 15, fontWeight: 590, color: 'var(--text-2)' }}>{label}</div>
+        <div style={{ fontSize: 15, fontWeight: 590, color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)' }}>{label}</div>
         <div style={{ marginTop: 6 }}>Tuto fázi doplníme v dalším kroku.</div>
       </div>
     </div>

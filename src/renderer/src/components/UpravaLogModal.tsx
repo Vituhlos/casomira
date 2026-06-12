@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { UpravaLogRadek, UpravaTyp, KoloTyp } from '@shared/types'
-import { Modal } from './Modal'
-import { Btn } from './ui'
-import { Card, Row, tdStyle, thStyle } from './table'
+import { Button, Chip, Modal, Table } from '@heroui/react'
 
 const KOLA_LABEL: Record<KoloTyp, string> = {
   Q1: 'Q1',
@@ -23,25 +21,18 @@ function formatKdy(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleString('cs-CZ', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    day: 'numeric', month: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
   })
 }
 
 function formatHodnota(typ: UpravaTyp, hodnota: number | null): string {
   if (hodnota === null) return '—'
   switch (typ) {
-    case 'CASOVA_PENALIZACE':
-      return `+${hodnota / 1000} s`
-    case 'BODOVA_PENALIZACE':
-      return hodnota >= 0 ? `+${hodnota} b` : `${hodnota} b`
-    case 'POSUN_PORADI':
-      return `${hodnota}. místo`
-    default:
-      return String(hodnota)
+    case 'CASOVA_PENALIZACE': return `+${hodnota / 1000} s`
+    case 'BODOVA_PENALIZACE': return hodnota >= 0 ? `+${hodnota} b` : `${hodnota} b`
+    case 'POSUN_PORADI': return `${hodnota}. místo`
+    default: return String(hodnota)
   }
 }
 
@@ -51,7 +42,6 @@ interface UpravaLogModalProps {
   onClose: () => void
 }
 
-/** Přehled auditního logu zásahů ředitele v kategorii. */
 export function UpravaLogModal({
   kategorieId,
   kategorieNazev,
@@ -76,133 +66,103 @@ export function UpravaLogModal({
   }, [nacti])
 
   return (
-    <Modal
-      title="Zásahy ředitele"
-      width={720}
-      onClose={onClose}
-      footer={
-        <>
-          <Btn variant="plain" onClick={() => void nacti()} disabled={nacita}>
-            Obnovit
-          </Btn>
-          <Btn variant="primary" onClick={onClose}>
-            Zavřít
-          </Btn>
-        </>
-      }
-    >
-      <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-2)' }}>
-        Kategorie <strong style={{ color: 'var(--text-1)' }}>{kategorieNazev}</strong> — chronologický
-        přehled všech zásahů (nejnovější nahoře). Kdo rozhodl: operátor / ředitel (bez přihlášení).
-      </p>
+    <Modal>
+      <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onClose() }}>
+        <Modal.Container>
+          <Modal.Dialog className="w-[720px] max-w-[calc(100vw-2rem)]">
+            <Modal.Header>
+              <span className="text-base font-semibold">Zásahy ředitele</span>
+            </Modal.Header>
 
-      {nacita && radky.length === 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Načítám…</p>
-      )}
+            <Modal.Body className="flex flex-col gap-3">
+              <p className="text-[13px] text-muted">
+                Kategorie <strong className="text-foreground font-[600]">{kategorieNazev}</strong> — chronologický
+                přehled všech zásahů (nejnovější nahoře). Kdo rozhodl: operátor / ředitel (bez přihlášení).
+              </p>
 
-      {!nacita && radky.length === 0 && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>
-          V této kategorii zatím nebyl žádný zásah ředitele.
-        </p>
-      )}
+              {nacita && radky.length === 0 && (
+                <p className="text-[13px] text-muted">Načítám…</p>
+              )}
 
-      {radky.length > 0 && (
-        <Card style={{ margin: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: 128 }} />
-              <col style={{ width: 108 }} />
-              <col style={{ width: 88 }} />
-              <col style={{ width: 140 }} />
-              <col />
-            </colgroup>
-            <thead>
-              <tr>
-                {['Kdy', 'Druh', 'Hodnota', 'Jezdec / jízda', 'Důvod'].map((h) => (
-                  <th key={h} style={thStyle}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {radky.map((r, i) => (
-                <Row key={r.id} i={i} zebra>
-                  <td style={{ ...tdStyle, fontSize: 12, color: 'var(--text-2)' }}>
-                    <span className="tnum">{formatKdy(r.kdy)}</span>
-                  </td>
-                  <td style={tdStyle}>
-                    <TypBadge typ={r.typ} />
-                  </td>
-                  <td
-                    style={{
-                      ...tdStyle,
-                      fontVariantNumeric: 'tabular-nums',
-                      fontWeight: 590,
-                      color: r.typ === 'ZRUSENI' ? 'var(--text-3)' : 'var(--text-1)'
-                    }}
-                  >
-                    {formatHodnota(r.typ, r.hodnota)}
-                  </td>
-                  <td style={{ ...tdStyle, fontSize: 12.5 }}>
-                    <div style={{ fontWeight: 590, color: 'var(--text-1)' }}>
-                      {r.st_cislo != null ? `${r.st_cislo} ` : ''}
-                      {r.prijmeni} {r.jmeno}
-                    </div>
-                    <div style={{ color: 'var(--text-3)', marginTop: 2 }}>
-                      {KOLA_LABEL[r.kolo_typ] ?? r.kolo_typ} · {r.jizda_cislo}. jízda
-                    </div>
-                  </td>
-                  <td style={{ ...tdStyle, fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.35 }}>
-                    {r.duvod}
-                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-4)' }}>
-                      {r.rozhodl}
-                    </div>
-                  </td>
-                </Row>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+              {!nacita && radky.length === 0 && (
+                <p className="text-[13px] text-muted">
+                  V této kategorii zatím nebyl žádný zásah ředitele.
+                </p>
+              )}
+
+              {radky.length > 0 && (
+                <Table>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label="Zásahy ředitele">
+                      <Table.Header>
+                        <Table.Column isRowHeader>Kdy</Table.Column>
+                        <Table.Column>Druh</Table.Column>
+                        <Table.Column>Hodnota</Table.Column>
+                        <Table.Column>Jezdec / jízda</Table.Column>
+                        <Table.Column>Důvod</Table.Column>
+                      </Table.Header>
+                      <Table.Body>
+                        {radky.map((r, i) => (
+                          <Table.Row key={r.id} id={r.id} className={i % 2 ? 'bg-muted/[0.04]' : ''}>
+                            <Table.Cell className="tabular-nums text-muted text-[12px]">
+                              {formatKdy(r.kdy)}
+                            </Table.Cell>
+                            <Table.Cell>
+                              <TypBadge typ={r.typ} />
+                            </Table.Cell>
+                            <Table.Cell className="tabular-nums font-[590]" style={{
+                              color: r.typ === 'ZRUSENI'
+                                ? 'color-mix(in srgb, var(--color-foreground) 35%, transparent)'
+                                : 'var(--color-foreground)'
+                            }}>
+                              {formatHodnota(r.typ, r.hodnota)}
+                            </Table.Cell>
+                            <Table.Cell>
+                              <div className="font-[590] text-foreground">
+                                {r.st_cislo != null ? `${r.st_cislo} ` : ''}
+                                {r.prijmeni} {r.jmeno}
+                              </div>
+                              <div className="text-muted mt-0.5 text-[12px]">
+                                {KOLA_LABEL[r.kolo_typ] ?? r.kolo_typ} · {r.jizda_cislo}. jízda
+                              </div>
+                            </Table.Cell>
+                            <Table.Cell className="text-muted text-[12.5px] leading-snug">
+                              {r.duvod}
+                              <div className="mt-1 text-[11px] opacity-60">{r.rozhodl}</div>
+                            </Table.Cell>
+                          </Table.Row>
+                        ))}
+                      </Table.Body>
+                    </Table.Content>
+                  </Table.ScrollContainer>
+                </Table>
+              )}
+            </Modal.Body>
+
+            <Modal.Footer className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onPress={() => void nacti()} isDisabled={nacita}>
+                Obnovit
+              </Button>
+              <Button size="sm" onPress={onClose}>
+                Zavřít
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   )
 }
 
 function TypBadge({ typ }: { typ: UpravaTyp }): React.JSX.Element {
-  const colors: Record<UpravaTyp, { bg: string; fg: string }> = {
-    CASOVA_PENALIZACE: {
-      bg: 'color-mix(in srgb, var(--accent) 14%, transparent)',
-      fg: 'var(--accent-text)'
-    },
-    BODOVA_PENALIZACE: {
-      bg: 'color-mix(in srgb, #c93636 12%, transparent)',
-      fg: '#c93636'
-    },
-    POSUN_PORADI: {
-      bg: 'color-mix(in srgb, #b8860b 14%, transparent)',
-      fg: '#9a7209'
-    },
-    ZRUSENI: {
-      bg: 'var(--seg-track)',
-      fg: 'var(--text-3)'
-    }
-  }
-  const c = colors[typ]
+  const color =
+    typ === 'CASOVA_PENALIZACE' ? 'accent' :
+    typ === 'BODOVA_PENALIZACE' ? 'danger' :
+    typ === 'POSUN_PORADI' ? 'warning' :
+    'default'
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        fontSize: 11,
-        fontWeight: 650,
-        padding: '2px 8px',
-        borderRadius: 99,
-        background: c.bg,
-        color: c.fg,
-        whiteSpace: 'nowrap'
-      }}
-    >
+    <Chip size="sm" variant="soft" color={color as 'accent' | 'danger' | 'warning' | 'default'}>
       {TYP_LABEL[typ]}
-    </span>
+    </Chip>
   )
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ImportCommit, ImportPolicy, ImportPreview } from '@shared/types'
-import { Modal } from './Modal'
-import { Btn } from './ui'
+import { Button, Chip, Modal } from '@heroui/react'
+import { ArrowUpFromSquare } from '@gravity-ui/icons'
 
 interface ImportDialogProps {
   preview: ImportPreview
@@ -10,7 +10,6 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps): React.JSX.Element {
-  // Výchozí výběr: všechny listy, které se podařilo napárovat na kategorii.
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(preview.listy.filter((l) => l.kategorieId !== null).map((l) => l.sheet))
   )
@@ -25,7 +24,6 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
     })
   }
 
-  // Souhrn podle aktuálního výběru a volby pro kolize.
   const { nove, kolize, celkem } = useMemo(() => {
     let nove = 0
     let kolize = 0
@@ -46,165 +44,124 @@ export function ImportDialog({ preview, onCancel, onConfirm }: ImportDialogProps
   }
 
   return (
-    <Modal
-      title="Import z Excelu"
-      width={620}
-      onClose={onCancel}
-      footer={
-        <>
-          <Btn variant="plain" onClick={onCancel}>
-            Zrušit
-          </Btn>
-          <Btn variant="primary" icon="import" onClick={confirm} disabled={celkem === 0}>
-            Uložit ({celkem} jezdců)
-          </Btn>
-        </>
-      }
-    >
-      <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
-        Vyber listy, které chceš naimportovat do příslušných kategorií. Zápis proběhne až
-        po potvrzení.
-      </p>
+    <Modal>
+      <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onCancel() }}>
+        <Modal.Container>
+          <Modal.Dialog className="w-[620px] max-w-[calc(100vw-2rem)]">
+            <Modal.Header>
+              <span className="text-base font-semibold">Import z Excelu</span>
+            </Modal.Header>
 
-      <div
-        style={{
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
-          overflow: 'hidden'
-        }}
-      >
-        {preview.listy.map((l, i) => {
-          const matched = l.kategorieId !== null
-          const on = selected.has(l.sheet)
-          return (
-            <label
-              key={l.sheet}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 12px',
-                borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-                cursor: matched ? 'pointer' : 'default',
-                opacity: matched ? 1 : 0.55
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={on}
-                disabled={!matched}
-                onChange={() => toggle(l.sheet)}
-                style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
-              />
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 560 }}>{l.sheet}</span>
-                <span style={{ color: 'var(--text-3)' }}> → </span>
-                {matched ? (
-                  <span style={{ fontSize: 13 }}>{l.mappedNazev}</span>
-                ) : (
-                  <span style={{ fontSize: 12.5, color: '#c93636' }}>
-                    kategorie „{l.mappedNazev}" nenalezena — přeskočí se
+            <Modal.Body>
+              <p className="mb-3 text-[12.5px] text-muted">
+                Vyber listy, které chceš naimportovat do příslušných kategorií. Zápis proběhne až
+                po potvrzení.
+              </p>
+
+              <div className="overflow-clip rounded-xl border border-border">
+                {preview.listy.map((l, i) => {
+                  const matched = l.kategorieId !== null
+                  const on = selected.has(l.sheet)
+                  return (
+                    <label
+                      key={l.sheet}
+                      className={[
+                        'flex items-center gap-2.5 px-3 py-2.5',
+                        i > 0 ? 'border-t border-border/60' : '',
+                        matched ? 'cursor-pointer' : 'cursor-default opacity-55'
+                      ].join(' ')}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={!matched}
+                        onChange={() => toggle(l.sheet)}
+                        className="h-4 w-4 shrink-0"
+                        style={{ accentColor: 'var(--color-primary)' }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="text-[13px] font-[560]">{l.sheet}</span>
+                        <span className="text-muted"> → </span>
+                        {matched ? (
+                          <span className="text-[13px]">{l.mappedNazev}</span>
+                        ) : (
+                          <span className="text-[12.5px] text-danger">
+                            kategorie „{l.mappedNazev}" nenalezena — přeskočí se
+                          </span>
+                        )}
+                        {l.losKolize.length > 0 && (
+                          <div className="mt-0.5 text-[11.5px] text-danger">
+                            ⚠ Duplicitní los v listu: {l.losKolize.join(', ')} — oprav v Excelu
+                            (los musí být unikátní)
+                          </div>
+                        )}
+                        {l.bezLosu > 0 && (
+                          <div className="mt-0.5 text-[11.5px] text-muted">
+                            {l.bezLosu} jezdců bez losu — naimportují se, ale nebudou zařazeni do
+                            roštů (neprojeli přejímkou)
+                          </div>
+                        )}
+                      </span>
+                      <span className="tabular-nums text-[12.5px] text-muted">
+                        {l.pocet} jezdců
+                      </span>
+                      {l.konflikty > 0 && (
+                        <Chip size="sm" variant="soft" color="warning" className="tabular-nums shrink-0">
+                          {l.konflikty}× existuje
+                        </Chip>
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+
+              {kolize > 0 && (
+                <div className="mt-3.5 flex items-center justify-between gap-3">
+                  <span className="text-[12.5px] text-muted">
+                    U {kolize} startovních čísel, která už existují:
                   </span>
-                )}
-                {l.losKolize.length > 0 && (
-                  <div style={{ fontSize: 11.5, color: '#c93636', marginTop: 3 }}>
-                    ⚠ Duplicitní los v listu: {l.losKolize.join(', ')} — oprav v Excelu (los musí být
-                    unikátní)
+                  <div className="flex w-fit gap-1 rounded-lg border border-border p-0.5">
+                    {(
+                      [
+                        ['skip', 'Přeskočit'],
+                        ['overwrite', 'Přepsat']
+                      ] as [ImportPolicy, string][]
+                    ).map(([val, label]) => (
+                      <Button
+                        key={val}
+                        size="sm"
+                        variant={policy === val ? 'default' : 'ghost'}
+                        onPress={() => setPolicy(val)}
+                      >
+                        {label}
+                      </Button>
+                    ))}
                   </div>
-                )}
-                {l.bezLosu > 0 && (
-                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
-                    {l.bezLosu} jezdců bez losu — naimportují se, ale nebudou zařazeni do roštů
-                    (neprojeli přejímkou)
-                  </div>
-                )}
-              </span>
-              <span className="tnum" style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
-                {l.pocet} jezdců
-              </span>
-              {l.konflikty > 0 && (
-                <span
-                  className="tnum"
-                  style={{
-                    fontSize: 11.5,
-                    color: '#9a6400',
-                    background: 'rgba(255,159,10,0.16)',
-                    borderRadius: 'var(--r-pill)',
-                    padding: '2px 8px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {l.konflikty}× existuje
-                </span>
+                </div>
               )}
-            </label>
-          )
-        })}
-      </div>
 
-      {kolize > 0 && (
-        <div
-          style={{
-            marginTop: 14,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12
-          }}
-        >
-          <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
-            U {kolize} startovních čísel, která už existují:
-          </span>
-          <div
-            style={{
-              display: 'flex',
-              gap: 2,
-              background: 'var(--seg-track)',
-              borderRadius: 8,
-              padding: 2
-            }}
-          >
-            {(
-              [
-                ['skip', 'Přeskočit'],
-                ['overwrite', 'Přepsat']
-              ] as [ImportPolicy, string][]
-            ).map(([val, label]) => {
-              const active = policy === val
-              return (
-                <button
-                  key={val}
-                  onClick={() => setPolicy(val)}
-                  style={{
-                    height: 26,
-                    padding: '0 12px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    fontSize: 12.5,
-                    fontWeight: active ? 590 : 450,
-                    color: active ? 'var(--text-1)' : 'var(--text-2)',
-                    background: active ? 'var(--seg-sel)' : 'transparent',
-                    borderRadius: 7,
-                    boxShadow: active ? 'var(--seg-sel-shadow)' : 'none'
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+              <p className="mt-3 text-[12px] text-muted">
+                Uloží se {nove} nových
+                {kolize > 0 &&
+                  (policy === 'overwrite'
+                    ? ` a přepíše ${kolize} existujících`
+                    : ` (${kolize} existujících přeskočeno)`)}
+                .
+              </p>
+            </Modal.Body>
 
-      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
-        Uloží se {nove} nových
-        {kolize > 0 &&
-          (policy === 'overwrite'
-            ? ` a přepíše ${kolize} existujících`
-            : ` (${kolize} existujících přeskočeno)`)}
-        .
-      </p>
+            <Modal.Footer className="flex justify-end gap-2">
+              <Button variant="secondary" onPress={onCancel}>
+                Zrušit
+              </Button>
+              <Button onPress={confirm} isDisabled={celkem === 0}>
+                <ArrowUpFromSquare width={14} height={14} />
+                Uložit ({celkem} jezdců)
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </Modal>
   )
 }

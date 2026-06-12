@@ -29,7 +29,7 @@ export function Finale({
     await nactiStav()
   }
 
-  if (!stav) return <div className="screen-enter" />
+  if (!stav) return <div />
 
   const zdroj = stav.sfSeKona
     ? `z postupujících SF (${Math.floor(stav.finaleVelikost / 2)} z každé jízdy)`
@@ -39,7 +39,7 @@ export function Finale({
   )
 
   return (
-    <div className="screen-enter" style={{ '--thead-top': '32px' } as React.CSSProperties}>
+    <div>
       <SubTabs
         tabs={[
           { id: 'rost', label: 'Rošt' },

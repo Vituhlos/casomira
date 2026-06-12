@@ -1,13 +1,12 @@
 import type { Jezdec, JezdecPole } from '@shared/types'
-import { ContentHead } from '../components/ContentHead'
-import { Btn } from '../components/ui'
-import { Icon } from '../components/Icon'
-import { Card, EditableCell, Row, tdStyle, thStyle } from '../components/table'
+import { Button, Chip, Table } from '@heroui/react'
+import { ArrowDownToSquare, Plus, TrashBin } from '@gravity-ui/icons'
+import { EditableCell } from '../components/table'
 
 interface Col {
   key: JezdecPole
   header: string
-  width: string | number
+  width: number
   num?: boolean
   weight?: number
 }
@@ -20,6 +19,8 @@ const COLS: Col[] = [
   { key: 'znacka', header: 'Značka', width: 135 },
   { key: 'model', header: 'Model', width: 175 }
 ]
+
+const ALL_COLS = [...COLS, { key: 'akce' as const, header: '', width: 46, num: false }]
 
 interface StartListProps {
   jezdci: Jezdec[]
@@ -38,7 +39,6 @@ export function StartList({
   onAdd,
   onDelete
 }: StartListProps): React.JSX.Element {
-  // Řazení dle losu (prázdný los až nakonec).
   const sorted = [...jezdci].sort((a, b) => (a.los ?? 9999) - (b.los ?? 9999))
   const bezLosu = jezdci.filter((j) => j.los === null).length
 
@@ -57,106 +57,101 @@ export function StartList({
       : `${jezdci.length} přihlášených · řazeno dle losu`
 
   return (
-    <div className="screen-enter">
-      <ContentHead title="Startovní listina" sub={subText}>
-        <Btn icon="import" onClick={onImport}>
-          Importovat z Excelu
-        </Btn>
-        <Btn variant="primary" icon="plus" onClick={onAdd}>
-          Přidat jezdce
-        </Btn>
-      </ContentHead>
+    <div className="h-full overflow-y-auto">
+      <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
+        <div>
+          <h2 className="text-[22px] font-[680] tracking-tight">Startovní listina</h2>
+          <p className="mt-0.5 text-[12.5px] text-muted">{subText}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onPress={onImport}>
+            <ArrowDownToSquare width={14} height={14} />
+            Importovat z Excelu
+          </Button>
+          <Button size="sm" onPress={onAdd}>
+            <Plus width={13} height={13} />
+            Přidat jezdce
+          </Button>
+        </div>
+      </div>
 
-      <Card>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-          <colgroup>
-            {COLS.map((c) => (
-              <col key={c.key} style={{ width: c.width }} />
-            ))}
-            <col style={{ width: 46 }} />
-          </colgroup>
-          <thead>
-            <tr>
-              {COLS.map((c) => (
-                <th key={c.key} style={thStyle}>
-                  {c.header}
-                </th>
-              ))}
-              <th style={thStyle} aria-label="akce" />
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 && (
-              <tr>
-                <td
-                  colSpan={COLS.length + 1}
-                  style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-3)', height: 80 }}
-                >
-                  Zatím žádní jezdci — naimportuj je z Excelu nebo přidej ručně.
-                </td>
-              </tr>
-            )}
-            {sorted.map((d, i) => {
-              const cekaNaPrejimku = d.los === null
-              return (
-                <Row key={d.id} i={i} zebra={zebra}>
-                  {COLS.map((c) => (
-                    <td
-                      key={c.key}
-                      style={{ ...tdStyle, opacity: cekaNaPrejimku ? 0.55 : 1 }}
+      <div className="mx-5 mb-5">
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label="Startovní listina">
+              <Table.Header columns={ALL_COLS}>
+                {(c) => (
+                  <Table.Column
+                    id={c.key}
+                    isRowHeader={c.key === 'prijmeni'}
+                    aria-label={c.key === 'akce' ? 'akce' : undefined}
+                    style={{ width: c.width }}
+                  >
+                    {c.header}
+                  </Table.Column>
+                )}
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <div className="flex h-20 items-center justify-center text-sm text-muted">
+                    Zatím žádní jezdci — naimportuj je z Excelu nebo přidej ručně.
+                  </div>
+                )}
+              >
+                {sorted.map((d, i) => {
+                  const cekaNaPrejimku = d.los === null
+                  return (
+                    <Table.Row
+                      key={d.id}
+                      id={d.id}
+                      className={`group ${zebra && i % 2 ? 'bg-muted/[0.04]' : ''}`}
                     >
-                      {c.key === 'prijmeni' && cekaNaPrejimku ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <EditableCell
-                            value={d[c.key]}
-                            num={c.num}
-                            weight={c.weight}
-                            onCommit={(raw) => commit(d.id, c, raw)}
-                          />
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              height: 18,
-                              padding: '0 7px',
-                              borderRadius: 'var(--r-ctrl)',
-                              fontSize: 10.5,
-                              fontWeight: 600,
-                              letterSpacing: '0.02em',
-                              background: 'rgba(120,120,128,0.14)',
-                              color: 'var(--text-3)',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            Bez přejímky
-                          </span>
-                        </div>
-                      ) : (
-                        <EditableCell
-                          value={d[c.key]}
-                          num={c.num}
-                          weight={c.weight}
-                          onCommit={(raw) => commit(d.id, c, raw)}
-                        />
-                      )}
-                    </td>
-                  ))}
-                  <td style={{ ...tdStyle, padding: '0 8px', textAlign: 'center' }}>
-                    <button
-                      className="row-action"
-                      title="Smazat jezdce"
-                      onClick={() => onDelete(d)}
-                      style={{ display: 'inline-flex', padding: 4 }}
-                    >
-                      <Icon name="trash" size={15} />
-                    </button>
-                  </td>
-                </Row>
-              )
-            })}
-          </tbody>
-        </table>
-      </Card>
+                      {COLS.map((c) => (
+                        <Table.Cell
+                          key={c.key}
+                          className="h-[38px] px-3.5 py-0"
+                          style={{ opacity: cekaNaPrejimku ? 0.55 : 1 }}
+                        >
+                          {c.key === 'prijmeni' && cekaNaPrejimku ? (
+                            <div className="flex items-center gap-1.5">
+                              <EditableCell
+                                value={d[c.key]}
+                                num={c.num}
+                                weight={c.weight}
+                                onCommit={(raw) => commit(d.id, c, raw)}
+                              />
+                              <Chip size="sm" variant="soft">Bez přejímky</Chip>
+                            </div>
+                          ) : (
+                            <EditableCell
+                              value={d[c.key]}
+                              num={c.num}
+                              weight={c.weight}
+                              onCommit={(raw) => commit(d.id, c, raw)}
+                            />
+                          )}
+                        </Table.Cell>
+                      ))}
+                      <Table.Cell className="h-[38px] px-1.5 py-0 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          isIconOnly
+                          aria-label="Smazat jezdce"
+                          onPress={() => onDelete(d)}
+                          className="opacity-0 group-hover:opacity-100"
+                        >
+                          <TrashBin width={15} height={15} />
+                        </Button>
+                      </Table.Cell>
+                    </Table.Row>
+                  )
+                })}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+        </Table>
+      </div>
     </div>
   )
 }

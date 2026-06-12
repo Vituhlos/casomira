@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { Kategorie } from '@shared/types'
+import { FileLetterP } from '@gravity-ui/icons'
+import { Button } from '@heroui/react'
 import { Modal } from './Modal'
 import { Btn } from './ui'
 
@@ -68,7 +70,7 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
           </Btn>
           <Btn
             variant="primary"
-            icon="pdf"
+            icon={<FileLetterP />}
             onClick={() => void tiskni()}
             disabled={probiha || vybrane.size === 0}
           >
@@ -77,7 +79,7 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
         </>
       }
     >
-      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'color-mix(in srgb, var(--color-foreground) 55%, transparent)', lineHeight: 1.5 }}>
         Vytiskne standardní sadu listin na výchozí tiskárnu. Listy bez dat se přeskočí.
       </p>
 
@@ -91,20 +93,16 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
         }}
       >
         <span style={{ fontSize: 12.5, fontWeight: 560 }}>Kategorie ({vybrane.size})</span>
-        <button
-          className="btn btn--plain"
-          onClick={prepniVse}
-          style={{ height: 22, padding: '0 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 530, borderRadius: 6 }}
-        >
+        <Button variant="ghost" size="sm" onPress={prepniVse}>
           {vse ? 'Zrušit výběr' : 'Vybrat vše'}
-        </button>
+        </Button>
       </div>
       <div
         style={{
           maxHeight: 160,
           overflowY: 'auto',
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--color-border)',
+          borderRadius: 6,
           marginBottom: 18
         }}
       >
@@ -118,17 +116,17 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
               padding: '7px 12px',
               fontSize: 13,
               cursor: 'pointer',
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--color-border)'
             }}
           >
             <input
               type="checkbox"
               checked={vybrane.has(k.id)}
               onChange={() => prepni(k.id)}
-              style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
+              style={{ accentColor: 'var(--color-primary)', width: 15, height: 15 }}
             />
             <span style={{ fontWeight: 540 }}>{k.nazev}</span>
-            <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 12 }}>
+            <span style={{ marginLeft: 'auto', color: 'color-mix(in srgb, var(--color-foreground) 35%, transparent)', fontSize: 12 }}>
               {k.pocet} jezdců
             </span>
           </label>
@@ -136,13 +134,13 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
       </div>
 
       {/* Přehled presetu */}
-      <div style={{ fontSize: 12.5, fontWeight: 560, marginBottom: 8, color: 'var(--text-1)' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 560, marginBottom: 8 }}>
         Bude vytištěno (na kategorii):
       </div>
       <div
         style={{
-          border: '0.5px solid var(--hairline)',
-          borderRadius: 'var(--r-ctrl)',
+          border: '0.5px solid var(--color-border)',
+          borderRadius: 6,
           overflow: 'hidden'
         }}
       >
@@ -155,16 +153,16 @@ export function TiskovyPresetModal({ kategorie, onClose, onToast }: Props): Reac
               justifyContent: 'space-between',
               padding: '6px 12px',
               fontSize: 12.5,
-              borderTop: i === 0 ? 'none' : '0.5px solid var(--divider)',
-              background: i % 2 === 0 ? 'transparent' : 'var(--card-alt)'
+              borderTop: i === 0 ? 'none' : '0.5px solid var(--color-border)',
+              background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--color-foreground) 4%, transparent)'
             }}
           >
-            <span style={{ color: 'var(--text-1)' }}>{p.nazev}</span>
+            <span>{p.nazev}</span>
             <span
               style={{
                 fontVariantNumeric: 'tabular-nums',
                 fontWeight: 600,
-                color: p.kopii > 1 ? 'var(--accent)' : 'var(--text-2)'
+                color: p.kopii > 1 ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
               }}
             >
               {p.kopii}×
