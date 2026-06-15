@@ -41,7 +41,12 @@ export function openStopky(): void {
     minWidth: 1240,
     minHeight: 660,
     title: 'Stopky — Časomíra',
-    backgroundColor: '#f4f4f6',
+    // Průhledné pozadí + Windows 11 „Mica" materiál — jemné protónování plochy,
+    // floating panely plavou nad pozadím (Microsoft doporučuje Micu pro pozadí
+    // dlouho otevřených oken). Mica vyžaduje průhledný backgroundColor.
+    // Na ne-Win11 se materiál neprojeví.
+    backgroundColor: '#00000000',
+    backgroundMaterial: 'mica',
     autoHideMenuBar: true,
     icon: appIconPath(),
     webPreferences: webPreferences()

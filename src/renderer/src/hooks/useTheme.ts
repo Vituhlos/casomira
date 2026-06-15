@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type Theme = 'light' | 'dark'
 
@@ -21,6 +21,8 @@ export function useTheme(): { theme: Theme; toggle: () => void } {
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 
-  const toggle = (): void => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  // Stabilní reference (nezávisí na ničem) — ať memoizace dětí, co toggle
+  // dostávají jako prop, nepadá kvůli nové identitě funkce při každém renderu.
+  const toggle = useCallback((): void => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), [])
   return { theme, toggle }
 }

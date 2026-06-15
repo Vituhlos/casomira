@@ -122,6 +122,7 @@ const api: CasomiraApi = {
   mereniDalsiJizda: () => ipcRenderer.invoke('mereni:dalsiJizda'),
   mereniJizdyHotovo: (katId: number, koloTyp: KoloTyp) =>
     ipcRenderer.invoke('mereni:jizdyHotovo', katId, koloTyp),
+  mereniJizdyKola: (koloTyp: KoloTyp) => ipcRenderer.invoke('mereni:jizdyKola', koloTyp),
   ulozMereniTimer: (jizdaId: number, stav: import('../shared/types').MereniTimerStav) =>
     ipcRenderer.invoke('mereni:ulozTimer', jizdaId, stav),
   nactiMereniTimery: () => ipcRenderer.invoke('mereni:nactiTimery'),

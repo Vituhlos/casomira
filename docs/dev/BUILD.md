@@ -137,14 +137,15 @@ Mac DMG v CI je **universal** (x64 + arm64) a jede **bez notarizace** (`CSC_IDEN
 
 ---
 
-## Ikona aplikace (volitelné)
+## Ikona aplikace
 
-Teď se použije výchozí Electron ikona. Až budeš mít logo:
+Produkční ikony jsou připravené v `build/`:
 
-1. Připrav **PNG 512×512** (průhledné pozadí).
-2. Ulož jako `build/icon.png`.
-3. Vygeneruj `.ico` / `.icns` (např. [cloudconvert.com](https://cloudconvert.com/png-to-ico)) do `build/icon.ico` a `build/icon.icns`.
-4. Odkomentuj řádky `installerIcon` / `icon` v `electron-builder.yml`.
+- `build/icon.ico` — Windows aplikace, zástupce, NSIS instalátor a odinstalátor.
+- `build/icon.icns` — macOS `.app` bundle.
+- `build/icon.png` — runtime ikona pro `BrowserWindow.icon` na Windows/Linuxu.
+
+Zdrojové brand assety a exporty jsou v `assets/brand/`.
 
 ---
 

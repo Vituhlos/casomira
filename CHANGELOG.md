@@ -6,7 +6,23 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.12-beta] – 2026-06-15
+
 ### Přidáno
+- **Nová obrazovka Stopky (kompletní redesign)** — levý „floating" sidebar se
+  seznamem kategorií, nahoře segmentové přepínače **Kolo** a **Jízda**, velké
+  hodiny s tlačítkem ZAZNAMENAT nad tabulkou naměřených časů a náhledem roštu
+  vpravo. Operátor se pohybuje přirozeně **kategorie → kolo → jízda** a vidí u
+  každé jízdy stav (čeká / měří se / odjeto).
+- **Sloupec „Auto" v tabulce časů** — u každého naměřeného času se vedle jezdce
+  zobrazí značka a model vozu pro snazší kontrolu při přiřazování čísel.
+- **Windows 11 Mica v okně Stopek** — okno má průhledné pozadí s nativním Mica
+  materiálem; panely (sidebar, navigace, tabulka) „plavou" nad protónovanou
+  plochou. Na starších systémech se efekt neprojeví (žádná regrese).
+- **Přepínač světlý/tmavý režim s ikonou** — v patičce sidebaru Stopek, jako
+  přepínač se sluncem/měsícem.
+- **Nové ikony a branding aplikace** — nová sada ikon pro Windows (.ico) a macOS
+  (.icns) a logo-lockup (světlá/tmavá varianta).
 - **Profesionální release diagnostika** — build nově nese metadata o verzi,
   commitu, datu buildu, release kanálu a git refu. V Nastavení → O aplikaci je
   rozšířený panel s tlačítkem „Kopírovat diagnostiku" pro podporu.
@@ -15,6 +31,28 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
   změnou musí upravit changelog nebo mít label `no-changelog-needed`.
 - **Release checklist** — nový GitHub issue template pro vydání verze a
   technický návod `docs/dev/RELEASE.md`.
+
+### Změněno
+- **Stopky jsou nově „okno" do struktury závodu** — jízdy se vybírají z kategorií
+  a kol, která už existují (vznikají při sestavení roštů v hlavním okně). Stopky
+  je samy nevytvářejí; ruční „Jiná jízda" zůstává jako záchrana pro nestandardní
+  situace.
+- **Vrácení posledního záznamu je nově Ctrl+Z** (dříve Backspace) — bezpečnější,
+  nekoliduje s mazáním v poli startovního čísla.
+- Sjednocený vzhled tlačítek a segmentů ve Stopkách (jemně vyplněná tlačítka,
+  jednotné zaoblení).
+
+### Opraveno
+- **Mezerník ve Stopkách spolehlivě zaznamenává** — dříve po kliknutí na tlačítko
+  (Start/Pauza) zůstal focus na tlačítku a mezerník ho omylem znovu aktivoval
+  (stopky se spouštěly/pauzovaly dokola).
+- **Backspace už nesmaže naměřený čas** — při mazání startovního čísla v poli už
+  nemůže „propadnout" na vrácení posledního záznamu.
+- **Plynulost Stopek** — živý čas běží v izolované komponentě, takže se 19×/s
+  překresluje jen text hodin, ne celé okno; sidebar a náhled roštu jsou
+  memoizované a nepřekreslují se při záznamu času.
+- **Seznam jízd se zobrazí hned po otevření** — odstraněn stav, kdy kolo působilo
+  prázdné, přestože jízdy existovaly.
 
 ## [0.9.11-beta] – 2026-06-09
 
@@ -258,7 +296,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.11-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.12-beta...HEAD
+[0.9.12-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.11-beta...v0.9.12-beta
 [0.9.11-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.10-beta...v0.9.11-beta
 [0.9.10-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.9-beta...v0.9.10-beta
 [0.9.9-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.8-beta...v0.9.9-beta

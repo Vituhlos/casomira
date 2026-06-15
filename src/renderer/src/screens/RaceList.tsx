@@ -2,6 +2,8 @@ import type { ZavodInfo } from '@shared/types'
 import { Button, ButtonGroup, Card, Chip, Typography } from '@heroui/react'
 import { ArrowDownToSquare, ArrowUpFromSquare, Flag, LayoutCells, Moon, Pencil, Persons, Plus, Sun, TrashBin } from '@gravity-ui/icons'
 import type { Theme } from '../hooks/useTheme'
+import logoDarkUrl from '../assets/brand/casomira-lockup-dark.svg?url'
+import logoLightUrl from '../assets/brand/casomira-lockup-light.svg?url'
 
 function czDate(iso: string): string {
   const parts = iso.split('-').map(Number)
@@ -35,12 +37,20 @@ export function RaceList({
 }: RaceListProps): React.JSX.Element {
   return (
     <div className="flex h-full flex-col bg-background">
-      <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-surface px-6 pb-5 pt-6">
-        <div className="flex flex-col gap-2">
-          <Typography type="h1">Správa závodů</Typography>
-          <Typography type="body-sm" color="muted">autokros · rallycross</Typography>
+      <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-6 border-b border-border bg-surface px-6 py-3">
+        <div className="h-8">
+          <img
+            src={logoLightUrl}
+            alt="Časomíra"
+            className="casomira-logo-light h-full w-auto max-w-[200px] object-contain"
+          />
+          <img
+            src={logoDarkUrl}
+            alt="Časomíra"
+            className="casomira-logo-dark h-full w-auto max-w-[200px] object-contain"
+          />
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           <ButtonGroup variant="tertiary" size="sm">
             <Button onPress={onRestore}>
               <ArrowUpFromSquare />
@@ -64,6 +74,10 @@ export function RaceList({
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[940px] px-7 pb-16 pt-8">
+          <div className="mb-8 flex flex-col gap-1">
+            <Typography type="h1">Správa závodů</Typography>
+            <Typography type="body-sm" color="muted">autokros · rallycross</Typography>
+          </div>
           {zavody.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
               <Flag width={32} height={32} style={{ color: 'var(--color-muted)', opacity: 0.35 }} />

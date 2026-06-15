@@ -4,10 +4,10 @@
 export const BUILD_INFO = {
   "name": "casomira",
   "productName": "Časomíra",
-  "version": "0.9.11-beta",
-  "commitSha": "e099ed473af2d4a2e2ebafc43dba045087f68586",
-  "shortCommitSha": "e099ed4",
-  "buildDate": "2026-06-12T11:21:12.162Z",
+  "version": "0.9.12-beta",
+  "commitSha": "b96126d0a8ff0dce63e28504e731035190e34271",
+  "shortCommitSha": "b96126d",
+  "buildDate": "2026-06-15T15:27:08.408Z",
   "releaseChannel": "beta",
   "gitRef": "heroui-native",
   "packagedBy": "local"

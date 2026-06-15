@@ -3,9 +3,140 @@
 @import '@heroui/styles';
 @import './theme/casomira.css';
 
+.casomira-logo-dark {
+  display: none;
+}
+
+.dark .casomira-logo-light,
+[data-theme='dark'] .casomira-logo-light {
+  display: none;
+}
+
+.dark .casomira-logo-dark,
+[data-theme='dark'] .casomira-logo-dark {
+  display: block;
+}
+
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
+}
+
+/* Okno Stopek (Windows 11 Mica) — průhledný řetězec, ať materiál prosvítá
+   skrz „shell" mezery. Floating panely si drží vlastní neprůhledné pozadí. */
+.stopky-window,
+.stopky-window body,
+.stopky-window #root {
+  background: transparent !important;
+}
+
+/* ---- Stopky: navigace + animace ---- */
+
+/* Pulzující tečka u běžícího časovače jízdy */
+@keyframes stopky-puls {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.45);
+    opacity: 0.55;
+  }
+}
+.stopky-puls {
+  animation: stopky-puls 1.1s ease-in-out infinite;
+}
+
+/* Nadjetí dlaždice jízdy (nepohne disabled) */
+.stopky-dlazdice:not([data-disabled]):hover {
+  transform: translateY(-1px);
+}
+
+/* Segmentové přepínače (kola, jízdy) — NEprůhledný šedý kontejner, ať je vidět
+   i na průhledném Mica pozadí (průsvitný by splynul). Pilulka (bílá) vystoupí. */
+.stopky-segment .tabs__list {
+  background: color-mix(in srgb, var(--color-foreground) 9%, var(--color-background));
+  border-radius: 11px;
+}
+.stopky-segment .tabs__tab,
+.stopky-segment .tabs__indicator {
+  border-radius: 9px;
+}
+/* Text nevybraného segmentu — čitelnější na Mice */
+.stopky-segment .tabs__tab:not([data-selected='true']) {
+  color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+}
+
+/* Sjednocený radius tlačítek ve Stopkách (jako pilulky v sidebaru ~9px). */
+.stopky-window .button {
+  border-radius: 9px;
+}
+
+/* Kategorie v sidebaru jako vertikální segment s klouzavou pilulkou.
+   Kontejner průhledný (sedí v bílém panelu), aktivní = jemné šedé podbarvení. */
+.stopky-sidebar-tabs,
+.stopky-sidebar-tabs .tabs__list-container {
+  width: 100%;
+}
+.stopky-sidebar-tabs .tabs__list {
+  display: flex;
+  width: 100%;
+  background: transparent;
+  padding: 0;
+  gap: 2px;
+}
+.stopky-sidebar-tabs .tabs__tab {
+  width: 100%;
+  justify-content: flex-start;
+  height: auto;
+  min-width: 0;
+  padding: 8px 11px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 450;
+  color: var(--color-foreground);
+}
+.stopky-sidebar-tabs .tabs__tab[data-selected='true'] {
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.stopky-sidebar-tabs .tabs__indicator {
+  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  box-shadow: none;
+  border-radius: 9px;
+}
+/* Hover na neaktivní kategorii — jemné podbarvení místo HeroUI ztlumení */
+.stopky-sidebar-tabs .tabs__tab:hover {
+  opacity: 1;
+}
+.stopky-sidebar-tabs .tabs__tab:not([data-selected='true']):hover {
+  background: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+}
+
+/* Příjezd banneru „Další jízda" */
+@keyframes stopky-baner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.stopky-baner {
+  animation: stopky-baner-in 0.22s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stopky-puls,
+  .stopky-baner {
+    animation: none;
+  }
+  .stopky-dlazdice:hover {
+    transform: none;
+  }
 }

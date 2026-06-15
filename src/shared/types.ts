@@ -243,6 +243,8 @@ export interface MereniRadek {
   st_cislo: number | null // doplní se přiřazením čísla
   prijmeni: string | null
   jmeno: string | null
+  znacka: string | null
+  model: string | null
 }
 
 /** Návrh předvýběru při otevření „Nové měření" — první neodměřená jízda. */
@@ -267,6 +269,22 @@ export interface MereniKanal {
   koloTyp: KoloTyp
   jizdaCislo: number
   pocet: number // počet zaznamenaných časů
+  label: string // „N1600 · Q1 · 1. jízda"
+}
+
+/**
+ * Jedna jízda v daném kole napříč kategoriemi závodu — pro navigaci Stopek.
+ * Stav (čeká / rozměřeno / odjeto) si UI odvodí z těchto polí; nikam se neukládá.
+ */
+export interface JizdaKolaRadek {
+  jizdaId: number
+  kategorieId: number
+  katNazev: string
+  koloTyp: KoloTyp
+  jizdaCislo: number
+  pocetKliku: number // záznamů v mereni (0 = ještě se neměřilo)
+  maVysledky: boolean // už zapsáno do Výsledků
+  obsazenoRostem: number // počet nasazených pozic (0 = rošt není sestaven)
   label: string // „N1600 · Q1 · 1. jízda"
 }
 
@@ -658,6 +676,8 @@ export interface CasomiraApi {
   mereniDalsiJizda(): Promise<MereniDalsiJizda | null>
   /** Vrátí jizdaId jízd, které mají záznamy v mereni nebo vysledek (stav „hotovo"). */
   mereniJizdyHotovo(katId: number, koloTyp: KoloTyp): Promise<number[]>
+  /** Read-only: všechny jízdy daného kola napříč kategoriemi aktivního závodu (pro navigaci). */
+  mereniJizdyKola(koloTyp: KoloTyp): Promise<JizdaKolaRadek[]>
   /** Vrátí sloty roštu konkrétní jízdy (read-only náhled). Prázdné pole = rošt není sestaven. */
   getRostJizda(jizdaId: number): Promise<RostSlot[]>
   /** Uloží stav běžícího časovače jízdy (autosave). */

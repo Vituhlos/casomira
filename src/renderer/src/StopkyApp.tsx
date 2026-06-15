@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Kategorie, KoloTyp, MereniRadek, MereniTimerStav, RostSlot } from '@shared/types'
+import type {
+  JizdaKolaRadek,
+  Kategorie,
+  KoloTyp,
+  MereniRadek,
+  MereniTimerStav,
+  RostSlot
+} from '@shared/types'
 import { useTheme } from './hooks/useTheme'
-import { Button, Table, Tabs } from '@heroui/react'
+import { Button, Label, Switch, Table, Tabs } from '@heroui/react'
 import { Btn } from './components/ui'
 import { ArrowUpArrowDown, ChevronRight, Moon, Plus, Stopwatch, Sun, TrashBin } from '@gravity-ui/icons'
 import { Modal } from './components/Modal'
@@ -13,10 +20,23 @@ const T2 = 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
 const T3 = 'color-mix(in srgb, var(--color-foreground) 35%, transparent)'
 const T4 = 'color-mix(in srgb, var(--color-foreground) 22%, transparent)'
 const CARD_ALT = 'color-mix(in srgb, var(--color-foreground) 4%, transparent)'
+// Jemně tónované pozadí „pod" floating panely (sidebar, měřící karta).
+const PANEL_SHADOW =
+  '0 1px 3px color-mix(in srgb, var(--color-foreground) 9%, transparent), 0 10px 28px color-mix(in srgb, var(--color-foreground) 6%, transparent)'
+const labelMini: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: T2,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.03em',
+  flexShrink: 0
+}
 
 interface Kanal {
   jizdaId: number
   label: string
+  koloTyp: KoloTyp | null
+  kategorieId: number | null
   klik: MereniRadek[]
   running: boolean
   startEpoch: number | null
@@ -40,13 +60,21 @@ export function StopkyApp(): React.JSX.Element {
   const [zavodNazev, setZavodNazev] = useState('')
   const [kanaly, setKanaly] = useState<Kanal[]>([])
   const [aktivniId, setAktivniId] = useState<number | null>(null)
-  const [now, setNow] = useState(Date.now())
   const [nove, setNove] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [potvrd, setPotvrd] = useState<{ typ: 'zapis' | 'zahodit'; jizdaId: number; label: string } | null>(null)
   const [aktivniRadek, setAktivniRadek] = useState<number | null>(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [aktRost, setAktRost] = useState<RostSlot[] | null>(null)
+  const [vybraneKolo, setVybraneKolo] = useState<KoloTyp>('Q1')
+  const [vybranaKategorie, setVybranaKategorie] = useState<number | null>(null)
+  const [jizdyKola, setJizdyKola] = useState<JizdaKolaRadek[]>([])
+  const [dalsiJizda, setDalsiJizda] = useState<{
+    jizdaId: number
+    label: string
+    koloTyp: KoloTyp
+    kategorieId: number
+  } | null>(null)
   const cisloRefs = useRef<Map<number, HTMLInputElement | null>>(new Map())
 
   const akt = kanaly.find((k) => k.jizdaId === aktivniId) ?? null
@@ -87,11 +115,13 @@ export function StopkyApp(): React.JSX.Element {
   const nactiZavodAkanaly = useCallback(async (): Promise<void> => {
     const z = await window.api.getAktivniZavod()
     let zId: number | null = null
+    let kats: Kategorie[] = []
     if (z) {
       zId = z.id
       setZavodId(z.id)
       setZavodNazev(z.nazev)
-      setKategorie(await window.api.listKategorie(z.id))
+      kats = await window.api.listKategorie(z.id)
+      setKategorie(kats)
     } else {
       setZavodId(null)
       setZavodNazev('')
@@ -111,6 +141,8 @@ export function StopkyApp(): React.JSX.Element {
       full.push({
         jizdaId: k.jizdaId,
         label: k.label,
+        koloTyp: k.koloTyp,
+        kategorieId: k.kategorieId,
         klik,
         running: t?.running ?? false,
         startEpoch: t?.running && t.startEpochMs != null ? t.startEpochMs : null,
@@ -123,6 +155,14 @@ export function StopkyApp(): React.JSX.Element {
         : (full[0]?.jizdaId ?? null)
     setKanaly(full)
     setAktivniId(aktivni)
+    // Přepínač kol + sidebar ukážou kolo a kategorii, kde se právě měří.
+    const aktivniKanal = full.find((k) => k.jizdaId === aktivni)
+    const aktKolo = aktivniKanal?.koloTyp
+    const kolo = aktKolo && MERENA_KOLA.includes(aktKolo) ? aktKolo : 'Q1'
+    setVybraneKolo(kolo)
+    setVybranaKategorie(aktivniKanal?.kategorieId ?? kats[0]?.id ?? null)
+    // Spolehlivý init mřížky jízd (nezávislý na timingu useEffectu).
+    if (zId != null) setJizdyKola(await window.api.mereniJizdyKola(kolo))
     setNove(false)
     setPotvrd(null)
     setAktivniRadek(null)
@@ -130,6 +170,23 @@ export function StopkyApp(): React.JSX.Element {
 
   useEffect(() => { void nactiZavodAkanaly() }, [nactiZavodAkanaly])
   useEffect(() => window.api.onZavodChanged(() => void nactiZavodAkanaly()), [nactiZavodAkanaly])
+
+  const nactiJizdyKola = useCallback(
+    async (kolo: KoloTyp): Promise<void> => {
+      if (zavodId == null) {
+        setJizdyKola([])
+        return
+      }
+      setJizdyKola(await window.api.mereniJizdyKola(kolo))
+    },
+    [zavodId]
+  )
+
+  useEffect(() => { void nactiJizdyKola(vybraneKolo) }, [vybraneKolo, nactiJizdyKola])
+  useEffect(
+    () => window.api.onDataChanged(() => void nactiJizdyKola(vybraneKolo)),
+    [nactiJizdyKola, vybraneKolo]
+  )
 
   useEffect(() => {
     if (zavodId == null || kanaly.length === 0) return
@@ -143,11 +200,8 @@ export function StopkyApp(): React.JSX.Element {
     return () => window.removeEventListener('beforeunload', flush)
   }, [kanaly, aktivniId, ulozVsechnyKanaly])
 
-  useEffect(() => {
-    if (!akt?.running) return
-    const t = setInterval(() => setNow(Date.now()), 53)
-    return () => clearInterval(t)
-  }, [akt?.running, aktivniId])
+  // Pozn.: živý čas běží uvnitř <ZivyCas> (vlastní interval), ať překreslování
+  // 19×/s zasáhne jen text hodin, ne celé okno Stopek (sidebar, tabulka, rošt…).
 
   useEffect(() => window.api.onStopkyRequestConfirm(() => setShowCloseConfirm(true)), [])
 
@@ -202,7 +256,6 @@ export function StopkyApp(): React.JSX.Element {
     } else {
       const startEpoch = Date.now()
       updKanal(akt.jizdaId, { running: true, startEpoch })
-      setNow(startEpoch)
       void window.api.ulozMereniTimer(akt.jizdaId, {
         jizdaId: akt.jizdaId, running: true, baseMs: akt.baseMs, startEpochMs: startEpoch
       })
@@ -212,13 +265,18 @@ export function StopkyApp(): React.JSX.Element {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (nove || potvrd) return
-      const tag = (e.target as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (e.code === 'Space') {
+      const el = e.target as HTMLElement | null
+      const editovatelne = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA'
+      if (e.code === 'Space' && !editovatelne) {
         e.preventDefault()
+        // Zafokusované tlačítko by jinak na mezerník zareagovalo (klik) —
+        // sebereme mu focus, ať mezerník vždy znamená „záznam / start".
+        if (el?.tagName === 'BUTTON') el.blur()
         if (akt?.running) void zaznamenej()
         else pauza()
-      } else if (e.key === 'Backspace') {
+      } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !editovatelne) {
+        // Vrátit poslední záznam přes Ctrl/Cmd+Z — bezpečnější než Backspace,
+        // který koliduje s mazáním v políčku startovního čísla.
         e.preventDefault()
         void vratPosledni()
       }
@@ -228,17 +286,25 @@ export function StopkyApp(): React.JSX.Element {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zaznamenej, vratPosledni, pauza, akt, nove, potvrd])
 
-  const zalozMereni = (jizdaId: number, label: string): void => {
+  const zalozMereni = (
+    jizdaId: number,
+    label: string,
+    koloTyp: KoloTyp | null = null,
+    kategorieId: number | null = null
+  ): void => {
     setNove(false)
+    setDalsiJizda(null)
     if (kanaly.some((k) => k.jizdaId === jizdaId)) {
       setAktivniId(jizdaId)
+      void window.api.ulozMereniAktivniJizdu(jizdaId)
       return
     }
     setKanaly((prev) => [
       ...prev,
-      { jizdaId, label, klik: [], running: false, startEpoch: null, baseMs: 0 }
+      { jizdaId, label, koloTyp, kategorieId, klik: [], running: false, startEpoch: null, baseMs: 0 }
     ])
     setAktivniId(jizdaId)
+    void window.api.ulozMereniAktivniJizdu(jizdaId)
   }
 
   const priradCislo = async (row: MereniRadek, raw: string): Promise<boolean> => {
@@ -277,10 +343,32 @@ export function StopkyApp(): React.JSX.Element {
     )
   }
 
+  // Po zápisu nabídne první neodměřenou jízdu (využívá stávající mereniDalsiJizda).
+  const nabidniDalsiJizdu = async (): Promise<void> => {
+    const d = await window.api.mereniDalsiJizda()
+    if (!d) {
+      setDalsiJizda(null)
+      return
+    }
+    const list = await window.api.mereniJizdyKola(d.koloTyp)
+    const found = list.find((j) => j.jizdaId === d.jizdaId)
+    setDalsiJizda(
+      found
+        ? {
+            jizdaId: found.jizdaId,
+            label: found.label,
+            koloTyp: found.koloTyp,
+            kategorieId: found.kategorieId
+          }
+        : null
+    )
+  }
+
   const zapisDoVysledku = async (jizdaId: number): Promise<void> => {
     await window.api.zapisMereniDoVysledku(jizdaId)
     setPotvrd(null)
     oznam('Zapsáno do Výsledků — pořadí a body se spočítaly.')
+    await nabidniDalsiJizdu()
   }
 
   const zkusZapsat = async (): Promise<void> => {
@@ -306,290 +394,325 @@ export function StopkyApp(): React.JSX.Element {
     })
   }
 
+  // Stabilní handler výběru kategorie (pro memoizovaný sidebar).
+  const vyberKategorii = useCallback((id: number): void => {
+    setVybranaKategorie(id)
+    setNove(false)
+  }, [])
+
+  // Odvozené hodnoty pro layout — memoizované, ať se identity nemění při
+  // každém renderu a nelámaly memoizaci dětí (segmenty, rošt).
+  // Klíčem k Set je seznam jízd, ne celé `kanaly` (to se mění i při záznamu
+  // času, ale seznam kanálů/běžících jízd zůstává stejný).
+  const kanalIds = kanaly.map((k) => k.jizdaId).join(',')
+  const beziIds = kanaly.filter((k) => k.running).map((k) => k.jizdaId).join(',')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const mereneSet = useMemo(() => new Set(kanaly.map((k) => k.jizdaId)), [kanalIds])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const beziSet = useMemo(() => new Set(kanaly.filter((k) => k.running).map((k) => k.jizdaId)), [beziIds])
+  const jizdyVybrane = useMemo(
+    () => jizdyKola.filter((j) => j.kategorieId === vybranaKategorie),
+    [jizdyKola, vybranaKategorie]
+  )
+  // Přiřazení (pro zvýraznění v roštu) — klíčem je SIGNATURA přiřazených jezdců,
+  // ne celé `akt.klik`. Tím se Set (a tedy memoizovaný RostNahled) nemění při
+  // pouhém záznamu času (přibyl klik bez čísla → přiřazení se nezměnilo).
+  const prirazeniSig = (akt?.klik ?? [])
+    .filter((c) => c.jezdec_id != null)
+    .map((c) => c.jezdec_id)
+    .join(',')
+  const prirazeniRost = useMemo(
+    () =>
+      new Set(
+        (akt?.klik ?? []).filter((c) => c.jezdec_id != null).map((c) => c.jezdec_id as number)
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prirazeniSig]
+  )
+  // Měřící panel patří k vybrané jízdě jen pokud sedí do vybrané kategorie i kola.
+  const aktSedi =
+    akt != null &&
+    (akt.kategorieId == null || akt.kategorieId === vybranaKategorie) &&
+    (akt.koloTyp == null || akt.koloTyp === vybraneKolo)
+
   return (
     <div
       style={{
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--color-background)',
+        // Průhledné — prosvítá Windows 11 Mica materiál okna (viz windows.ts).
+        background: 'transparent',
         color: 'var(--color-foreground)'
       }}
     >
-      {/* Horní lišta */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 18px',
-          borderBottom: '0.5px solid var(--color-border)'
-        }}
-      >
-        <Stopwatch width={20} height={20} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 680 }}>Stopky</div>
-          {zavodNazev && (
-            <div style={{ fontSize: 11.5, color: T3 }}>{zavodNazev}</div>
-          )}
-        </div>
-        <div style={{ flex: 1 }} />
-        <Btn
-          variant="bezel"
-          icon={theme === 'dark' ? <Sun /> : <Moon />}
-          onClick={toggle}
-          title={theme === 'dark' ? 'Světlý režim' : 'Tmavý režim'}
-        />
-      </div>
-
-      {/* Pruh kanálů */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '10px 18px',
-          flexWrap: 'wrap',
-          borderBottom: '0.5px solid var(--color-border)'
-        }}
-      >
-        {kanaly.map((k) => {
-          const on = k.jizdaId === aktivniId
-          return (
-            <Button
-              key={k.jizdaId}
-              variant={on ? 'primary' : 'outline'}
-              size="sm"
-              onPress={() => {
-                if (aktivniId != null && aktivniId !== k.jizdaId) {
-                  const pred = kanaly.find((x) => x.jizdaId === aktivniId)
-                  if (pred) void window.api.ulozMereniTimer(pred.jizdaId, timerPayload(pred))
-                }
-                setAktivniId(k.jizdaId)
-                setNove(false)
-                void window.api.ulozMereniAktivniJizdu(k.jizdaId)
-              }}
-            >
-              <span style={{ fontWeight: on ? 580 : 500 }}>{k.label}</span>
-              <span className="tnum" style={{ opacity: on ? 0.85 : 0.6, fontWeight: on ? 580 : 500 }}>
-                · {k.klik.length}
-              </span>
-              {k.running && (
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 99,
-                    background: on ? 'rgba(255,255,255,0.75)' : T3,
-                    display: 'inline-block',
-                    flexShrink: 0
-                  }}
-                />
-              )}
-            </Button>
-          )
-        })}
-        <Btn variant="bezel" icon={<Plus />} onClick={() => setNove(true)}>
-          Nové měření
-        </Btn>
-      </div>
+      {/* Floating sidebar: hlavička „Stopky" + kategorie + patička s přepínačem režimu */}
+      <SidebarKategorie
+        zavodNazev={zavodNazev}
+        kategorie={kategorie}
+        vybrana={vybranaKategorie}
+        onVyber={vyberKategorii}
+        theme={theme}
+        onToggleTheme={toggle}
+      />
 
       {/* Obsah */}
-      {nove ? (
-        <NoveMereni
-          key={zavodId ?? 'none'}
-          kategorie={kategorie}
-          onZalozit={zalozMereni}
-          onZrusit={() => setNove(false)}
-        />
-      ) : !akt ? (
-        <Prazdno onNove={() => setNove(true)} />
-      ) : (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-          {/* Levý sloupec: hodiny + ovládání */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex' }}>
+
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {/* Navigace: floating panel (neprůhledný, ať je čitelná i na Mica skle) */}
+          <div style={{ padding: '12px 20px 6px' }}>
           <div
             style={{
-              width: 340,
-              minWidth: 340,
-              flexShrink: 0,
-              borderRight: '0.5px solid var(--color-border)',
-              padding: 20,
               display: 'flex',
-              flexDirection: 'column',
-              gap: 14
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+              padding: '8px 14px',
+              background: 'var(--color-background)',
+              border: '0.5px solid var(--color-border)',
+              borderRadius: 14,
+              boxShadow: PANEL_SHADOW
             }}
           >
-            <div style={{ fontSize: 12.5, color: T2 }}>{akt.label}</div>
-            <div
-              className="tnum"
-              style={{
-                fontSize: 52,
-                fontWeight: 680,
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-                fontVariantNumeric: 'tabular-nums'
-              }}
-            >
-              {fmtTime(elapsed(akt, now))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+              <span style={labelMini}>Kolo</span>
+              <div style={{ minWidth: 0, overflowX: 'auto' }}>
+                <Tabs
+                  className="stopky-segment w-fit"
+                  selectedKey={vybraneKolo}
+                  onSelectionChange={(k) => { setVybraneKolo(k as KoloTyp); setNove(false) }}
+                >
+                  <Tabs.ListContainer>
+                    <Tabs.List aria-label="Kolo">
+                      {MERENA_KOLA.map((t) => (
+                        <Tabs.Tab key={t} id={t}>
+                          <span style={{ whiteSpace: 'nowrap' }}>{KOLA_LABEL[t]}</span>
+                          <Tabs.Indicator />
+                        </Tabs.Tab>
+                      ))}
+                    </Tabs.List>
+                  </Tabs.ListContainer>
+                </Tabs>
+              </div>
             </div>
 
-            {(() => {
-              const notStarted = !akt.running && akt.baseMs === 0
-              const paused = !akt.running && akt.baseMs > 0
-              return (
-                <>
-                  <Button
-                    variant="primary"
-                    isDisabled={paused}
-                    onPress={() => notStarted ? pauza() : void zaznamenej()}
-                    className="w-full font-[680] tracking-[0.02em]"
-                    style={{ height: 92, borderRadius: 12, fontSize: 22 }}
-                  >
-                    {notStarted ? 'START' : 'ZAZNAMENAT'}
-                  </Button>
-                  <div style={{ fontSize: 11.5, color: T3, textAlign: 'center' }}>
-                    {notStarted
-                      ? 'mezerník = start'
-                      : akt.running
-                        ? 'mezerník = záznam · Backspace = vrátit poslední'
-                        : 'mezerník = pokračovat'}
-                  </div>
-                </>
-              )
-            })()}
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 2, marginBottom: 2 }}>
-              <Btn variant="bezel" onClick={pauza} style={{ flex: 1, height: 46, fontSize: 14 }}>
-                {akt.running ? 'Pauza' : akt.baseMs === 0 ? 'Start' : 'Pokračovat'}
-              </Btn>
-              <Btn
-                variant="bezel"
-                onClick={() => void vratPosledni()}
-                disabled={akt.klik.length === 0}
-                style={{ flex: 1, height: 46, fontSize: 14 }}
-              >
-                Vrátit poslední
-              </Btn>
-            </div>
-
-            <div style={{ flex: 1 }} />
-            <Btn variant="primary" icon={<ArrowUpArrowDown />} onClick={() => void zkusZapsat()}>
-              Zapsat do Výsledků
-            </Btn>
-            <Btn
-              variant="plain"
-              icon={<TrashBin />}
-              onClick={() => setPotvrd({ typ: 'zahodit', jizdaId: akt.jizdaId, label: akt.label })}
-            >
-              Zahodit měření
-            </Btn>
-          </div>
-
-          {/* Střední sloupec: tabulka naměřených časů */}
-          <div style={{ flex: 1, minWidth: 600, overflowY: 'auto', padding: '18px' }}>
-            <div style={{ maxWidth: 600, margin: '0 auto', width: '100%' }}>
+            {!nove && jizdyVybrane.length > 0 && (
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  justifyContent: 'space-between',
-                  padding: '0 2px 8px'
+                  width: 1,
+                  height: 26,
+                  background: 'var(--color-border)',
+                  flexShrink: 0
                 }}
-              >
-                <span style={{ fontSize: 13.5, fontWeight: 620 }}>Naměřené časy</span>
-                <span style={{ fontSize: 12, color: T3 }}>
-                  přiřazeno {akt.klik.filter((c) => c.jezdec_id != null).length} / {akt.klik.length}
-                </span>
-              </div>
+              />
+            )}
+            {!nove && (
+              <JizdyVyber
+                jizdy={jizdyVybrane}
+                aktivniId={aktivniId}
+                merene={mereneSet}
+                bezi={beziSet}
+                onVyber={(jz) => zalozMereni(jz.jizdaId, jz.label, jz.koloTyp, jz.kategorieId)}
+              />
+            )}
 
-              {akt.klik.length === 0 ? (
-                <div
-                  style={{
-                    padding: '30px 16px',
-                    textAlign: 'center',
-                    color: T3,
-                    fontSize: 13.5,
-                    lineHeight: 1.6,
-                    border: '0.5px solid var(--color-border)',
-                    borderRadius: 12,
-                    background: 'var(--color-background)'
-                  }}
-                >
-                  Zatím žádný záznam.
-                  <br />
-                  Zmáčkni <b>mezerník</b> (nebo velké tlačítko) při průjezdu cílem.
-                </div>
-              ) : (
-                <Table>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label="Naměřené časy">
-                      <Table.Header className="sticky top-0 z-10">
-                        <Table.Column isRowHeader style={{ width: 52 }}>#</Table.Column>
-                        <Table.Column style={{ width: 134 }}>Čas</Table.Column>
-                        <Table.Column style={{ width: 116 }}>St. č.</Table.Column>
-                        <Table.Column>Jezdec</Table.Column>
-                      </Table.Header>
-                      <Table.Body>
-                        {akt.klik.map((row, i) => {
-                          const assigned = row.jezdec_id != null
-                          const active = aktivniRadek === row.id
-                          return (
-                            <Table.Row
-                              id={row.id}
-                              key={row.id}
-                              style={{
-                                background: active
-                                  ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-background))'
-                                  : i % 2 ? CARD_ALT : 'transparent',
-                                boxShadow: active ? 'inset 3px 0 0 var(--color-primary)' : 'none'
-                              }}
-                            >
-                              <Table.Cell
-                                style={{ color: T3, fontVariantNumeric: 'tabular-nums', fontSize: 14, padding: '0 14px', height: 48, verticalAlign: 'middle' }}
-                              >
-                                {i + 1}.
-                              </Table.Cell>
-                              <Table.Cell style={{ padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
-                                <CasCell cas={row.cas_ms} onCommit={(ms) => void opravCas(row, ms)} />
-                              </Table.Cell>
-                              <Table.Cell style={{ padding: '0 8px', height: 48, verticalAlign: 'middle' }}>
-                                <CisloInput
-                                  row={row}
-                                  setRef={(el) => cisloRefs.current.set(row.id, el)}
-                                  onCommit={(raw) => priradCislo(row, raw)}
-                                  onFocusRow={() => setAktivniRadek(row.id)}
-                                  onBlurRow={() => setAktivniRadek((c) => (c === row.id ? null : c))}
-                                  onEnter={() => focusDalsi(row.id)}
-                                />
-                              </Table.Cell>
-                              <Table.Cell style={{ fontSize: 14.5, padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
-                                {assigned ? (
-                                  <span>
-                                    <b style={{ fontWeight: 600 }}>{row.prijmeni}</b>{' '}
-                                    <span style={{ color: T2 }}>{row.jmeno}</span>
-                                  </span>
-                                ) : (
-                                  <span style={{ color: T4 }}>čeká na číslo</span>
-                                )}
-                              </Table.Cell>
-                            </Table.Row>
-                          )
-                        })}
-                      </Table.Body>
-                    </Table.Content>
-                  </Table.ScrollContainer>
-                </Table>
-              )}
-            </div>
+            <div style={{ flex: 1 }} />
+            <Btn
+              variant="tertiary"
+              icon={<Plus />}
+              onClick={() => setNove(true)}
+              title="Změřit jinou jízdu (ručně)"
+            >
+              Jiná jízda
+            </Btn>
+          </div>
           </div>
 
-          {/* Pravý sloupec: read-only náhled roštu */}
-          <RostNahled
-            sloty={aktRost}
-            prirazeni={new Set(akt.klik.filter(c => c.jezdec_id != null).map(c => c.jezdec_id as number))}
-          />
+          {/* Další jízda (po zápisu) — fáze B */}
+          {dalsiJizda && !nove && (
+            <div style={{ padding: '10px 20px 0' }}>
+              <DalsiJizdaBaner
+                label={dalsiJizda.label}
+                onJet={() => {
+                  const d = dalsiJizda
+                  setVybraneKolo(d.koloTyp)
+                  setVybranaKategorie(d.kategorieId)
+                  zalozMereni(d.jizdaId, d.label, d.koloTyp, d.kategorieId)
+                }}
+                onZavri={() => setDalsiJizda(null)}
+              />
+            </div>
+          )}
+
+          {nove ? (
+            <NoveMereni
+              key={zavodId ?? 'none'}
+              kategorie={kategorie}
+              onZalozit={zalozMereni}
+              onZrusit={() => setNove(false)}
+            />
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '4px 20px 18px',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Měřící oblast nebo výzva k výběru jízdy */}
+              {!akt || !aktSedi ? (
+                <VyberVyzva
+                  maKategorie={vybranaKategorie != null}
+                  maJizdy={jizdyVybrane.length > 0}
+                  kolo={vybraneKolo}
+                />
+              ) : (
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    border: '0.5px solid var(--color-border)',
+                    borderRadius: 16,
+                    background: 'var(--color-background)',
+                    boxShadow: PANEL_SHADOW,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Stopky — pruh nad tabulkou */}
+                  <StopkyPruh
+                    akt={akt}
+                    onStartZaznam={() => {
+                      if (!akt.running && akt.baseMs === 0) pauza()
+                      else void zaznamenej()
+                    }}
+                    onPauza={pauza}
+                    onVratit={() => void vratPosledni()}
+                    onZapsat={() => void zkusZapsat()}
+                    onZahodit={() =>
+                      setPotvrd({ typ: 'zahodit', jizdaId: akt.jizdaId, label: akt.label })
+                    }
+                  />
+
+                  {/* Tabulka naměřených časů + náhled roštu */}
+                  <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                    <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '14px 18px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'baseline',
+                          justifyContent: 'space-between',
+                          padding: '0 2px 8px'
+                        }}
+                      >
+                        <span style={{ fontSize: 13.5, fontWeight: 620 }}>Naměřené časy</span>
+                        <span style={{ fontSize: 12, color: T3 }}>
+                          přiřazeno {akt.klik.filter((c) => c.jezdec_id != null).length} /{' '}
+                          {akt.klik.length}
+                        </span>
+                      </div>
+
+                      {akt.klik.length === 0 ? (
+                        <div
+                          style={{
+                            padding: '30px 16px',
+                            textAlign: 'center',
+                            color: T3,
+                            fontSize: 13.5,
+                            lineHeight: 1.6,
+                            border: '0.5px solid var(--color-border)',
+                            borderRadius: 12,
+                            background: 'var(--color-background)'
+                          }}
+                        >
+                          Zatím žádný záznam.
+                          <br />
+                          Zmáčkni <b>mezerník</b> (nebo velké tlačítko) při průjezdu cílem.
+                        </div>
+                      ) : (
+                        <Table>
+                          <Table.ScrollContainer>
+                            <Table.Content aria-label="Naměřené časy">
+                              <Table.Header className="sticky top-0 z-10">
+                                <Table.Column isRowHeader style={{ width: 52 }}>#</Table.Column>
+                                <Table.Column style={{ width: 134 }}>Čas</Table.Column>
+                                <Table.Column style={{ width: 116 }}>St. č.</Table.Column>
+                                <Table.Column style={{ width: 210 }}>Jezdec</Table.Column>
+                                <Table.Column>Auto</Table.Column>
+                              </Table.Header>
+                              <Table.Body>
+                                {akt.klik.map((row, i) => {
+                                  const assigned = row.jezdec_id != null
+                                  const active = aktivniRadek === row.id
+                                  return (
+                                    <Table.Row
+                                      id={row.id}
+                                      key={row.id}
+                                      style={{
+                                        background: active
+                                          ? 'color-mix(in srgb, var(--color-primary) 14%, var(--color-background))'
+                                          : i % 2 ? CARD_ALT : 'transparent',
+                                        boxShadow: active ? 'inset 3px 0 0 var(--color-primary)' : 'none'
+                                      }}
+                                    >
+                                      <Table.Cell
+                                        style={{ color: T3, fontVariantNumeric: 'tabular-nums', fontSize: 14, padding: '0 14px', height: 48, verticalAlign: 'middle' }}
+                                      >
+                                        {i + 1}.
+                                      </Table.Cell>
+                                      <Table.Cell style={{ padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
+                                        <CasCell cas={row.cas_ms} onCommit={(ms) => void opravCas(row, ms)} />
+                                      </Table.Cell>
+                                      <Table.Cell style={{ padding: '0 8px', height: 48, verticalAlign: 'middle' }}>
+                                        <CisloInput
+                                          row={row}
+                                          setRef={(el) => cisloRefs.current.set(row.id, el)}
+                                          onCommit={(raw) => priradCislo(row, raw)}
+                                          onFocusRow={() => setAktivniRadek(row.id)}
+                                          onBlurRow={() => setAktivniRadek((c) => (c === row.id ? null : c))}
+                                          onEnter={() => focusDalsi(row.id)}
+                                        />
+                                      </Table.Cell>
+                                      <Table.Cell style={{ fontSize: 14.5, padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
+                                        {assigned ? (
+                                          <span>
+                                            <b style={{ fontWeight: 600 }}>{row.prijmeni}</b>{' '}
+                                            <span style={{ color: T2 }}>{row.jmeno}</span>
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: T4 }}>čeká na číslo</span>
+                                        )}
+                                      </Table.Cell>
+                                      <Table.Cell style={{ fontSize: 13.5, padding: '0 14px', height: 48, verticalAlign: 'middle', color: T2 }}>
+                                        {assigned && (row.znacka || row.model) ? (
+                                          [row.znacka, row.model].filter(Boolean).join(' ')
+                                        ) : (
+                                          <span style={{ color: T4 }}>—</span>
+                                        )}
+                                      </Table.Cell>
+                                    </Table.Row>
+                                  )
+                                })}
+                              </Table.Body>
+                            </Table.Content>
+                          </Table.ScrollContainer>
+                        </Table>
+                      )}
+                    </div>
+
+                    {/* Read-only náhled roštu */}
+                    <RostNahled sloty={aktRost} prirazeni={prirazeniRost} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {potvrd && (
         <Modal
@@ -685,7 +808,7 @@ function NoveMereni({
   onZrusit
 }: {
   kategorie: Kategorie[]
-  onZalozit: (jizdaId: number, label: string) => void
+  onZalozit: (jizdaId: number, label: string, koloTyp: KoloTyp, kategorieId: number) => void
   onZrusit: () => void
 }): React.JSX.Element {
   const [katId, setKatId] = useState<number | null>(kategorie[0]?.id ?? null)
@@ -812,7 +935,10 @@ function NoveMereni({
                       key={jz.id}
                       variant={jeNaRade ? 'primary' : 'outline'}
                       size="sm"
-                      onPress={() => onZalozit(jz.id, `${katNazev} · ${KOLA_LABEL[typ]} · ${jz.cislo}. jízda`)}
+                      onPress={() =>
+                        katId != null &&
+                        onZalozit(jz.id, `${katNazev} · ${KOLA_LABEL[typ]} · ${jz.cislo}. jízda`, typ, katId)
+                      }
                       style={{ opacity: jeHotovo && !jeNaRade ? 0.55 : 1, height: 34 }}
                     >
                       {jeHotovo ? (
@@ -971,18 +1097,401 @@ function KategorieSelect({
   )
 }
 
-function Prazdno({ onNove }: { onNove: () => void }): React.JSX.Element {
+// ---- Navigace: přepínač kol + jízdy po kategoriích ----
+
+type StavJizdy = 'aktivni' | 'odjeto' | 'merene' | 'ceka' | 'bezRostu'
+
+function stavJizdy(jz: JizdaKolaRadek, aktivniId: number | null, merene: Set<number>): StavJizdy {
+  if (jz.jizdaId === aktivniId) return 'aktivni'
+  if (jz.maVysledky) return 'odjeto'
+  if (merene.has(jz.jizdaId) || jz.pocetKliku > 0) return 'merene'
+  if (jz.obsazenoRostem === 0) return 'bezRostu'
+  return 'ceka'
+}
+
+// Floating sidebar: hlavička „Stopky" + seznam kategorií + patička s režimem.
+const SidebarKategorie = memo(function SidebarKategorie({
+  zavodNazev,
+  kategorie,
+  vybrana,
+  onVyber,
+  theme,
+  onToggleTheme
+}: {
+  zavodNazev: string
+  kategorie: Kategorie[]
+  vybrana: number | null
+  onVyber: (id: number) => void
+  theme: string
+  onToggleTheme: () => void
+}): React.JSX.Element {
+  const dark = theme === 'dark'
   return (
-    <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: T3 }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 14, marginBottom: 12 }}>Žádné měření. Založ ho pro vybranou jízdu.</div>
-        <Btn variant="primary" icon={<Plus />} onClick={onNove}>Nové měření</Btn>
+    <div
+      style={{
+        width: 244,
+        minWidth: 244,
+        flexShrink: 0,
+        margin: 12,
+        marginRight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--color-background)',
+        border: '0.5px solid var(--color-border)',
+        borderRadius: 16,
+        boxShadow: PANEL_SHADOW,
+        overflow: 'hidden'
+      }}
+    >
+      {/* Hlavička */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '15px 16px',
+          borderBottom: '0.5px solid var(--color-border)'
+        }}
+      >
+        <Stopwatch width={20} height={20} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15.5, fontWeight: 680, lineHeight: 1.2 }}>Stopky</div>
+          {zavodNazev && (
+            <div
+              style={{
+                fontSize: 11,
+                color: T3,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {zavodNazev}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Kategorie */}
+      <div style={{ ...labelMini, padding: '13px 16px 8px' }}>Kategorie</div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 10px' }}>
+        {kategorie.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: T3, padding: '8px 10px', lineHeight: 1.5 }}>
+            Žádné kategorie. Otevři závod v hlavním okně.
+          </div>
+        ) : (
+          <Tabs
+            orientation="vertical"
+            className="stopky-sidebar-tabs w-full"
+            selectedKey={vybrana != null ? String(vybrana) : ''}
+            onSelectionChange={(k) => onVyber(Number(k))}
+          >
+            <Tabs.ListContainer>
+              <Tabs.List aria-label="Kategorie">
+                {kategorie.map((k) => (
+                  <Tabs.Tab key={k.id} id={String(k.id)}>
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {k.nazev}
+                    </span>
+                    <Tabs.Indicator />
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs.ListContainer>
+          </Tabs>
+        )}
+      </div>
+
+      {/* Patička: přepínač světlý / tmavý režim */}
+      <div
+        style={{
+          padding: '11px 14px',
+          borderTop: '0.5px solid var(--color-border)'
+        }}
+      >
+        <Switch isSelected={dark} onChange={onToggleTheme} size="md">
+          <Switch.Control>
+            <Switch.Thumb>
+              <Switch.Icon>
+                {dark ? (
+                  <Moon className="size-3 text-inherit" />
+                ) : (
+                  <Sun className="size-3 text-inherit" />
+                )}
+              </Switch.Icon>
+            </Switch.Thumb>
+          </Switch.Control>
+          <Switch.Content>
+            <Label className="text-sm" style={{ color: T2 }}>
+              {dark ? 'Tmavý režim' : 'Světlý režim'}
+            </Label>
+          </Switch.Content>
+        </Switch>
+      </div>
+    </div>
+  )
+})
+
+// Breadcrumb kategorie·kolo + tlačítka jízd vybrané kategorie a kola.
+function JizdyVyber({
+  jizdy,
+  aktivniId,
+  merene,
+  bezi,
+  onVyber
+}: {
+  jizdy: JizdaKolaRadek[]
+  aktivniId: number | null
+  merene: Set<number>
+  bezi: Set<number>
+  onVyber: (jz: JizdaKolaRadek) => void
+}): React.JSX.Element | null {
+  const vybrano =
+    aktivniId != null && jizdy.some((j) => j.jizdaId === aktivniId) ? String(aktivniId) : ''
+  if (jizdy.length === 0) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <span style={labelMini}>Jízda</span>
+      <div style={{ minWidth: 0, overflowX: 'auto' }}>
+        <Tabs
+          className="stopky-segment w-fit"
+          selectedKey={vybrano}
+          onSelectionChange={(k) => {
+            const jz = jizdy.find((j) => String(j.jizdaId) === String(k))
+            if (jz) onVyber(jz)
+          }}
+        >
+          <Tabs.ListContainer>
+            <Tabs.List aria-label="Jízda">
+              {jizdy.map((jz) => {
+                const stav = stavJizdy(jz, aktivniId, merene)
+                return (
+                  <Tabs.Tab key={jz.jizdaId} id={String(jz.jizdaId)}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {stav === 'odjeto' && (
+                        <span style={{ color: 'var(--color-medal-gold, #2e9e5b)', fontSize: 12, lineHeight: 1 }}>
+                          ✓
+                        </span>
+                      )}
+                      {bezi.has(jz.jizdaId) && (
+                        <span
+                          className="stopky-puls"
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: 99,
+                            background: 'var(--color-primary)',
+                            display: 'inline-block',
+                            flexShrink: 0
+                          }}
+                        />
+                      )}
+                      {jz.jizdaCislo}. jízda
+                      {jz.pocetKliku > 0 && (
+                        <span className="tnum" style={{ opacity: 0.55, fontSize: 12 }}>
+                          · {jz.pocetKliku}
+                        </span>
+                      )}
+                    </span>
+                    <Tabs.Indicator />
+                  </Tabs.Tab>
+                )
+              })}
+            </Tabs.List>
+          </Tabs.ListContainer>
+        </Tabs>
       </div>
     </div>
   )
 }
 
-function RostNahled({
+// Živý čas — vlastní interval. Tím se 19×/s překresluje jen text hodin,
+// ne celé okno Stopek (sidebar, tabulka, rošt, segmenty). Klíč k plynulosti.
+function ZivyCas({ akt }: { akt: Kanal }): React.JSX.Element {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!akt.running) return
+    const t = setInterval(() => setNow(Date.now()), 53)
+    return () => clearInterval(t)
+  }, [akt.running])
+  return <>{fmtTime(elapsed(akt, now))}</>
+}
+
+// Stopky: vodorovný pruh nad tabulkou (hodiny + START/ZAZNAMENAT + ovládání).
+function StopkyPruh({
+  akt,
+  onStartZaznam,
+  onPauza,
+  onVratit,
+  onZapsat,
+  onZahodit
+}: {
+  akt: Kanal
+  onStartZaznam: () => void
+  onPauza: () => void
+  onVratit: () => void
+  onZapsat: () => void
+  onZahodit: () => void
+}): React.JSX.Element {
+  const notStarted = !akt.running && akt.baseMs === 0
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 18,
+        padding: '14px 18px',
+        borderBottom: '0.5px solid var(--color-border)',
+        background: 'var(--color-background)',
+        flexWrap: 'wrap'
+      }}
+    >
+      {/* Label + hodiny + nápověda */}
+      <div style={{ minWidth: 200 }}>
+        <div style={{ fontSize: 12, color: T2, marginBottom: 1 }}>{akt.label}</div>
+        <div
+          className="tnum"
+          style={{
+            fontSize: 54,
+            fontWeight: 700,
+            lineHeight: 1.05,
+            letterSpacing: '-0.02em',
+            fontVariantNumeric: 'tabular-nums'
+          }}
+        >
+          <ZivyCas akt={akt} />
+        </div>
+        <div style={{ fontSize: 11, color: T3, marginTop: 3 }}>
+          {notStarted
+            ? 'mezerník = start'
+            : akt.running
+              ? 'mezerník = záznam · Ctrl+Z vrátit'
+              : 'mezerník = pokračovat'}
+        </div>
+      </div>
+
+      {/* Velké tlačítko */}
+      <Button
+        variant="primary"
+        onPress={onStartZaznam}
+        className="font-[680] tracking-[0.02em]"
+        style={{ height: 66, minWidth: 196, fontSize: 20 }}
+      >
+        {notStarted ? 'START' : 'ZAZNAMENAT'}
+      </Button>
+
+      <Btn variant="tertiary" onClick={onPauza} style={{ height: 44 }}>
+        {akt.running ? 'Pauza' : akt.baseMs === 0 ? 'Start' : 'Pokračovat'}
+      </Btn>
+      <Btn variant="tertiary" onClick={onVratit} disabled={akt.klik.length === 0} style={{ height: 44 }}>
+        Vrátit poslední
+      </Btn>
+
+      <div style={{ flex: 1 }} />
+
+      <Btn variant="primary" icon={<ArrowUpArrowDown />} onClick={onZapsat}>
+        Zapsat do Výsledků
+      </Btn>
+      <Btn variant="danger-soft" icon={<TrashBin />} onClick={onZahodit}>
+        Zahodit
+      </Btn>
+    </div>
+  )
+}
+
+// Výzva uprostřed měřící plochy, když není vybraná žádná jízda k měření.
+function VyberVyzva({
+  maKategorie,
+  maJizdy,
+  kolo
+}: {
+  maKategorie: boolean
+  maJizdy: boolean
+  kolo: KoloTyp
+}): React.JSX.Element {
+  const text = !maKategorie
+    ? 'Vyber kategorii vlevo.'
+    : maJizdy
+      ? 'Vyber jízdu nahoře a začni měřit.'
+      : kolo === 'SF' || kolo === 'F'
+        ? `${KOLA_LABEL[kolo]} se nasazuje až po klasifikaci — udělej to v hlavním okně. Pak se jízdy objeví tady.`
+        : `Pro ${KOLA_LABEL[kolo]} zatím nejsou žádné jízdy. Sestav rošt v hlavním okně, pak se objeví tady.`
+  return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'grid',
+        placeItems: 'center',
+        border: '0.5px dashed var(--color-border)',
+        borderRadius: 16,
+        background: 'var(--color-background)'
+      }}
+    >
+      <div
+        style={{
+          textAlign: 'center',
+          maxWidth: 340,
+          lineHeight: 1.55,
+          fontSize: 13.5,
+          color: T3,
+          padding: 24
+        }}
+      >
+        {text}
+      </div>
+    </div>
+  )
+}
+
+function DalsiJizdaBaner({
+  label,
+  onJet,
+  onZavri
+}: {
+  label: string
+  onJet: () => void
+  onZavri: () => void
+}): React.JSX.Element {
+  return (
+    <div
+      className="stopky-baner"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 18px',
+        background: 'color-mix(in srgb, var(--color-primary) 10%, var(--color-background))',
+        borderBottom: '0.5px solid var(--color-border)'
+      }}
+    >
+      <span style={{ fontSize: 13, color: T2 }}>Hotovo. Další na řadě:</span>
+      <b style={{ fontSize: 13.5, fontWeight: 620 }}>{label}</b>
+      <div style={{ flex: 1 }} />
+      <Btn variant="primary" icon={<ChevronRight />} onClick={onJet}>
+        Jet
+      </Btn>
+      <Btn variant="plain" onClick={onZavri}>
+        Zavřít
+      </Btn>
+    </div>
+  )
+}
+
+const RostNahled = memo(function RostNahled({
   sloty,
   prirazeni
 }: {
@@ -995,8 +1504,8 @@ function RostNahled({
   return (
     <div
       style={{
-        width: 300,
-        minWidth: 300,
+        width: 360,
+        minWidth: 360,
         flexShrink: 0,
         borderLeft: '0.5px solid var(--color-border)',
         padding: '18px 18px 22px',
@@ -1113,7 +1622,7 @@ function RostNahled({
       )}
     </div>
   )
-}
+})
 
 const rostTd: React.CSSProperties = {
   padding: '8px 12px',

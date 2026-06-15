@@ -1722,7 +1722,8 @@ function overJizdaPatriAktivnimuZavodu(db: Db, jizdaId: number): number {
 
 const MERENI_SLOUPCE =
   'm.id AS id, m.jizda_id AS jizda_id, m.poradi_kliku AS poradi_kliku, m.cas_ms AS cas_ms, ' +
-  'm.jezdec_id AS jezdec_id, j.st_cislo AS st_cislo, j.prijmeni AS prijmeni, j.jmeno AS jmeno'
+  'm.jezdec_id AS jezdec_id, j.st_cislo AS st_cislo, j.prijmeni AS prijmeni, j.jmeno AS jmeno, ' +
+  'j.znacka AS znacka, j.model AS model'
 
 function mereniRadek(db: Db, id: number): MereniRadek {
   return db
@@ -1934,6 +1935,50 @@ export function mereniJizdyHotovo(katId: number, koloTyp: KoloTyp): number[] {
     )
     .all(katId, koloTyp) as { id: number }[]
   return rows.map((r) => r.id)
+}
+
+// Read-only přehled pro navigaci Stopek: všechny jízdy daného kola napříč
+// kategoriemi aktivního závodu, se stavem odvozeným z dat. NIC nezakládá ani
+// nemaže — jen čte existující strukturu (jízdy vznikají dál jen v rošt gridu).
+export function listJizdyKola(koloTyp: KoloTyp): import('../shared/types').JizdaKolaRadek[] {
+  const zavod = getAktivniZavod()
+  if (!zavod) return []
+  const rows = getDb()
+    .prepare(
+      `SELECT jz.id AS jizdaId, k.id AS kategorieId, k.nazev AS katNazev,
+              ko.typ AS koloTyp, jz.cislo AS jizdaCislo,
+              (SELECT COUNT(*) FROM mereni m WHERE m.jizda_id = jz.id) AS pocetKliku,
+              (SELECT COUNT(*) FROM vysledek v WHERE v.jizda_id = jz.id
+                 AND (v.namereny_cas_ms IS NOT NULL OR v.stav <> 'OK' OR v.poradi IS NOT NULL))
+                AS maVysledkyN,
+              (SELECT COUNT(*) FROM rost_pozice rp WHERE rp.jizda_id = jz.id) AS obsazenoRostem
+       FROM jizda jz
+       JOIN kolo ko ON ko.id = jz.kolo_id
+       JOIN kategorie k ON k.id = ko.kategorie_id
+       WHERE k.zavod_id = ? AND ko.typ = ?
+       ORDER BY k.nazev, jz.cislo`
+    )
+    .all(zavod.id, koloTyp) as {
+    jizdaId: number
+    kategorieId: number
+    katNazev: string
+    koloTyp: KoloTyp
+    jizdaCislo: number
+    pocetKliku: number
+    maVysledkyN: number
+    obsazenoRostem: number
+  }[]
+  return rows.map((r) => ({
+    jizdaId: r.jizdaId,
+    kategorieId: r.kategorieId,
+    katNazev: r.katNazev,
+    koloTyp: r.koloTyp,
+    jizdaCislo: r.jizdaCislo,
+    pocetKliku: r.pocetKliku,
+    maVysledky: r.maVysledkyN > 0,
+    obsazenoRostem: r.obsazenoRostem,
+    label: `${r.katNazev} · ${r.koloTyp} · ${r.jizdaCislo}. jízda`
+  }))
 }
 
 // Má daná jízda už zadané výsledky? (čas / nestandardní stav / pořadí)

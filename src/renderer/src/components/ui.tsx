@@ -1,7 +1,14 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Button, Chip } from '@heroui/react'
 
-type BtnVariant = 'primary' | 'bezel' | 'plain' | 'danger'
+type BtnVariant =
+  | 'primary'
+  | 'secondary'
+  | 'tertiary'
+  | 'bezel'
+  | 'plain'
+  | 'danger'
+  | 'danger-soft'
 
 interface BtnProps {
   children?: ReactNode
@@ -24,10 +31,20 @@ export function Btn({
   style,
   disabled
 }: BtnProps): React.JSX.Element {
-  const heroVariant: 'primary' | 'outline' | 'ghost' | 'danger' =
+  const heroVariant:
+    | 'primary'
+    | 'secondary'
+    | 'tertiary'
+    | 'outline'
+    | 'ghost'
+    | 'danger'
+    | 'danger-soft' =
     variant === 'plain' ? 'ghost' :
     variant === 'bezel' ? 'outline' :
+    variant === 'secondary' ? 'secondary' :
+    variant === 'tertiary' ? 'tertiary' :
     variant === 'danger' ? 'danger' :
+    variant === 'danger-soft' ? 'danger-soft' :
     'primary'
 
   return (

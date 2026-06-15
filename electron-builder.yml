@@ -24,8 +24,8 @@ files:
   - '!*.tsbuildinfo'
   - '!{.env,.env.*}'
 
-# Ikona přístupná za běhu pro BrowserWindow.icon (dev i prod, Windows i Linux).
-# macOS nepotřebuje — ikona jde z .app bundle.
+# PNG ikona přístupná za běhu pro BrowserWindow.icon (dev i prod, Windows/Linux).
+# Instalační ikony berou platformní formáty níže: .ico pro Windows, .icns pro macOS.
 extraResources:
   - from: build/icon.png
     to: icon.png
@@ -38,11 +38,10 @@ win:
     - nsis
   executableName: Casomira
   artifactName: Casomira-Setup-${version}.${ext}
-  # Ikona appky. electron-builder z PNG (1024×1024) vyrobí multi-velikostní .ico
-  # a přes rcedit ho embedne do Casomira.exe (= ikona v Průzkumníku i v taskbaru).
-  # Platí i pro NSIS instalátor. Bez certifikátu signing electron-builder přeskočí.
+  # Ikona appky. .ico obsahuje multi-rozlišení 16/24/32/48/64/128/256 px.
+  # rcedit ji embedne do Casomira.exe (= ikona v Průzkumníku i v taskbaru).
   # POZOR: signAndEditExecutable nesmí být false — to by zakázalo i embedding ikony.
-  icon: build/icon.png
+  icon: build/icon.ico
 
 nsis:
   oneClick: false
@@ -53,9 +52,8 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: Časomíra
   uninstallDisplayName: Časomíra
-  # Volitelně: build/icon.ico (512×512 zdroj → viz docs/dev/BUILD.md)
-  # installerIcon: build/icon.ico
-  # uninstallerIcon: build/icon.ico
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
 
 mac:
   # Jeden DMG pro Intel (x64) i Apple Silicon (arm64).
@@ -77,8 +75,8 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   # Test build nemá Apple notarizaci — nepouštěj Gatekeeper assess při buildu.
   gatekeeperAssess: false
-  # Ikona .app — electron-builder z build/icon.png vyrobí .icns (vč. retina @2x).
-  icon: build/icon.png
+  # Ikona .app — nativní macOS .icns s velikostmi 16–1024 vč. @2x.
+  icon: build/icon.icns
 
 dmg:
   title: Časomíra ${version}

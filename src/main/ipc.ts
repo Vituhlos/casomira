@@ -207,6 +207,7 @@ export function registerIpc(): void {
   ipcMain.handle('mereni:jizdyHotovo', (_e, katId: number, koloTyp: KoloTyp) =>
     repo.mereniJizdyHotovo(katId, koloTyp)
   )
+  ipcMain.handle('mereni:jizdyKola', (_e, koloTyp: KoloTyp) => repo.listJizdyKola(koloTyp))
   ipcMain.handle('mereni:zapis', (_e, jizdaId: number) => {
     const v = repo.zapisMereniDoVysledku(jizdaId)
     broadcast('app:dataChanged') // hlavní okno si obnoví výsledky

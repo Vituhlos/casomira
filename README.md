@@ -5,7 +5,7 @@ Desktopová aplikace pro **časoměřičství autokrosu a rallycrossu** — náh
 Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Pravidla RAC Race (Hobby), RX Cup a Šotolina podle časoměřičské bible, v MVP co nejvěrněji stávajícímu workflow.
 
 <p align="center">
-  <img src="reference/Casomira-macOS/screenshots/04-vysledky-q1.png" alt="Výsledky Q1 — světlý režim" width="720">
+  <img src="assets/brand/casomira-lockup-light-800x200.png" alt="Časomíra" width="520">
 </p>
 
 ---
