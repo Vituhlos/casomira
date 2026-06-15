@@ -4,7 +4,7 @@ import { SCHEMA_SQL } from './schema'
 
 // Číslo poslední migrace. Každý krok zvýší SCHEMA_VERSION o 1.
 // user_version se nastavuje ihned po každém kroku — restart pokračuje od správného místa.
-export const SCHEMA_VERSION = 12
+export const SCHEMA_VERSION = 13
 const LATEST = SCHEMA_VERSION
 
 function step(db: DatabaseSync, targetVersion: number, fn: () => void): void {
@@ -206,6 +206,22 @@ export function migrate(db: DatabaseSync): void {
       `)
     })
     version = 12
+  }
+
+  if (version < 13) {
+    // Indexy na FK sloupcích, které SQLite nevytváří automaticky.
+    // Pokrývají nejčastější JOIN patterny: kolo←kategorie_id, jizda←kolo_id,
+    // rost_pozice←jizda_id, jezdec←kategorie_id.
+    // vysledek(jizda_id) je již krytý ux_vysledek_jizda_jezdec (v2).
+    step(db, 13, () => {
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS ix_kolo_kategorie   ON kolo(kategorie_id);
+        CREATE INDEX IF NOT EXISTS ix_jizda_kolo       ON jizda(kolo_id);
+        CREATE INDEX IF NOT EXISTS ix_rost_jizda       ON rost_pozice(jizda_id);
+        CREATE INDEX IF NOT EXISTS ix_jezdec_kategorie ON jezdec(kategorie_id);
+      `)
+    })
+    version = 13
   }
 
   // Pojistka: synchronizuj user_version s LATEST pro případ, že bylo přidáno
