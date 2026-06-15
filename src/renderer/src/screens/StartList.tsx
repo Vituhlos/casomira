@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { Jezdec, JezdecPole } from '@shared/types'
 import { Button, Chip, Table } from '@heroui/react'
 import { ArrowDownToSquare, Plus, TrashBin } from '@gravity-ui/icons'
@@ -39,8 +40,11 @@ export function StartList({
   onAdd,
   onDelete
 }: StartListProps): React.JSX.Element {
-  const sorted = [...jezdci].sort((a, b) => (a.los ?? 9999) - (b.los ?? 9999))
-  const bezLosu = jezdci.filter((j) => j.los === null).length
+  const sorted = useMemo(
+    () => [...jezdci].sort((a, b) => (a.los ?? 9999) - (b.los ?? 9999)),
+    [jezdci]
+  )
+  const bezLosu = useMemo(() => jezdci.filter((j) => j.los === null).length, [jezdci])
 
   const commit = (id: number, col: Col, raw: string): Promise<boolean> => {
     if (col.num) {

@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { KoloTyp, Stav, VysledekJizda, VysledekKolo, VysledekRadek } from '@shared/types'
 import { Chip, Table } from '@heroui/react'
+import { MedalDot } from '../components/MedalDot'
 import { PenalizaceDialog, type PenalizaceTarget } from '../components/PenalizaceDialog'
 import { Tooltip } from '../components/Tooltip'
 import { fmtTime, parseTimeLoose } from '../lib/time'
@@ -59,6 +60,9 @@ function stavZeZkratky(text: string): Stav | null {
   return null
 }
 
+const COL_HEADERS_BEZ_BODOVANI = ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas']
+const COL_HEADERS_STD = [...COL_HEADERS_BEZ_BODOVANI, 'Body']
+
 interface MenuState {
   jizdaId: number
   jezdecId: number
@@ -72,9 +76,9 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [penalizace, setPenalizace] = useState<PenalizaceTarget | null>(null)
 
-  const nacti = (): void => {
+  const nacti = useCallback((): void => {
     safeCall(window.api.getVysledky(kategorieId, typ).then(setKolo), setLoadError)
-  }
+  }, [kategorieId, typ])
 
   useEffect(() => {
     let live = true
@@ -152,9 +156,7 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
 
       {(kolo?.jizdy ?? []).map((jz) => {
         const nekompletni = jizdaNekompletni(jz.vysledky)
-        const colHeaders = bezBodovani
-          ? ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas']
-          : ['Pořadí', 'St. č.', 'Příjmení', 'Jméno', 'Značka', 'Model', 'Čas', 'Body']
+        const colHeaders = bezBodovani ? COL_HEADERS_BEZ_BODOVANI : COL_HEADERS_STD
 
         return (
           <div key={jz.id} className="mx-5 mb-4">
@@ -297,21 +299,6 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
         />
       )}
     </div>
-  )
-}
-
-function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
-  const color =
-    rank === 1 ? 'var(--color-medal-gold)' :
-    rank === 2 ? 'var(--color-medal-silver)' :
-    rank === 3 ? 'var(--color-medal-bronze)' : null
-  if (!color) return null
-  return (
-    <span style={{
-      display: 'inline-block', width: 7, height: 7,
-      borderRadius: 99, background: color,
-      marginRight: 8, verticalAlign: 'middle'
-    }} />
   )
 }
 

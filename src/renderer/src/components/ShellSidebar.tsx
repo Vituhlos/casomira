@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Button, Label, ListBox } from '@heroui/react'
 import type { Kategorie, UpdateInfo } from '@shared/types'
 import { APP_NAME, APP_VERSION_LABEL } from '../lib/version'
+import logoDarkUrl from '../assets/brand/casomira-lockup-dark.svg?url'
+import logoLightUrl from '../assets/brand/casomira-lockup-light.svg?url'
 
 interface ShellSidebarProps {
   kategorie: Kategorie[]
@@ -12,7 +14,7 @@ interface ShellSidebarProps {
   datum: string
 }
 
-export function ShellSidebar({
+export const ShellSidebar = memo(function ShellSidebar({
   kategorie,
   activeCat,
   onCat,
@@ -28,7 +30,25 @@ export function ShellSidebar({
 
   return (
     <aside className="flex w-sidebar shrink-0 flex-col h-full border-r border-border bg-surface">
-      <div className="h-toolbar shrink-0" />
+      <div className="h-toolbar shrink-0 flex items-center px-4">
+        <button
+          type="button"
+          onClick={onZpet}
+          aria-label="Zpět na seznam závodů"
+          className="flex h-7 cursor-pointer items-center border-none bg-transparent p-0 opacity-80 transition-opacity hover:opacity-100"
+        >
+          <img
+            src={logoLightUrl}
+            alt={APP_NAME}
+            className="casomira-logo casomira-logo-light h-full w-auto"
+          />
+          <img
+            src={logoDarkUrl}
+            alt={APP_NAME}
+            className="casomira-logo casomira-logo-dark h-full w-auto"
+          />
+        </button>
+      </div>
 
       <div className="px-2.5 pb-1.5">
         <Button
@@ -111,4 +131,4 @@ export function ShellSidebar({
       </div>
     </aside>
   )
-}
+})
