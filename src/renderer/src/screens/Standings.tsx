@@ -28,6 +28,11 @@ export function Standings({
     void nacti()
   }, [nacti])
 
+  useEffect(() => {
+    const off = window.api.onDataChanged?.(() => void nacti())
+    return off
+  }, [nacti])
+
   const sub = ukazLos
     ? 'Součet bodů · řazeno sestupně · při shodě rozhoduje los do 1. jízdy'
     : 'Součet bodů ze všech jízd · řazeno sestupně'

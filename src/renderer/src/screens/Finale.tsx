@@ -24,6 +24,11 @@ export function Finale({
     void nactiStav()
   }, [nactiStav])
 
+  useEffect(() => {
+    const off = window.api.onDataChanged?.(() => void nactiStav())
+    return off
+  }, [nactiStav])
+
   const setVelikost = async (v: number): Promise<void> => {
     await window.api.setFinaleVelikost(kategorieId, v)
     await nactiStav()

@@ -129,8 +129,6 @@ export function App(): React.JSX.Element {
   } | null>(null)
   // Problém s kořenovou složkou pro PDF (nenastavená / smazaná) → výzva k výběru.
   const [rootProblem, setRootProblem] = useState<PdfRootStav | null>(null)
-  // Zvýší se, když jiné okno změní data → vynutí přenačtení obsahu.
-  const [dataNonce, setDataNonce] = useState(0)
 
   // Krátké oznámení (volitelně s cestou ke složce → tlačítko „Otevřít").
   const oznam = useCallback((text: string, slozka?: string | null): void => {
@@ -192,10 +190,11 @@ export function App(): React.JSX.Element {
     void reloadJezdci()
   }, [reloadJezdci])
 
-  // Data se změnila v jiném okně (např. stopky zapsaly výsledky) → obnov pohled.
+  // Data se změnila v jiném okně (např. stopky zapsaly výsledky) → obnov jezdce a kategorie.
+  // Jednotlivé obrazovky (Results, QVysledky, Overall, Standings, Semifinale, Finale) si
+  // samy refreshují svá data přes vlastní onDataChanged subscription.
   useEffect(() => {
     const off = window.api.onDataChanged(() => {
-      setDataNonce((n) => n + 1)
       void reloadJezdci()
       void reloadKategorie()
     })
@@ -341,6 +340,20 @@ export function App(): React.JSX.Element {
   const phases = phasesForCategory(zavod?.typ ?? 'RAC')
   const phaseLabel = phases.find((p) => p.id === phase)?.label ?? ''
   const contentMaxW = contentMaxWidth(phase)
+
+  // Dynamický titulek okna — operátor vidí kontext i v taskbaru.
+  useEffect(() => {
+    if (view === 'list') {
+      document.title = 'Časomíra'
+      return
+    }
+    const subLabel = SUB_PHASES.has(phase)
+      ? subView === 'rost' ? ' Rošt' : ' Výsledky'
+      : ''
+    document.title = catLabel
+      ? `Časomíra — ${catLabel} · ${phaseLabel}${subLabel}`
+      : 'Časomíra'
+  }, [view, catLabel, phase, phaseLabel, subView])
 
   // Když se fáze ocitne mimo seznam povolených (přepnutí RAC→RX nebo otevření
   // RX závodu s uloženou „class_q2"), spadni zpět na startovní listinu.
@@ -556,7 +569,6 @@ export function App(): React.JSX.Element {
             />
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div
-                key={dataNonce}
                 style={{ maxWidth: contentMaxW, width: '100%', margin: '0 auto' }}
               >
                 {renderPhase()}
