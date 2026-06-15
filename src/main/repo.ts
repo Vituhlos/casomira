@@ -1016,16 +1016,17 @@ export function getVysledky(kategorieId: number, typ: KoloTyp): VysledekKolo {
   const selPoz = db.prepare('SELECT jezdec_id FROM rost_pozice WHERE jizda_id = ?')
   const { bodyZaPozici, penalizace } = nactiBodovani(db, rulesetKategorie(db, kategorieId))
 
-  // Sync roštu s výsledky + přepočet bodů v jediné transakci — žádný mezistav
-  // kde jsou řádky sesynchronizované ale body ještě nepřepočítané.
-  // prepoctiJizdu uvnitř vytvoří savepoint (better-sqlite3 nested tx).
+  // Sync roštu s výsledky + podmíněný přepočet bodů v jediné transakci.
+  // prepoctiJizdu se volá jen když se roster skutečně změnil (přibyl/ubyl jezdec);
+  // při prostém čtení výsledků (obvyklý případ) přepočet přeskočíme.
   const jizdyData = runInTransaction(db, () => {
-    for (const jz of jizdy) {
-      clean.run(jz.id, jz.id)
-      for (const p of selPoz.all(jz.id) as { jezdec_id: number }[]) ensure.run(jz.id, p.jezdec_id)
-    }
     return jizdy.map((jz) => {
-      prepoctiJizdu(db, jz.id, bodyZaPozici, penalizace)
+      const deleted = Number(clean.run(jz.id, jz.id).changes) > 0
+      let added = false
+      for (const p of selPoz.all(jz.id) as { jezdec_id: number }[]) {
+        if (Number(ensure.run(jz.id, p.jezdec_id).changes) > 0) added = true
+      }
+      if (deleted || added) prepoctiJizdu(db, jz.id, bodyZaPozici, penalizace)
       return nactiJizdu(db, jz.id, jz.cislo)
     })
   })
