@@ -820,11 +820,15 @@ function rulesetKategorie(db: Db, kategorieId: number): Ruleset {
   }).ruleset
 }
 
+type Bodovani = { bodyZaPozici: (p: number) => number; penalizace: Penalizace }
+// zebricek a pravidla jsou read-only po inicializaci DB → cache platí po celý běh aplikace.
+const bodovaniCache = new Map<Ruleset, Bodovani>()
+
 // Načte žebříček a penalizace pro daný ruleset (z tabulek zebricek/pravidla).
-function nactiBodovani(db: Db, ruleset: Ruleset): {
-  bodyZaPozici: (p: number) => number
-  penalizace: Penalizace
-} {
+function nactiBodovani(db: Db, ruleset: Ruleset): Bodovani {
+  const cached = bodovaniCache.get(ruleset)
+  if (cached) return cached
+
   const zRows = db.prepare('SELECT poradi, body FROM zebricek WHERE ruleset = ?').all(ruleset) as {
     poradi: number
     body: number
@@ -835,7 +839,7 @@ function nactiBodovani(db: Db, ruleset: Ruleset): {
       'SELECT dnf_offset, dns_offset, dq_offset, dnf_body, dns_body, dq_body FROM pravidla WHERE ruleset = ?'
     )
     .get(ruleset) as unknown as Penalizace | undefined
-  return {
+  const result: Bodovani = {
     bodyZaPozici: (p: number) => zMap.get(p) ?? 0,
     penalizace: pr ?? {
       dnf_offset: null,
@@ -846,6 +850,8 @@ function nactiBodovani(db: Db, ruleset: Ruleset): {
       dq_body: null
     }
   }
+  bodovaniCache.set(ruleset, result)
+  return result
 }
 
 /** Automatická body jezdce v jízdě (bez `body_rucni` — čistý výpočet z času/stavu). */
