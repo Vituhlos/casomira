@@ -1801,6 +1801,14 @@ export function mereniVratPosledni(jizdaId: number): void {
   if (row) db.prepare('DELETE FROM mereni WHERE id = ?').run(row.id)
 }
 
+// Smaže jeden konkrétní záznam měření (křížek v tabulce). Ověří, že patří
+// aktivnímu závodu — jinak vyhodí (ochrana proti zásahu do cizích dat).
+export function mereniSmazRadek(id: number): void {
+  const db = getDb()
+  overMereniPatriAktivnimuZavodu(db, id)
+  db.prepare('DELETE FROM mereni WHERE id = ?').run(id)
+}
+
 export function mereniOpravCas(id: number, cas_ms: number): MereniRadek {
   const db = getDb()
   overMereniPatriAktivnimuZavodu(db, id)

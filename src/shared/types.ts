@@ -662,6 +662,8 @@ export interface CasomiraApi {
   mereniPridej(jizdaId: number, cas_ms: number): Promise<MereniRadek>
   /** Vrátí (smaže) poslední záznam jízdy. */
   mereniVratPosledni(jizdaId: number): Promise<void>
+  /** Smaže jeden konkrétní záznam měření (křížek v tabulce). */
+  mereniSmazRadek(id: number): Promise<void>
   /** Ruční oprava jednoho času. */
   mereniOpravCas(id: number, cas_ms: number): Promise<MereniRadek>
   /** Přiřadí startovní číslo k záznamu (null = zrušit). */

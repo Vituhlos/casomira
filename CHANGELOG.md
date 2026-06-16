@@ -6,6 +6,27 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+## [0.9.13-beta] – 2026-06-16
+
+### Přidáno
+- **Mazání jednotlivého času ve Stopkách** — u každého naměřeného času je křížek,
+  který smaže přesně ten řádek. Po smazání naskočí toast s tlačítkem **„Vrátit"**
+  (10 s), které čas obnoví i s přiřazeným startovním číslem.
+
+### Změněno
+- **„Vrátit poslední" je nově jen klávesová zkratka Ctrl+Z** — tlačítko z pruhu
+  stopek zmizelo (mazání řeší křížky u řádků). Navíc vrácení **odmítne smazat
+  čas, který už má přiřazené startovní číslo** (ochrana proti ztrátě dat).
+- **Modaly a oznámení na nativním HeroUI** — okno „Jiná jízda" i potvrzovací
+  dialogy jsou teď HeroUI Modal a oznámení používají HeroUI Toast.
+
+### Opraveno
+- **Plynulost při zaznamenávání času** — řádky tabulky (políčko čísla, editace
+  času) jsou memoizované, takže se při zápisu překreslí jen nový řádek, ne všech
+  osm. Konec drhnutí při rychlém mačkání mezerníku.
+- **Sloupec „Auto"** se doplní okamžitě po přiřazení startovního čísla (značka +
+  model vozu).
+
 ## [0.9.12-beta] – 2026-06-15
 
 ### Přidáno
@@ -296,7 +317,8 @@ na macOS 26 hned po spuštění padal (exit 133).
   (Electron + React + SQLite): startovní listina, rošty, výsledky, klasifikace,
   semifinále/finále, PDF export, stopky.
 
-[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.12-beta...HEAD
+[Nevydáno]: https://github.com/Vituhlos/casomira/compare/v0.9.13-beta...HEAD
+[0.9.13-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.12-beta...v0.9.13-beta
 [0.9.12-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.11-beta...v0.9.12-beta
 [0.9.11-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.10-beta...v0.9.11-beta
 [0.9.10-beta]: https://github.com/Vituhlos/casomira/compare/v0.9.9-beta...v0.9.10-beta

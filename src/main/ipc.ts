@@ -196,6 +196,7 @@ export function registerIpc(): void {
     repo.mereniPridej(jizdaId, cas)
   )
   ipcMain.handle('mereni:vratPosledni', (_e, jizdaId: number) => repo.mereniVratPosledni(jizdaId))
+  ipcMain.handle('mereni:smazRadek', (_e, id: number) => repo.mereniSmazRadek(id))
   ipcMain.handle('mereni:opravCas', (_e, id: number, cas: number) => repo.mereniOpravCas(id, cas))
   ipcMain.handle('mereni:setCislo', (_e, id: number, st: number | null) =>
     repo.mereniSetCislo(id, st)

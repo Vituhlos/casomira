@@ -9,10 +9,9 @@ import type {
   RostSlot
 } from '@shared/types'
 import { useTheme } from './hooks/useTheme'
-import { Button, Label, Switch, Table, Tabs } from '@heroui/react'
+import { Button, Label, Modal, Switch, Table, Tabs, Toast, toast } from '@heroui/react'
 import { Btn } from './components/ui'
 import { ArrowUpArrowDown, ChevronRight, Moon, Plus, Stopwatch, Sun, TrashBin } from '@gravity-ui/icons'
-import { Modal } from './components/Modal'
 import { fmtTime, parseTimeLoose } from './lib/time'
 import { safeCall } from './lib/api'
 
@@ -61,7 +60,6 @@ export function StopkyApp(): React.JSX.Element {
   const [kanaly, setKanaly] = useState<Kanal[]>([])
   const [aktivniId, setAktivniId] = useState<number | null>(null)
   const [nove, setNove] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [potvrd, setPotvrd] = useState<{ typ: 'zapis' | 'zahodit'; jizdaId: number; label: string } | null>(null)
   const [aktivniRadek, setAktivniRadek] = useState<number | null>(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
@@ -76,23 +74,55 @@ export function StopkyApp(): React.JSX.Element {
     kategorieId: number
   } | null>(null)
   const cisloRefs = useRef<Map<number, HTMLInputElement | null>>(new Map())
+  const aktKlikRef = useRef<MereniRadek[]>([])
 
   const akt = kanaly.find((k) => k.jizdaId === aktivniId) ?? null
+  aktKlikRef.current = akt?.klik ?? []
 
-  const focusDalsi = (id: number): void => {
-    if (!akt) return
-    const idx = akt.klik.findIndex((c) => c.id === id)
-    const dalsi = akt.klik[idx + 1]
+  // Stabilní handlery pro memoizované buňky řádků (CisloInput, CasCell) — díky
+  // nim se při záznamu času překreslí jen nový řádek, ne všech 8 existujících.
+  const focusDalsi = useCallback((id: number): void => {
+    const klik = aktKlikRef.current
+    const idx = klik.findIndex((c) => c.id === id)
+    const dalsi = klik[idx + 1]
     if (dalsi) cisloRefs.current.get(dalsi.id)?.focus()
     else cisloRefs.current.get(id)?.blur()
-  }
+  }, [])
+  const onFocusRow = useCallback((id: number): void => setAktivniRadek(id), [])
+  const onBlurRow = useCallback(
+    (id: number): void => setAktivniRadek((c) => (c === id ? null : c)),
+    []
+  )
+  const setRefCb = useCallback((id: number, el: HTMLInputElement | null): void => {
+    cisloRefs.current.set(id, el)
+  }, [])
 
-  const oznam = useCallback((t: string): void => setToast(t), [])
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 4000)
-    return () => clearTimeout(t)
-  }, [toast])
+  const oznam = useCallback((t: string): void => { toast(t) }, [])
+
+  // Smaže jeden konkrétní čas (křížek) a nabídne vrácení přes toast s akcí.
+  // Vrácení vloží čas znovu (i s číslem) — řádek se reloaduje z DB.
+  const smazCas = useCallback(async (row: MereniRadek): Promise<void> => {
+    await window.api.mereniSmazRadek(row.id)
+    setKanaly((prev) =>
+      prev.map((x) =>
+        x.jizdaId === row.jizda_id ? { ...x, klik: x.klik.filter((c) => c.id !== row.id) } : x
+      )
+    )
+    const obnova = async (): Promise<void> => {
+      const novy = await window.api.mereniPridej(row.jizda_id, row.cas_ms)
+      if (row.st_cislo != null) await window.api.mereniSetCislo(novy.id, row.st_cislo)
+      const klik = await window.api.mereniList(row.jizda_id)
+      setKanaly((prev) => prev.map((x) => (x.jizdaId === row.jizda_id ? { ...x, klik } : x)))
+    }
+    toast(`Čas ${fmtTime(row.cas_ms)} smazán`, {
+      description: 'Naměřený čas byl odebrán z tabulky.',
+      timeout: 10000,
+      actionProps: {
+        children: 'Vrátit',
+        onPress: () => { void obnova(); toast.clear() }
+      }
+    })
+  }, [])
 
   const timerPayload = (k: Kanal): MereniTimerStav => ({
     jizdaId: k.jizdaId,
@@ -238,11 +268,19 @@ export function StopkyApp(): React.JSX.Element {
   const vratPosledni = useCallback(async (): Promise<void> => {
     const k = kanaly.find((x) => x.jizdaId === aktivniId)
     if (!k || k.klik.length === 0) return
+    // Ochrana proti ztrátě dat: má-li poslední čas přiřazené startovní číslo,
+    // nevracíme ho (to už není „omylem zaznamenaný" klik). Operátor musí nejdřív
+    // odebrat číslo z políčka — teprve pak lze čas vrátit.
+    const posledni = k.klik[k.klik.length - 1]
+    if (posledni.jezdec_id != null) {
+      oznam('Poslední čas má přiřazené číslo — nejdřív odeber číslo, pak ho lze vrátit.')
+      return
+    }
     await window.api.mereniVratPosledni(k.jizdaId)
     setKanaly((prev) =>
       prev.map((x) => (x.jizdaId === k.jizdaId ? { ...x, klik: x.klik.slice(0, -1) } : x))
     )
-  }, [kanaly, aktivniId])
+  }, [kanaly, aktivniId, oznam])
 
   const pauza = (): void => {
     if (!akt) return
@@ -307,7 +345,7 @@ export function StopkyApp(): React.JSX.Element {
     void window.api.ulozMereniAktivniJizdu(jizdaId)
   }
 
-  const priradCislo = async (row: MereniRadek, raw: string): Promise<boolean> => {
+  const priradCislo = useCallback(async (row: MereniRadek, raw: string): Promise<boolean> => {
     const trimmed = raw.trim()
     const parsed = trimmed === '' ? null : Number.parseInt(trimmed, 10)
     const valid = parsed !== null && !Number.isNaN(parsed)
@@ -324,16 +362,18 @@ export function StopkyApp(): React.JSX.Element {
               jezdec_id: res.ok ? res.jezdec?.id ?? null : c.jezdec_id,
               st_cislo: res.ok ? res.jezdec?.st_cislo ?? null : c.st_cislo,
               prijmeni: res.ok ? res.jezdec?.prijmeni ?? null : c.prijmeni,
-              jmeno: res.ok ? res.jezdec?.jmeno ?? null : c.jmeno
+              jmeno: res.ok ? res.jezdec?.jmeno ?? null : c.jmeno,
+              znacka: res.ok ? res.jezdec?.znacka ?? null : c.znacka,
+              model: res.ok ? res.jezdec?.model ?? null : c.model
             }
           )
         }
       )
     )
     return res.ok || trimmed === ''
-  }
+  }, [oznam])
 
-  const opravCas = async (row: MereniRadek, ms: number): Promise<void> => {
+  const opravCas = useCallback(async (row: MereniRadek, ms: number): Promise<void> => {
     const novy = await window.api.mereniOpravCas(row.id, ms)
     setKanaly((prev) =>
       prev.map((k) =>
@@ -341,7 +381,7 @@ export function StopkyApp(): React.JSX.Element {
           : { ...k, klik: k.klik.map((c) => (c.id === row.id ? { ...c, cas_ms: novy.cas_ms } : c)) }
       )
     )
-  }
+  }, [])
 
   // Po zápisu nabídne první neodměřenou jízdu (využívá stávající mereniDalsiJizda).
   const nabidniDalsiJizdu = async (): Promise<void> => {
@@ -544,15 +584,16 @@ export function StopkyApp(): React.JSX.Element {
             </div>
           )}
 
-          {nove ? (
+          {nove && (
             <NoveMereni
               key={zavodId ?? 'none'}
               kategorie={kategorie}
               onZalozit={zalozMereni}
               onZrusit={() => setNove(false)}
             />
-          ) : (
-            <div
+          )}
+
+          <div
               style={{
                 flex: 1,
                 minHeight: 0,
@@ -591,7 +632,6 @@ export function StopkyApp(): React.JSX.Element {
                       else void zaznamenej()
                     }}
                     onPauza={pauza}
-                    onVratit={() => void vratPosledni()}
                     onZapsat={() => void zkusZapsat()}
                     onZahodit={() =>
                       setPotvrd({ typ: 'zahodit', jizdaId: akt.jizdaId, label: akt.label })
@@ -643,6 +683,7 @@ export function StopkyApp(): React.JSX.Element {
                                 <Table.Column style={{ width: 116 }}>St. č.</Table.Column>
                                 <Table.Column style={{ width: 210 }}>Jezdec</Table.Column>
                                 <Table.Column>Auto</Table.Column>
+                                <Table.Column style={{ width: 50 }} aria-label="Smazat" />
                               </Table.Header>
                               <Table.Body>
                                 {akt.klik.map((row, i) => {
@@ -665,16 +706,16 @@ export function StopkyApp(): React.JSX.Element {
                                         {i + 1}.
                                       </Table.Cell>
                                       <Table.Cell style={{ padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
-                                        <CasCell cas={row.cas_ms} onCommit={(ms) => void opravCas(row, ms)} />
+                                        <CasCell row={row} onCommit={opravCas} />
                                       </Table.Cell>
                                       <Table.Cell style={{ padding: '0 8px', height: 48, verticalAlign: 'middle' }}>
                                         <CisloInput
                                           row={row}
-                                          setRef={(el) => cisloRefs.current.set(row.id, el)}
-                                          onCommit={(raw) => priradCislo(row, raw)}
-                                          onFocusRow={() => setAktivniRadek(row.id)}
-                                          onBlurRow={() => setAktivniRadek((c) => (c === row.id ? null : c))}
-                                          onEnter={() => focusDalsi(row.id)}
+                                          setRef={setRefCb}
+                                          onCommit={priradCislo}
+                                          onFocusRow={onFocusRow}
+                                          onBlurRow={onBlurRow}
+                                          onEnter={focusDalsi}
                                         />
                                       </Table.Cell>
                                       <Table.Cell style={{ fontSize: 14.5, padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
@@ -694,6 +735,17 @@ export function StopkyApp(): React.JSX.Element {
                                           <span style={{ color: T4 }}>—</span>
                                         )}
                                       </Table.Cell>
+                                      <Table.Cell style={{ padding: '0 8px', height: 48, verticalAlign: 'middle', textAlign: 'right' }}>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          isIconOnly
+                                          onPress={() => void smazCas(row)}
+                                          aria-label="Smazat čas"
+                                        >
+                                          <TrashBin />
+                                        </Button>
+                                      </Table.Cell>
                                     </Table.Row>
                                   )
                                 })}
@@ -710,93 +762,83 @@ export function StopkyApp(): React.JSX.Element {
                 </div>
               )}
             </div>
-          )}
         </div>
       </div>
 
       {potvrd && (
-        <Modal
-          title={potvrd.typ === 'zapis' ? 'Přepsat výsledky?' : 'Zahodit měření?'}
-          width={440}
-          onClose={() => setPotvrd(null)}
-          footer={
-            <>
-              <Btn variant="plain" onClick={() => setPotvrd(null)}>Zrušit</Btn>
-              {potvrd.typ === 'zapis' ? (
-                <Btn variant="primary" icon={<ArrowUpArrowDown />} onClick={() => void zapisDoVysledku(potvrd.jizdaId)}>
-                  Zapsat
-                </Btn>
-              ) : (
-                <Btn variant="danger" icon={<TrashBin />} onClick={() => void zahodKanal(potvrd.jizdaId)}>
-                  Zahodit
-                </Btn>
-              )}
-            </>
-          }
-        >
-          {potvrd.typ === 'zapis' ? (
-            <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55 }}>
-              Jízda <b>{potvrd.label}</b> už má zadané výsledky. Naměřené časy přepíšou časy
-              přiřazených jezdců a přepočítá se pořadí i body.
-            </p>
-          ) : (
-            <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55 }}>
-              Smazat všechny zaznamenané časy měření <b>{potvrd.label}</b>? Tuto akci nelze vrátit.
-            </p>
-          )}
-        </Modal>
+        <Modal.Backdrop isOpen onOpenChange={(o) => { if (!o) setPotvrd(null) }}>
+          <Modal.Container placement="center">
+            <Modal.Dialog className="sm:max-w-[440px]">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>
+                  {potvrd.typ === 'zapis' ? 'Přepsat výsledky?' : 'Zahodit měření?'}
+                </Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                {potvrd.typ === 'zapis' ? (
+                  <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55 }}>
+                    Jízda <b>{potvrd.label}</b> už má zadané výsledky. Naměřené časy přepíšou časy
+                    přiřazených jezdců a přepočítá se pořadí i body.
+                  </p>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55 }}>
+                    Smazat všechny zaznamenané časy měření <b>{potvrd.label}</b>? Tuto akci nelze vrátit.
+                  </p>
+                )}
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="tertiary" slot="close">Zrušit</Button>
+                {potvrd.typ === 'zapis' ? (
+                  <Btn variant="primary" icon={<ArrowUpArrowDown />} onClick={() => void zapisDoVysledku(potvrd.jizdaId)}>
+                    Zapsat
+                  </Btn>
+                ) : (
+                  <Btn variant="danger" icon={<TrashBin />} onClick={() => void zahodKanal(potvrd.jizdaId)}>
+                    Zahodit
+                  </Btn>
+                )}
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       )}
 
       {showCloseConfirm && (
-        <Modal
-          title="Stopky — nezapsané měření"
-          width={440}
-          onClose={() => setShowCloseConfirm(false)}
-          footer={
-            <>
-              <Btn variant="plain" onClick={() => setShowCloseConfirm(false)}>Zůstat</Btn>
-              <Btn
-                variant="danger"
-                onClick={() => {
-                  setShowCloseConfirm(false)
-                  void window.api.stopkyZavritPotvrzeno()
-                }}
-              >
-                Zavřít i tak
-              </Btn>
-            </>
-          }
-        >
-          <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
-            Máš rozměřené stopky, které nejsou zapsané do výsledků.
-          </p>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: T2 }}>
-            Data měření zůstanou uložená v aplikaci. Po znovuotevření stopek je najdeš tam, kde
-            jsi skončil. Nezapomeň je zapsat do výsledků v hlavní aplikaci.
-          </p>
-        </Modal>
+        <Modal.Backdrop isOpen onOpenChange={(o) => { if (!o) setShowCloseConfirm(false) }}>
+          <Modal.Container placement="center">
+            <Modal.Dialog className="sm:max-w-[440px]">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>Stopky — nezapsané měření</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body>
+                <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.55 }}>
+                  Máš rozměřené stopky, které nejsou zapsané do výsledků.
+                </p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: T2 }}>
+                  Data měření zůstanou uložená v aplikaci. Po znovuotevření stopek je najdeš tam, kde
+                  jsi skončil. Nezapomeň je zapsat do výsledků v hlavní aplikaci.
+                </p>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="tertiary" slot="close">Zůstat</Button>
+                <Btn
+                  variant="danger"
+                  onClick={() => {
+                    setShowCloseConfirm(false)
+                    void window.api.stopkyZavritPotvrzeno()
+                  }}
+                >
+                  Zavřít i tak
+                </Btn>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       )}
 
-      {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 200,
-            background: 'var(--color-background)',
-            border: '0.5px solid var(--color-border)',
-            boxShadow: '0 4px 16px color-mix(in srgb, var(--color-foreground) 12%, transparent)',
-            borderRadius: 8,
-            padding: '10px 16px',
-            fontSize: 13,
-            maxWidth: '80vw'
-          }}
-        >
-          {toast}
-        </div>
-      )}
+      <Toast.Provider placement="bottom" />
     </div>
   )
 }
@@ -852,136 +894,112 @@ function NoveMereni({
   const naRadeId = jizdy.find((jz) => !hotovo.has(jz.id))?.id ?? null
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'grid',
-        placeItems: 'center',
-        overflowY: 'auto',
-        padding: 24,
-        background: 'var(--color-background)'
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 480,
-          background: 'var(--color-background)',
-          borderRadius: 12,
-          boxShadow: '0 2px 12px color-mix(in srgb, var(--color-foreground) 8%, transparent)',
-          border: '0.5px solid var(--color-border)',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Hlavička karty */}
-        <div style={{ padding: '20px 24px 18px', borderBottom: '0.5px solid var(--color-border)' }}>
-          <div style={{ fontSize: 17, fontWeight: 680, marginBottom: 4 }}>Nové měření</div>
-          <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.5 }}>
-            Vyber jízdu, kterou budeš měřit. Naměřené časy padnou rovnou do ní.
-          </div>
-        </div>
-
-        {/* Tělo karty */}
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Kategorie */}
-          <div>
-            <div style={labelStyle}>Kategorie</div>
-            <KategorieSelect items={kategorie} value={katId} onChange={setKatId} />
-          </div>
-
-          {/* Kolo */}
-          <div>
-            <div style={labelStyle}>Kolo</div>
-            <Tabs selectedKey={typ} onSelectionChange={(key) => setTyp(key as KoloTyp)}>
-              <Tabs.ListContainer>
-                <Tabs.List aria-label="Kolo">
-                  {KOLA.map((t) => (
-                    <Tabs.Tab key={t} id={t}>
-                      {KOLA_LABEL[t]}
-                      <Tabs.Indicator />
-                    </Tabs.Tab>
-                  ))}
-                </Tabs.List>
-              </Tabs.ListContainer>
-            </Tabs>
-          </div>
-
-          {/* Jízda */}
-          <div>
-            <div style={labelStyle}>Jízda</div>
-            {jizdy.length === 0 ? (
-              <div
-                style={{
-                  fontSize: 13,
-                  color: T3,
-                  lineHeight: 1.55,
-                  padding: '12px 14px',
-                  background: CARD_ALT,
-                  borderRadius: 6,
-                  border: '0.5px solid var(--color-border)'
-                }}
-              >
-                Pro <b style={{ color: T2, fontWeight: 580 }}>{katNazev} · {KOLA_LABEL[typ]}</b> zatím není žádná jízda.
-                <br />Vytvoř rošt v hlavním okně.
+    <Modal.Backdrop isOpen onOpenChange={(o) => { if (!o) onZrusit() }}>
+      <Modal.Container placement="center">
+        <Modal.Dialog className="sm:max-w-[480px]">
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading>Jiná jízda</Modal.Heading>
+            <p style={{ fontSize: 12.5, color: T2, lineHeight: 1.5, marginTop: 6 }}>
+              Vyber jízdu, kterou budeš měřit. Naměřené časy padnou rovnou do ní.
+            </p>
+          </Modal.Header>
+          <Modal.Body>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Kategorie */}
+              <div>
+                <div style={labelStyle}>Kategorie</div>
+                <KategorieSelect items={kategorie} value={katId} onChange={setKatId} />
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {jizdy.map((jz) => {
-                  const jeHotovo = hotovo.has(jz.id)
-                  const jeNaRade = jz.id === naRadeId
-                  return (
-                    <Button
-                      key={jz.id}
-                      variant={jeNaRade ? 'primary' : 'outline'}
-                      size="sm"
-                      onPress={() =>
-                        katId != null &&
-                        onZalozit(jz.id, `${katNazev} · ${KOLA_LABEL[typ]} · ${jz.cislo}. jízda`, typ, katId)
-                      }
-                      style={{ opacity: jeHotovo && !jeNaRade ? 0.55 : 1, height: 34 }}
-                    >
-                      {jeHotovo ? (
-                        <span style={{ color: T3, fontSize: 12, lineHeight: 1 }}>✓</span>
-                      ) : jeNaRade ? (
-                        <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--color-primary)', flexShrink: 0, display: 'inline-block' }} />
-                      ) : null}
-                      {jz.cislo}. jízda
-                      <span style={{ fontSize: 12, color: T3, fontVariantNumeric: 'tabular-nums' }}>
-                        ({jz.filled})
-                      </span>
-                    </Button>
-                  )
-                })}
-              </div>
-            )}
-            {jizdy.length > 0 && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 14, fontSize: 11.5, color: T3 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ color: T3 }}>✓</span> hotovo
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--color-primary)', display: 'inline-block' }} /> na řadě
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Patička karty */}
-        <div
-          style={{
-            padding: '14px 24px',
-            borderTop: '0.5px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 8
-          }}
-        >
-          <Btn variant="plain" onClick={onZrusit}>Zrušit</Btn>
-        </div>
-      </div>
-    </div>
+              {/* Kolo */}
+              <div>
+                <div style={labelStyle}>Kolo</div>
+                <Tabs
+                  className="stopky-segment w-fit"
+                  selectedKey={typ}
+                  onSelectionChange={(key) => setTyp(key as KoloTyp)}
+                >
+                  <Tabs.ListContainer>
+                    <Tabs.List aria-label="Kolo">
+                      {KOLA.map((t) => (
+                        <Tabs.Tab key={t} id={t}>
+                          <span style={{ whiteSpace: 'nowrap' }}>{KOLA_LABEL[t]}</span>
+                          <Tabs.Indicator />
+                        </Tabs.Tab>
+                      ))}
+                    </Tabs.List>
+                  </Tabs.ListContainer>
+                </Tabs>
+              </div>
+
+              {/* Jízda */}
+              <div>
+                <div style={labelStyle}>Jízda</div>
+                {jizdy.length === 0 ? (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: T3,
+                      lineHeight: 1.55,
+                      padding: '12px 14px',
+                      background: CARD_ALT,
+                      borderRadius: 9,
+                      border: '0.5px solid var(--color-border)'
+                    }}
+                  >
+                    Pro <b style={{ color: T2, fontWeight: 580 }}>{katNazev} · {KOLA_LABEL[typ]}</b> zatím není žádná jízda.
+                    <br />Vytvoř rošt v hlavním okně.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {jizdy.map((jz) => {
+                      const jeHotovo = hotovo.has(jz.id)
+                      const jeNaRade = jz.id === naRadeId
+                      return (
+                        <Button
+                          key={jz.id}
+                          variant={jeNaRade ? 'primary' : 'outline'}
+                          size="sm"
+                          onPress={() =>
+                            katId != null &&
+                            onZalozit(jz.id, `${katNazev} · ${KOLA_LABEL[typ]} · ${jz.cislo}. jízda`, typ, katId)
+                          }
+                          style={{ opacity: jeHotovo && !jeNaRade ? 0.55 : 1, height: 34 }}
+                        >
+                          {jeHotovo ? (
+                            <span style={{ color: T3, fontSize: 12, lineHeight: 1 }}>✓</span>
+                          ) : jeNaRade ? (
+                            <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--color-primary)', flexShrink: 0, display: 'inline-block' }} />
+                          ) : null}
+                          {jz.cislo}. jízda
+                          <span style={{ fontSize: 12, color: T3, fontVariantNumeric: 'tabular-nums' }}>
+                            ({jz.filled})
+                          </span>
+                        </Button>
+                      )
+                    })}
+                  </div>
+                )}
+                {jizdy.length > 0 && (
+                  <div style={{ marginTop: 10, display: 'flex', gap: 14, fontSize: 11.5, color: T3 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: T3 }}>✓</span> hotovo
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--color-primary)', display: 'inline-block' }} /> na řadě
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Zrušit</Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   )
 }
 
@@ -1335,14 +1353,12 @@ function StopkyPruh({
   akt,
   onStartZaznam,
   onPauza,
-  onVratit,
   onZapsat,
   onZahodit
 }: {
   akt: Kanal
   onStartZaznam: () => void
   onPauza: () => void
-  onVratit: () => void
   onZapsat: () => void
   onZahodit: () => void
 }): React.JSX.Element {
@@ -1395,9 +1411,6 @@ function StopkyPruh({
 
       <Btn variant="tertiary" onClick={onPauza} style={{ height: 44 }}>
         {akt.running ? 'Pauza' : akt.baseMs === 0 ? 'Start' : 'Pokračovat'}
-      </Btn>
-      <Btn variant="tertiary" onClick={onVratit} disabled={akt.klik.length === 0} style={{ height: 44 }}>
-        Vrátit poslední
       </Btn>
 
       <div style={{ flex: 1 }} />
@@ -1640,9 +1653,16 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase' as const
 }
 
-function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => void }): React.JSX.Element {
+const CasCell = memo(function CasCell({
+  row,
+  onCommit
+}: {
+  row: MereniRadek
+  onCommit: (row: MereniRadek, ms: number) => void
+}): React.JSX.Element {
   const [edit, setEdit] = useState(false)
   const [v, setV] = useState('')
+  const cas = row.cas_ms
   if (!edit) {
     return (
       <Button
@@ -1657,7 +1677,7 @@ function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => voi
   }
   const uloz = (): void => {
     const ms = parseTimeLoose(v)
-    if (ms != null) onCommit(ms)
+    if (ms != null) onCommit(row, ms)
     setEdit(false)
   }
   return (
@@ -1686,9 +1706,9 @@ function CasCell({ cas, onCommit }: { cas: number; onCommit: (ms: number) => voi
       }}
     />
   )
-}
+})
 
-function CisloInput({
+const CisloInput = memo(function CisloInput({
   row,
   onCommit,
   onFocusRow,
@@ -1697,11 +1717,11 @@ function CisloInput({
   setRef
 }: {
   row: MereniRadek
-  onCommit: (raw: string) => Promise<boolean>
-  onFocusRow: () => void
-  onBlurRow: () => void
-  onEnter: () => void
-  setRef: (el: HTMLInputElement | null) => void
+  onCommit: (row: MereniRadek, raw: string) => Promise<boolean>
+  onFocusRow: (id: number) => void
+  onBlurRow: (id: number) => void
+  onEnter: (id: number) => void
+  setRef: (id: number, el: HTMLInputElement | null) => void
 }): React.JSX.Element {
   const [v, setV] = useState(row.st_cislo != null ? String(row.st_cislo) : '')
   const [focused, setFocused] = useState(false)
@@ -1712,20 +1732,20 @@ function CisloInput({
   const border = focused ? 'var(--color-primary)' : warn ? '#c93636' : 'var(--color-border)'
   return (
     <input
-      ref={setRef}
+      ref={(el) => setRef(row.id, el)}
       value={v}
       placeholder="—"
       inputMode="numeric"
       onChange={(e) => { setV(e.target.value); if (warn) setWarn(false) }}
-      onFocus={() => { setFocused(true); onFocusRow() }}
+      onFocus={() => { setFocused(true); onFocusRow(row.id) }}
       onBlur={async () => {
         setFocused(false)
-        onBlurRow()
-        const ok = await onCommit(v)
+        onBlurRow(row.id)
+        const ok = await onCommit(row, v)
         setWarn(!ok)
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') { e.preventDefault(); onEnter() }
+        if (e.key === 'Enter') { e.preventDefault(); onEnter(row.id) }
       }}
       style={{
         width: 86,
@@ -1745,4 +1765,4 @@ function CisloInput({
       }}
     />
   )
-}
+})

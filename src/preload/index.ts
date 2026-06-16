@@ -112,6 +112,7 @@ const api: CasomiraApi = {
   mereniPridej: (jizdaId: number, cas_ms: number) =>
     ipcRenderer.invoke('mereni:pridej', jizdaId, cas_ms),
   mereniVratPosledni: (jizdaId: number) => ipcRenderer.invoke('mereni:vratPosledni', jizdaId),
+  mereniSmazRadek: (id: number) => ipcRenderer.invoke('mereni:smazRadek', id),
   mereniOpravCas: (id: number, cas_ms: number) => ipcRenderer.invoke('mereni:opravCas', id, cas_ms),
   mereniSetCislo: (id: number, st_cislo: number | null) =>
     ipcRenderer.invoke('mereni:setCislo', id, st_cislo),
