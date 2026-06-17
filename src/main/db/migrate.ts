@@ -4,7 +4,7 @@ import { SCHEMA_SQL } from './schema'
 
 // Číslo poslední migrace. Každý krok zvýší SCHEMA_VERSION o 1.
 // user_version se nastavuje ihned po každém kroku — restart pokračuje od správného místa.
-export const SCHEMA_VERSION = 13
+export const SCHEMA_VERSION = 14
 const LATEST = SCHEMA_VERSION
 
 function step(db: DatabaseSync, targetVersion: number, fn: () => void): void {
@@ -222,6 +222,20 @@ export function migrate(db: DatabaseSync): void {
       `)
     })
     version = 13
+  }
+
+  if (version < 14) {
+    // Pokrývající index pro nejčastější dotazy na mereni z pohledu stopek:
+    //   SELECT MAX(poradi_kliku) WHERE jizda_id = ?   ← O(1) místo full scan
+    //   ORDER BY poradi_kliku WHERE jizda_id = ?      ← přímý index scan, bez sort
+    //   ORDER BY poradi_kliku DESC LIMIT 1            ← reverse scan
+    // Bez indexu rostla IPC latence lineárně s počtem záznamů (4 ms → 20 ms @ 65 řádků).
+    step(db, 14, () => {
+      db.exec(
+        'CREATE INDEX IF NOT EXISTS ix_mereni_jizda_poradi ON mereni(jizda_id, poradi_kliku)'
+      )
+    })
+    version = 14
   }
 
   // Pojistka: synchronizuj user_version s LATEST pro případ, že bylo přidáno

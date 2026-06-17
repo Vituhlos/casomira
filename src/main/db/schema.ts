@@ -134,4 +134,16 @@ CREATE TABLE IF NOT EXISTS mereni_timer (
   base_ms          INTEGER NOT NULL DEFAULT 0,
   start_epoch_ms   INTEGER
 );
+
+-- Indexy na FK sloupcích a kritických cestách stopek.
+CREATE INDEX IF NOT EXISTS ix_mereni_zavod         ON mereni(zavod_id);
+CREATE INDEX IF NOT EXISTS ix_mereni_timer_zavod   ON mereni_timer(zavod_id);
+CREATE INDEX IF NOT EXISTS ix_uprava_vysledek      ON uprava_log(vysledek_id, kdy DESC);
+CREATE INDEX IF NOT EXISTS ix_kolo_kategorie       ON kolo(kategorie_id);
+CREATE INDEX IF NOT EXISTS ix_jizda_kolo           ON jizda(kolo_id);
+CREATE INDEX IF NOT EXISTS ix_rost_jizda           ON rost_pozice(jizda_id);
+CREATE INDEX IF NOT EXISTS ix_jezdec_kategorie     ON jezdec(kategorie_id);
+CREATE INDEX IF NOT EXISTS ix_qagg_kolo            ON q_agregat_override(kolo_id);
+-- Pokrývající index pro stopky: MAX(poradi_kliku) + ORDER BY poradi_kliku při jizda_id filtru.
+CREATE INDEX IF NOT EXISTS ix_mereni_jizda_poradi  ON mereni(jizda_id, poradi_kliku);
 `

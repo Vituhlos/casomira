@@ -1779,17 +1779,16 @@ export function mereniList(jizdaId: number): MereniRadek[] {
 export function mereniPridej(jizdaId: number, cas_ms: number): MereniRadek {
   const db = getDb()
   const zavodId = overJizdaPatriAktivnimuZavodu(db, jizdaId)
-  const max = (
-    db.prepare('SELECT COALESCE(MAX(poradi_kliku), 0) AS m FROM mereni WHERE jizda_id = ?').get(
-      jizdaId
-    ) as { m: number }
-  ).m
+  // RETURNING eliminuje předchozí SELECT MAX — poradi_kliku se počítá subquery přímo v INSERT.
+  // S indexem ix_mereni_jizda_poradi je MAX O(log N) místo dřívějšího full scan.
   const r = db
     .prepare(
-      'INSERT INTO mereni (jizda_id, zavod_id, poradi_kliku, cas_ms) VALUES (?, ?, ?, ?)'
+      `INSERT INTO mereni (jizda_id, zavod_id, poradi_kliku, cas_ms)
+       VALUES (?, ?, (SELECT COALESCE(MAX(poradi_kliku), 0) + 1 FROM mereni WHERE jizda_id = ?), ?)
+       RETURNING id`
     )
-    .run(jizdaId, zavodId, max + 1, Math.round(cas_ms))
-  return mereniRadek(db, Number(r.lastInsertRowid))
+    .get(jizdaId, zavodId, jizdaId, Math.round(cas_ms)) as { id: number }
+  return mereniRadek(db, r.id)
 }
 
 export function mereniVratPosledni(jizdaId: number): void {

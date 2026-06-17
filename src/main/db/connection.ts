@@ -34,8 +34,10 @@ export function getDb(): DatabaseSync {
   })
   const file = join(dir, DB_FILE)
   db = new DatabaseSync(file)
-  db.exec('PRAGMA journal_mode = WAL') // svižnější a odolnější zápisy
-  db.exec('PRAGMA foreign_keys = ON')  // hlídat vazby mezi tabulkami
+  db.exec('PRAGMA journal_mode = WAL')      // svižnější a odolnější zápisy
+  db.exec('PRAGMA synchronous = NORMAL')    // WAL + NORMAL: bezpečné a rychlejší (bez fsync per commit)
+  db.exec('PRAGMA busy_timeout = 3000')     // čekej 3 s na zámek místo okamžité chyby
+  db.exec('PRAGMA foreign_keys = ON')       // hlídat vazby mezi tabulkami
   return db
 }
 
