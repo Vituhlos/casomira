@@ -11,6 +11,8 @@
 |---|---|---|---|
 | `ZivyCas` (stopky) | `setInterval(53ms)` = 19fps, nesynchronizováno s displayem | Nahrazeno `requestAnimationFrame` (60fps, sync s display pipeline) | heroui-native |
 | `zaznamenej()` (stopky) | `setKanaly` po IPC blokoval JS thread → timer drhl při stisku mezerníku | `startTransition(() => setKanaly(...))` — přidání řádku označeno jako non-urgent | heroui-native |
+| `KoloVyber` (stopky) | HeroUI Tabs pro Q1/Q2/Q3/SF/F se re-renderovaly na každý `setKanaly` | Extrahováno do `memo(KoloVyber)` se stabilním `onVybratKolo = useCallback` | heroui-native |
+| `zaznamenej()` (stopky) | Řádek se objevil až po IPC round-tripu (~10–15 ms) → vnímané seknutí i přes RAF | Optimistický insert: placeholder se přidá okamžitě (urgentní), DB row nahradí přes `startTransition` — klíč `poradi_kliku` zachová instanci `CasRadek` | heroui-native |
 
 ---
 
@@ -69,8 +71,8 @@ Projít systematicky. Checkovat v React DevTools Profileru, ne odhadem.
 
 ### HeroUI / React Aria specifika
 
-- [ ] Inline HeroUI `Tabs` v `StopkyApp` extrahovat do `memo` komponenty — re-renderují se na každý `setKanaly`, přestože se obsah nemění
-- [ ] `Table` v `RostNahled` používá HeroUI `Table.Row` — zkontrolovat, zda se zbytečně nemountuje na každý render rodiče
+- [x] Inline HeroUI `Tabs` v `StopkyApp` extrahovat do `memo` komponenty — hotovo (`KoloVyber`, `SidebarKategorie`, `JizdyVyber`)
+- [x] `Table` v `RostNahled` — ověřeno: `RostNahled` je `memo`, `prirazeniRost` je stabilní při záznamu času (nový klik nemá `jezdec_id`) → `RostNahled` se nepřekresluje
 - [ ] HeroUI v3.0.3+ snížila závislosti o 90 % — ověřit že jsme na aktuální verzi
 
 ### Electron / Nízko-prioritní práce

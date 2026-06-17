@@ -49,6 +49,10 @@ const KOLA_LABEL: Partial<Record<KoloTyp, string>> = {
 
 const MERENA_KOLA: KoloTyp[] = ['Q1', 'Q2', 'Q3', 'SF', 'F']
 
+function timerPayload(k: Kanal): MereniTimerStav {
+  return { jizdaId: k.jizdaId, running: k.running, baseMs: k.baseMs, startEpochMs: k.startEpoch }
+}
+
 export function StopkyApp(): React.JSX.Element {
   const { theme, toggle } = useTheme()
   const [kategorie, setKategorie] = useState<Kategorie[]>([])
@@ -133,13 +137,6 @@ export function StopkyApp(): React.JSX.Element {
       }
     })
   }, [])
-
-  const timerPayload = (k: Kanal): MereniTimerStav => ({
-    jizdaId: k.jizdaId,
-    running: k.running,
-    baseMs: k.baseMs,
-    startEpochMs: k.startEpoch
-  })
 
   const ulozVsechnyKanaly = useCallback(
     (list: Kanal[], aktivni: number | null): void => {
@@ -267,23 +264,54 @@ export function StopkyApp(): React.JSX.Element {
     return () => { live = false }
   }, [akt?.jizdaId])
 
-  // Záznam času: počkej na zápis do DB (~10 ms = pod jeden snímek, neviditelné),
-  // pak JEDNÍM commitem přidej reálný řádek. Jeden render, jeden paint, žádný
-  // remount. Stabilní (čte z aktRef) → nepřekresluje StopkyPruh.
+  // Záznam času: okamžitě zobrazí placeholder (stejný frame jako stisk mezerníku),
+  // pak po IPC (~10 ms) nahradí reálným řádkem ze DB. Výsledek: nulová vnímaná latence.
+  // Klíčem řádku je poradi_kliku (stabilní i po swapu placeholder→real) → CasRadek
+  // přežije bez remountu. Stabilní callback (čte z aktRef) → nepřekresluje StopkyPruh.
   const zaznamenej = useCallback(async (): Promise<void> => {
     const k = aktRef.current
     if (!k || !k.running || k.startEpoch == null) return
     const cas = Math.round(k.baseMs + (Date.now() - k.startEpoch))
+    const placeholderPoradi = k.klik.length + 1
+    const placeholder: MereniRadek = {
+      id: -placeholderPoradi,
+      jizda_id: k.jizdaId,
+      poradi_kliku: placeholderPoradi,
+      cas_ms: cas,
+      jezdec_id: null,
+      st_cislo: null,
+      prijmeni: null,
+      jmeno: null,
+      znacka: null,
+      model: null
+    }
+    // Urgentní update — row se objeví ve stejném framu jako stisk.
+    setKanaly((prev) =>
+      prev.map((x) => (x.jizdaId === k.jizdaId ? { ...x, klik: [...x.klik, placeholder] } : x))
+    )
     const perf = zacniMereniZapisu()
     try {
       const real = await window.api.mereniPridej(k.jizdaId, cas)
       perf?.(performance.now())
+      // Non-urgent: swap placeholder→real (poradi_kliku stejné → žádný remount CasRadek).
       startTransition(() => {
         setKanaly((prev) =>
-          prev.map((x) => (x.jizdaId === k.jizdaId ? { ...x, klik: [...x.klik, real] } : x))
+          prev.map((x) =>
+            x.jizdaId === k.jizdaId
+              ? { ...x, klik: x.klik.map((c) => (c.poradi_kliku === placeholderPoradi ? real : c)) }
+              : x
+          )
         )
       })
     } catch {
+      // Odeber placeholder při chybě DB.
+      setKanaly((prev) =>
+        prev.map((x) =>
+          x.jizdaId === k.jizdaId
+            ? { ...x, klik: x.klik.filter((c) => c.poradi_kliku !== placeholderPoradi) }
+            : x
+        )
+      )
       oznam('Záznam času se nepodařilo uložit do databáze.')
     }
   }, [oznam])
@@ -727,7 +755,7 @@ export function StopkyApp(): React.JSX.Element {
                           <tbody className="table__body">
                             {akt.klik.map((row, i) => (
                               <CasRadek
-                                key={row.id}
+                                key={row.poradi_kliku}
                                 row={row}
                                 poradi={i + 1}
                                 onOpravCas={opravCas}
