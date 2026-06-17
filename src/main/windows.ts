@@ -51,6 +51,9 @@ export function openStopky(): void {
     height: 760,
     minWidth: 1240,
     minHeight: 660,
+    // Okno ukážeme až je obsah připravený (ready-to-show) — jinak bliká prázdné
+    // průhledné okno, než se renderer vykreslí.
+    show: false,
     title: 'Stopky — Časomíra',
     // Průhledné pozadí + Windows 11 „Mica" materiál — jemné protónování plochy,
     // floating panely plavou nad pozadím (Microsoft doporučuje Micu pro pozadí
@@ -61,6 +64,11 @@ export function openStopky(): void {
     autoHideMenuBar: true,
     icon: appIconPath(),
     webPreferences: webPreferences()
+  })
+  // Až renderer naběhne a je co vykreslit, okno ukážeme a vytáhneme dopředu.
+  stopkyWin.once('ready-to-show', () => {
+    stopkyWin?.show()
+    stopkyWin?.focus()
   })
   stopkyWin.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
