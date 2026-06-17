@@ -5,7 +5,11 @@ Desktopová aplikace pro **časoměřičství autokrosu a rallycrossu** — náh
 Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Pravidla RAC Race (Hobby), RX Cup a Šotolina podle časoměřičské bible, v MVP co nejvěrněji stávajícímu workflow.
 
 <p align="center">
-  <img src="docs/user/verdict/logo/png/verdict-lockup-horizontal-light.png" alt="Verdict" width="520">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/user/verdict/logo/png/verdict-lockup-horizontal-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/user/verdict/logo/png/verdict-lockup-horizontal-light.png">
+    <img src="docs/user/verdict/logo/png/verdict-lockup-horizontal-light.png" alt="Verdict" width="520">
+  </picture>
 </p>
 
 ---
