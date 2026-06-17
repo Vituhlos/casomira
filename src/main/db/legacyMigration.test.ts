@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { DB_FILE, migrateLegacyData } from './legacyMigration'
 
 const LEGACY_PRODUCT_NAME = 'Časomíra'
+const LEGACY_DEV_PRODUCT_NAME = 'casomira'
 const LEGACY_DB_FILE = 'casomira.db'
 
 let tempRoots: string[] = []
@@ -16,8 +17,8 @@ function tempRoot(): string {
   return root
 }
 
-function createLegacyDb(appData: string): string {
-  const legacyDir = join(appData, LEGACY_PRODUCT_NAME)
+function createLegacyDb(appData: string, productName = LEGACY_PRODUCT_NAME): string {
+  const legacyDir = join(appData, productName)
   mkdirSync(legacyDir, { recursive: true })
   const dbFile = join(legacyDir, LEGACY_DB_FILE)
   const db = new DatabaseSync(dbFile)
@@ -94,17 +95,20 @@ describe('migrateLegacyData', () => {
     expect(existsSync(targetDb)).toBe(true)
   })
 
-  it('přeskočí migraci ve vývojovém režimu', () => {
+  it('zkopíruje legacy databázi i z vývojové složky casomira', () => {
     const root = tempRoot()
     const appData = join(root, 'AppData')
-    const userData = join(appData, 'Verdict')
+    const userData = join(appData, 'verdict')
     mkdirSync(userData, { recursive: true })
-    createLegacyDb(appData)
+    const legacyDb = createLegacyDb(appData, LEGACY_DEV_PRODUCT_NAME)
 
     const migrated = migrateLegacyData({ userData, appData, isPackaged: false })
+    const targetDb = join(userData, DB_FILE)
 
-    expect(migrated).toBe(false)
-    expect(existsSync(join(userData, DB_FILE))).toBe(false)
+    expect(migrated).toBe(true)
+    expect(existsSync(legacyDb)).toBe(true)
+    expect(existsSync(targetDb)).toBe(true)
+    expect(markerValue(targetDb)).toBe('legacy-data')
   })
 
   it('spadne raději nahlas, když po cílové databázi zůstaly jen WAL/SHM sidecary', () => {

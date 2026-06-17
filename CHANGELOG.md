@@ -40,6 +40,10 @@ Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
   přestavěna tak, že se při každém stisku mezerníku překreslí jen nový řádek
   (dřív se přepočítávala celá tabulka, a to dvakrát). Zápis je teď plynulý i
   s desítkami řádků a bez ohledu na to, jak rychle časy naskakují.
+- **Dev režim po rebrandingu najde stará data** — migrace teď kromě produkční
+  složky `%APPDATA%\Časomíra` hledá i vývojovou složku `%APPDATA%\casomira`,
+  takže `npm run dev` po přejmenování nepřijde o předchozí testovací závody a
+  naměřené časy.
 - **Okno Stopek už nebliká prázdné** — zobrazí se až s vykresleným obsahem,
   ne jako prázdné okno, které se teprve doplňuje.
 

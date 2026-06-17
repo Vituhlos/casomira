@@ -9,8 +9,13 @@ import {
 import { DatabaseSync } from 'node:sqlite'
 
 export const DB_FILE = 'verdict.db'
-const LEGACY_PRODUCT_NAME = 'Časomíra'
 const LEGACY_DB_FILE = 'casomira.db'
+const LEGACY_DB_CANDIDATES = [
+  // Zabalená stará appka používala productName Časomíra.
+  'Časomíra',
+  // Electron dev režim bere userData z package.json name, tedy casomira.
+  'casomira'
+] as const
 
 export interface LegacyMigrationOptions {
   userData: string
@@ -25,6 +30,17 @@ function dbSidecars(dbFile: string): string[] {
 
 function copyIfExists(from: string, to: string): void {
   if (existsSync(from)) copyFileSync(from, to)
+}
+
+function legacyDbCandidates(appData: string): string[] {
+  return LEGACY_DB_CANDIDATES.map((productName) => join(appData, productName, LEGACY_DB_FILE))
+}
+
+function findLegacyDb(appData: string): string | null {
+  for (const legacyDb of legacyDbCandidates(appData)) {
+    if (existsSync(legacyDb)) return legacyDb
+  }
+  return null
 }
 
 function verifySqliteIntegrity(dbFile: string): void {
@@ -48,15 +64,17 @@ export function migrateLegacyData({
   isPackaged,
   log = () => {}
 }: LegacyMigrationOptions): boolean {
-  if (!isPackaged) return false
-
   const targetDb = join(userData, DB_FILE)
   if (existsSync(targetDb)) return false
 
-  const legacyDb = join(appData, LEGACY_PRODUCT_NAME, LEGACY_DB_FILE)
-  if (!existsSync(legacyDb)) {
-    log(`legacy DB nenalezena, migrace přeskočena: ${legacyDb}`)
+  const legacyDb = findLegacyDb(appData)
+  if (!legacyDb) {
+    log(`legacy DB nenalezena, migrace přeskočena: ${legacyDbCandidates(appData).join(', ')}`)
     return false
+  }
+
+  if (!isPackaged) {
+    log('dev režim: migruji legacy DB kopii pro lokální rebrand test')
   }
 
   const staleTargetSidecars = dbSidecars(targetDb).filter((file) => existsSync(file))

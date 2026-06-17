@@ -5,9 +5,9 @@ export const BUILD_INFO = {
   "name": "verdict",
   "productName": "Verdict",
   "version": "0.9.13-beta",
-  "commitSha": "89d90832fadac8aa1e23d274d3972696976b2c77",
-  "shortCommitSha": "89d9083",
-  "buildDate": "2026-06-17T08:45:20.433Z",
+  "commitSha": "698b2eaaba9805ea16d1489713f51e04898382a7",
+  "shortCommitSha": "698b2ea",
+  "buildDate": "2026-06-17T09:25:57.225Z",
   "releaseChannel": "beta",
   "gitRef": "heroui-native",
   "packagedBy": "local"
