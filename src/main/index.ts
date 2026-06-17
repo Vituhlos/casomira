@@ -28,6 +28,7 @@ import { getDb } from './db/connection'
 import { migrate } from './db/migrate'
 import { seed } from './db/seed'
 import { registerAppQuitGuard } from './stopkyClose'
+import { devToolsZkratky } from './windows'
 
 // Zapíše krok startu do souboru startup.log v datové složce aplikace. Když start
 // spadne (typicky nativní modul better-sqlite3 na macOS), z logu je přesně vidět,
@@ -137,6 +138,9 @@ function createWindow(): void {
 
   // Okno ukážeme až je obsah připravený — žádné bliknutí prázdného okna.
   mainWindow.on('ready-to-show', () => mainWindow.show())
+
+  // Dev: F12 = DevTools, Ctrl/Cmd+R = reload (v produkci no-op).
+  devToolsZkratky(mainWindow)
 
   // Odkazy s target=_blank otevřít v systémovém prohlížeči, ne v appce.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

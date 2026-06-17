@@ -116,6 +116,37 @@ body,
   background: color-mix(in srgb, var(--color-foreground) 4%, transparent);
 }
 
+/* --------------------------------------------------------------------------
+   Tabulka naměřených časů — vzhled (pořadí, zebra, aktivní řádek) řešený
+   čistě v CSS, ne v Reactu. Důvod: HeroUI Table používáme s dynamickou
+   kolekcí (`items`), která cachuje řádky podle id a překreslí jen změněné.
+   Aby cache fungovala, vykreslení řádku NESMÍ záviset na indexu v poli ani
+   na vnějším stavu — proto pořadí, zebru i zvýraznění děláme tady.
+   Pozadí se aplikuje na buňky (.table__cell mají vlastní bg-surface).
+   -------------------------------------------------------------------------- */
+
+/* Selektory míří na přímé potomky řádku (`> *` / `> :first-child`), aby
+   fungovaly bez ohledu na to, zda React Aria vykreslí buňku jako <td> nebo
+   řádkové záhlaví jako <th>. */
+
+/* Pořadí „1., 2., …" se renderuje přímo v Reactu (memoizovaný CasRadek dostává
+   `poradi`) — žádný CSS counter, který by nutil O(N) style-recalc při každém
+   vložení řádku. */
+
+/* Zebra: sudé řádky jemně tónované (stejný odstín jako jinde v appce). */
+.stopky-cas-tabulka .table__body .table__row:nth-child(even) > * {
+  background: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+}
+
+/* Aktivní řádek = řádek s fokusem (políčko čísla / úprava času). Nahrazuje
+   dřívější React stav `aktivniRadek`, takže fokus nespouští re-render. */
+.stopky-cas-tabulka .table__body .table__row:focus-within > * {
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-background));
+}
+.stopky-cas-tabulka .table__body .table__row:focus-within > :first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
 /* Příjezd banneru „Další jízda" */
 @keyframes stopky-baner-in {
   from {

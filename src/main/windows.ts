@@ -15,6 +15,17 @@ function appIconPath(): string | undefined {
 
 let stopkyWin: BrowserWindow | null = null
 
+// V dev režimu naváže F12 (toggle DevTools) a Ctrl/Cmd+R (reload) na okno.
+// Produkce (`app.isPackaged`) se nedotkne — appka zůstane bez DevTools zkratek.
+export function devToolsZkratky(win: BrowserWindow): void {
+  if (app.isPackaged) return
+  win.webContents.on('before-input-event', (_e, input) => {
+    if (input.type !== 'keyDown') return
+    if (input.key === 'F12') win.webContents.toggleDevTools()
+    if ((input.control || input.meta) && input.key.toLowerCase() === 'r') win.webContents.reload()
+  })
+}
+
 function webPreferences(): Electron.WebPreferences {
   return {
     preload: join(__dirname, '../preload/index.js'),
@@ -65,6 +76,7 @@ export function openStopky(): void {
   if (devUrl) void stopkyWin.loadURL(`${devUrl}#stopky`)
   else void stopkyWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'stopky' })
 
+  devToolsZkratky(stopkyWin)
   attachStopkyCloseGuard(stopkyWin)
 
   stopkyWin.on('closed', () => {

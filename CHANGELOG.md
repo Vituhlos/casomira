@@ -6,6 +6,12 @@ Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
 
 ## [Nevydáno]
 
+### Opraveno
+- **Stopky se už při zápisu času neseknou** — tabulka naměřených časů byla
+  přestavěna tak, že se při každém stisku mezerníku překreslí jen nový řádek
+  (dřív se přepočítávala celá tabulka, a to dvakrát). Zápis je teď plynulý i
+  s desítkami řádků a bez ohledu na to, jak rychle časy naskakují.
+
 ## [0.9.13-beta] – 2026-06-16
 
 ### Přidáno
