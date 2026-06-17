@@ -1,13 +1,13 @@
 // Dev-only měření výkonu kritických cest (zápis času ve Stopkách).
 // V produkci je `import.meta.env.DEV === false` → všechny funkce jsou no-op,
 // takže žádná režie. Cílem je oddělit, kolik z latence „stisk → vidím řádek"
-// padá na IPC (round-trip do main procesu + SQLite) a kolik na React+paint.
+// padá na IPC (round-trip do main procesu + SQLite) a kolik na React+postIpcFrameMs.
 
 const DEV = import.meta.env.DEV
 
 interface Vzorek {
   ipc: number
-  paint: number
+  postIpcFrameMs: number
 }
 
 const buffer: Vzorek[] = []
@@ -32,16 +32,16 @@ export function zacniMereniZapisu(): ((ipcHotovoMs: number) => void) | null {
     const ipc = ipcHotovoMs - t0
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        const paint = performance.now() - ipcHotovoMs
-        buffer.push({ ipc, paint })
+        const postIpcFrameMs = performance.now() - ipcHotovoMs
+        buffer.push({ ipc, postIpcFrameMs })
         const n = buffer.length
         // eslint-disable-next-line no-console
         console.log(
           `[stopky] zápis #${n}` +
             `  IPC ${ipc.toFixed(1)} ms` +
-            `  render→paint ${paint.toFixed(1)} ms` +
+            `  render→postIpcFrameMs ${postIpcFrameMs.toFixed(1)} ms` +
             `  │ Ø IPC ${prumer('ipc').toFixed(1)} ms` +
-            `  Ø paint ${prumer('paint').toFixed(1)} ms`
+            `  Ø postIpcFrameMs ${prumer('postIpcFrameMs').toFixed(1)} ms`
         )
       })
     )
@@ -50,8 +50,8 @@ export function zacniMereniZapisu(): ((ipcHotovoMs: number) => void) | null {
 
 /**
  * onRender callback pro <Profiler>. Loguje čistý čas React renderu (bez
- * browser layout/paint) jen v DEV. Spolu s `render→paint` z výše to řekne,
- * jestli je úzké hrdlo React (rekonciliace Table) nebo browser layout/paint.
+ * browser layout/postIpcFrameMs) jen v DEV. Spolu s `render→postIpcFrameMs` z výše to řekne,
+ * jestli je úzké hrdlo React (rekonciliace Table) nebo browser layout/postIpcFrameMs.
  */
 export function profilStopek(
   _id: string,

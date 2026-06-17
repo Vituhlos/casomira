@@ -9,7 +9,7 @@ import type {
   RostSlot
 } from '@shared/types'
 import { useTheme } from './hooks/useTheme'
-import { Button, Label, Modal, Switch, Table, Tabs, Toast, toast } from '@heroui/react'
+import { Button, Label, Modal, Switch, Tabs, Toast, toast } from '@heroui/react'
 import { Btn } from './components/ui'
 import { ArrowUpArrowDown, ChevronRight, Moon, Plus, Stopwatch, Sun, TrashBin } from '@gravity-ui/icons'
 import { fmtTime, parseTimeLoose } from './lib/time'
@@ -81,12 +81,19 @@ export function StopkyApp(): React.JSX.Element {
   const aktRef = useRef<Kanal | null>(null)
   const kanalyRef = useRef<Kanal[]>([])
   const aktivniIdRef = useRef<number | null>(null)
+  // Mutex — zabrání souběžným IPC zápisům při velmi rychlém double-tapu mezerníku.
+  const recordingRef = useRef(false)
+  // Refy pro nove/potvrd — keydown listener se nemusí re-registrovat při každém modalu.
+  const noveRef = useRef(false)
+  const potvrdRef = useRef(false)
 
   const akt = kanaly.find((k) => k.jizdaId === aktivniId) ?? null
   aktKlikRef.current = akt?.klik ?? []
   aktRef.current = akt
   kanalyRef.current = kanaly
   aktivniIdRef.current = aktivniId
+  noveRef.current = nove
+  potvrdRef.current = potvrd != null
 
   // Stabilní handlery pro memoizované buňky řádků (CisloInput, CasCell) — díky
   // nim se při záznamu času překreslí jen nový řádek, ne všech 8 existujících.
@@ -170,21 +177,30 @@ export function StopkyApp(): React.JSX.Element {
       zId != null ? window.api.nactiMereniAktivniJizdu() : Promise.resolve(null)
     ])
     const timerMap = new Map(timery.map((t) => [t.jizdaId, t]))
+    // Paralelní načtení kliků všech kanálů místo sekvenčního loopu.
+    const vsechnyKliky = await Promise.all(ks.map((k) => window.api.mereniList(k.jizdaId)))
     const full: Kanal[] = []
-    for (const k of ks) {
-      const klik = await window.api.mereniList(k.jizdaId)
+    const CRASH_LIMIT_MS = 60 * 60 * 1000  // timer běžel déle než hodinu = crash
+    for (let i = 0; i < ks.length; i++) {
+      const k = ks[i]
+      const klik = vsechnyKliky[i]
       const t = timerMap.get(k.jizdaId)
       const last = klik.length ? klik[klik.length - 1].cas_ms : 0
+      // Pokud timer běžel příliš dlouho, pravděpodobně šlo o crash — auto-pause.
+      const crashCas = t?.running === true && t.startEpochMs != null && (Date.now() - t.startEpochMs) > CRASH_LIMIT_MS
       full.push({
         jizdaId: k.jizdaId,
         label: k.label,
         koloTyp: k.koloTyp,
         kategorieId: k.kategorieId,
         klik,
-        running: t?.running ?? false,
-        startEpoch: t?.running && t.startEpochMs != null ? t.startEpochMs : null,
-        baseMs: t != null ? t.baseMs : last
+        running: crashCas ? false : (t?.running ?? false),
+        startEpoch: crashCas ? null : (t?.running && t.startEpochMs != null ? t.startEpochMs : null),
+        baseMs: crashCas ? (t!.baseMs + (Date.now() - t!.startEpochMs!)) : (t != null ? t.baseMs : last)
       })
+      if (crashCas) {
+        toast(`Stopky „${k.label}" byly přerušeny — zkontroluj naměřený čas`, { timeout: 8000 })
+      }
     }
     const aktivni =
       ulozenaAktivni != null && full.some((k) => k.jizdaId === ulozenaAktivni)
@@ -268,9 +284,12 @@ export function StopkyApp(): React.JSX.Element {
   // pak po IPC (~10 ms) nahradí reálným řádkem ze DB. Výsledek: nulová vnímaná latence.
   // Klíčem řádku je poradi_kliku (stabilní i po swapu placeholder→real) → CasRadek
   // přežije bez remountu. Stabilní callback (čte z aktRef) → nepřekresluje StopkyPruh.
+  // recordingRef mutex zabrání duplicitním IPC při velmi rychlém double-tapu.
   const zaznamenej = useCallback(async (): Promise<void> => {
+    if (recordingRef.current) return
     const k = aktRef.current
     if (!k || !k.running || k.startEpoch == null) return
+    recordingRef.current = true
     const cas = Math.round(k.baseMs + (Date.now() - k.startEpoch))
     const placeholderPoradi = k.klik.length + 1
     const placeholder: MereniRadek = {
@@ -313,6 +332,8 @@ export function StopkyApp(): React.JSX.Element {
         )
       )
       oznam('Záznam času se nepodařilo uložit do databáze.')
+    } finally {
+      recordingRef.current = false
     }
   }, [oznam])
 
@@ -323,6 +344,11 @@ export function StopkyApp(): React.JSX.Element {
     // nevracíme ho (to už není „omylem zaznamenaný" klik). Operátor musí nejdřív
     // odebrat číslo z políčka — teprve pak lze čas vrátit.
     const posledni = k.klik[k.klik.length - 1]
+    if (posledni.id < 0) {
+      // Placeholder — IPC zápis ještě nedoběhl, vyčkej chvíli.
+      oznam('Záznam se ještě ukládá — počkej chvíli a zkus znovu.')
+      return
+    }
     if (posledni.jezdec_id != null) {
       oznam('Poslední čas má přiřazené číslo — nejdřív odeber číslo, pak ho lze vrátit.')
       return
@@ -359,7 +385,7 @@ export function StopkyApp(): React.JSX.Element {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (nove || potvrd) return
+      if (noveRef.current || potvrdRef.current) return
       const el = e.target as HTMLElement | null
       const editovatelne = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA'
       if (e.code === 'Space' && !editovatelne) {
@@ -378,7 +404,7 @@ export function StopkyApp(): React.JSX.Element {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [zaznamenej, vratPosledni, pauza, nove, potvrd])
+  }, [zaznamenej, vratPosledni, pauza])
 
   const zalozMereni = useCallback(
     (
@@ -404,41 +430,46 @@ export function StopkyApp(): React.JSX.Element {
   )
 
   const priradCislo = useCallback(async (row: MereniRadek, raw: string): Promise<boolean> => {
+    if (row.id < 0) return false  // placeholder — IPC zápis ještě nedoběhl
     const trimmed = raw.trim()
     const parsed = trimmed === '' ? null : Number.parseInt(trimmed, 10)
     const valid = parsed !== null && !Number.isNaN(parsed)
     const res = await window.api.mereniSetCislo(row.id, valid ? parsed : null)
     if (res.duplicitni) oznam(`Číslo ${parsed} už je přiřazené jinému času v této jízdě.`)
     else if (trimmed !== '' && !res.ok) oznam(`Startovní číslo ${trimmed} v této kategorii není.`)
-    setKanaly((prev) =>
-      prev.map((k) =>
-        k.jizdaId !== row.jizda_id ? k : {
-          ...k,
-          klik: k.klik.map((c) =>
-            c.id !== row.id ? c : {
-              ...c,
-              jezdec_id: res.ok ? res.jezdec?.id ?? null : c.jezdec_id,
-              st_cislo: res.ok ? res.jezdec?.st_cislo ?? null : c.st_cislo,
-              prijmeni: res.ok ? res.jezdec?.prijmeni ?? null : c.prijmeni,
-              jmeno: res.ok ? res.jezdec?.jmeno ?? null : c.jmeno,
-              znacka: res.ok ? res.jezdec?.znacka ?? null : c.znacka,
-              model: res.ok ? res.jezdec?.model ?? null : c.model
-            }
-          )
-        }
+    startTransition(() => {
+      setKanaly((prev) =>
+        prev.map((k) =>
+          k.jizdaId !== row.jizda_id ? k : {
+            ...k,
+            klik: k.klik.map((c) =>
+              c.id !== row.id ? c : {
+                ...c,
+                jezdec_id: res.ok ? res.jezdec?.id ?? null : c.jezdec_id,
+                st_cislo: res.ok ? res.jezdec?.st_cislo ?? null : c.st_cislo,
+                prijmeni: res.ok ? res.jezdec?.prijmeni ?? null : c.prijmeni,
+                jmeno: res.ok ? res.jezdec?.jmeno ?? null : c.jmeno,
+                znacka: res.ok ? res.jezdec?.znacka ?? null : c.znacka,
+                model: res.ok ? res.jezdec?.model ?? null : c.model
+              }
+            )
+          }
+        )
       )
-    )
+    })
     return res.ok || trimmed === ''
   }, [oznam])
 
   const opravCas = useCallback(async (row: MereniRadek, ms: number): Promise<void> => {
     const novy = await window.api.mereniOpravCas(row.id, ms)
-    setKanaly((prev) =>
-      prev.map((k) =>
-        k.jizdaId !== row.jizda_id ? k
-          : { ...k, klik: k.klik.map((c) => (c.id === row.id ? { ...c, cas_ms: novy.cas_ms } : c)) }
+    startTransition(() => {
+      setKanaly((prev) =>
+        prev.map((k) =>
+          k.jizdaId !== row.jizda_id ? k
+            : { ...k, klik: k.klik.map((c) => (c.id === row.id ? { ...c, cas_ms: novy.cas_ms } : c)) }
+        )
       )
-    )
+    })
   }, [])
 
   // Po zápisu nabídne první neodměřenou jízdu (využívá stávající mereniDalsiJizda).
@@ -700,7 +731,7 @@ export function StopkyApp(): React.JSX.Element {
 
                   {/* Tabulka naměřených časů + náhled roštu */}
                   <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                    <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '14px 18px' }}>
+                    <div style={{ flex: 1, minWidth: 0, overflowY: 'scroll', padding: '14px 18px' }}>
                       <div
                         style={{
                           display: 'flex',
@@ -874,8 +905,6 @@ function NoveMereni({
   const [jizdy, setJizdy] = useState<{ id: number; cislo: number; filled: number }[]>([])
   const [hotovo, setHotovo] = useState<Set<number>>(new Set())
 
-  const aktKat = kategorie.find((k) => k.id === katId) ?? null
-  void aktKat
   const KOLA = MERENA_KOLA
 
   useEffect(() => {
@@ -1630,76 +1659,73 @@ const RostNahled = memo(function RostNahled({
           Rošt ještě není nasazen.
         </div>
       ) : (
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Rošt jízdy">
-              <Table.Header className="sticky top-0 z-10">
-                <Table.Column isRowHeader style={{ width: 30 }}>#</Table.Column>
-                <Table.Column style={{ width: 46 }}>St.č.</Table.Column>
-                <Table.Column>Jezdec</Table.Column>
-              </Table.Header>
-              <Table.Body>
-                {sloty.map((slot, i) => {
-                  const hotovo = slot.jezdec != null && prirazeni.has(slot.jezdec.id)
-                  return (
-                    <Table.Row
-                      id={slot.pozice}
-                      key={slot.pozice}
-                      style={{
-                        opacity: hotovo ? 0.42 : 1,
-                        transition: 'opacity 0.15s',
-                        background: i % 2 ? CARD_ALT : 'transparent'
-                      }}
-                    >
-                      <Table.Cell style={{ ...rostTd, color: T3, fontVariantNumeric: 'tabular-nums' }}>
-                        {slot.pozice}.
-                      </Table.Cell>
-                      <Table.Cell style={{ ...rostTd, color: 'var(--color-primary)', fontWeight: 660, fontVariantNumeric: 'tabular-nums', paddingLeft: 0 }}>
-                        {slot.jezdec?.st_cislo ?? <span style={{ color: T4 }}>—</span>}
-                      </Table.Cell>
-                      <Table.Cell style={{ ...rostTd, minWidth: 0 }}>
-                        {slot.jezdec ? (
-                          <>
-                            <div
-                              style={{
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                fontWeight: 580,
-                                color: 'var(--color-foreground)'
-                              }}
-                            >
-                              {slot.jezdec.prijmeni}
-                              {slot.jezdec.jmeno && (
-                                <> <span style={{ color: T2, fontWeight: 440 }}>{slot.jezdec.jmeno}</span></>
-                              )}
-                            </div>
-                            {(slot.jezdec.znacka || slot.jezdec.model) && (
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: T3,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  marginTop: 2
-                                }}
-                              >
-                                {[slot.jezdec.znacka, slot.jezdec.model].filter(Boolean).join(' ')}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span style={{ color: T4 }}>prázdná pozice</span>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '0.5px solid var(--color-border)' }}>
+              <th style={{ ...rostTh, width: 30 }}>#</th>
+              <th style={{ ...rostTh, width: 46 }}>St.č.</th>
+              <th style={rostTh}>Jezdec</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sloty.map((slot, i) => {
+              const hotovo = slot.jezdec != null && prirazeni.has(slot.jezdec.id)
+              return (
+                <tr
+                  key={slot.pozice}
+                  style={{
+                    opacity: hotovo ? 0.42 : 1,
+                    transition: 'opacity 0.15s',
+                    background: i % 2 ? CARD_ALT : 'transparent'
+                  }}
+                >
+                  <td style={{ ...rostTd, color: T3, fontVariantNumeric: 'tabular-nums' }}>
+                    {slot.pozice}.
+                  </td>
+                  <td style={{ ...rostTd, color: 'var(--color-primary)', fontWeight: 660, fontVariantNumeric: 'tabular-nums', paddingLeft: 0 }}>
+                    {slot.jezdec?.st_cislo ?? <span style={{ color: T4 }}>—</span>}
+                  </td>
+                  <td style={{ ...rostTd, minWidth: 0 }}>
+                    {slot.jezdec ? (
+                      <>
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontWeight: 580,
+                            color: 'var(--color-foreground)'
+                          }}
+                        >
+                          {slot.jezdec.prijmeni}
+                          {slot.jezdec.jmeno && (
+                            <> <span style={{ color: T2, fontWeight: 440 }}>{slot.jezdec.jmeno}</span></>
+                          )}
+                        </div>
+                        {(slot.jezdec.znacka || slot.jezdec.model) && (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: T3,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              marginTop: 2
+                            }}
+                          >
+                            {[slot.jezdec.znacka, slot.jezdec.model].filter(Boolean).join(' ')}
+                          </div>
                         )}
-                      </Table.Cell>
-                    </Table.Row>
-                  )
-                })}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
+                      </>
+                    ) : (
+                      <span style={{ color: T4 }}>prázdná pozice</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       )}
     </div>
   )
@@ -1710,6 +1736,16 @@ const rostTd: React.CSSProperties = {
   fontSize: 12.5,
   color: 'var(--color-foreground)',
   verticalAlign: 'top'
+}
+
+const rostTh: React.CSSProperties = {
+  padding: '6px 12px',
+  fontSize: 11,
+  fontWeight: 600,
+  color: T3,
+  textAlign: 'left',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em'
 }
 
 const labelStyle: React.CSSProperties = {
