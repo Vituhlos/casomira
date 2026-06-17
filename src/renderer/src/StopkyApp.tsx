@@ -1,4 +1,4 @@
-import { memo, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Profiler, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type {
   JizdaKolaRadek,
@@ -278,9 +278,11 @@ export function StopkyApp(): React.JSX.Element {
     try {
       const real = await window.api.mereniPridej(k.jizdaId, cas)
       perf?.(performance.now())
-      setKanaly((prev) =>
-        prev.map((x) => (x.jizdaId === k.jizdaId ? { ...x, klik: [...x.klik, real] } : x))
-      )
+      startTransition(() => {
+        setKanaly((prev) =>
+          prev.map((x) => (x.jizdaId === k.jizdaId ? { ...x, klik: [...x.klik, real] } : x))
+        )
+      })
     } catch {
       oznam('Záznam času se nepodařilo uložit do databáze.')
     }
@@ -470,6 +472,11 @@ export function StopkyApp(): React.JSX.Element {
     setNove(false)
   }, [])
 
+  const onVybratKolo = useCallback((kolo: KoloTyp): void => {
+    setVybraneKolo(kolo)
+    setNove(false)
+  }, [])
+
   // Stabilní handlery pro memoizovaný StopkyPruh / JizdyVyber (čtou z aktRef).
   const onStartZaznam = useCallback((): void => {
     const k = aktRef.current
@@ -560,27 +567,7 @@ export function StopkyApp(): React.JSX.Element {
               boxShadow: PANEL_SHADOW
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-              <span style={labelMini}>Kolo</span>
-              <div style={{ minWidth: 0, overflowX: 'auto' }}>
-                <Tabs
-                  className="stopky-segment w-fit"
-                  selectedKey={vybraneKolo}
-                  onSelectionChange={(k) => { setVybraneKolo(k as KoloTyp); setNove(false) }}
-                >
-                  <Tabs.ListContainer>
-                    <Tabs.List aria-label="Kolo">
-                      {MERENA_KOLA.map((t) => (
-                        <Tabs.Tab key={t} id={t}>
-                          <span style={{ whiteSpace: 'nowrap' }}>{KOLA_LABEL[t]}</span>
-                          <Tabs.Indicator />
-                        </Tabs.Tab>
-                      ))}
-                    </Tabs.List>
-                  </Tabs.ListContainer>
-                </Tabs>
-              </div>
-            </div>
+            <KoloVyber vybraneKolo={vybraneKolo} onVybrat={onVybratKolo} />
 
             {!nove && jizdyVybrane.length > 0 && (
               <div
@@ -1118,6 +1105,38 @@ function KategorieSelect({
 
 // ---- Navigace: přepínač kol + jízdy po kategoriích ----
 
+const KoloVyber = memo(function KoloVyber({
+  vybraneKolo,
+  onVybrat
+}: {
+  vybraneKolo: KoloTyp
+  onVybrat: (kolo: KoloTyp) => void
+}): React.JSX.Element {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+      <span style={labelMini}>Kolo</span>
+      <div style={{ minWidth: 0, overflowX: 'auto' }}>
+        <Tabs
+          className="stopky-segment w-fit"
+          selectedKey={vybraneKolo}
+          onSelectionChange={(k) => onVybrat(k as KoloTyp)}
+        >
+          <Tabs.ListContainer>
+            <Tabs.List aria-label="Kolo">
+              {MERENA_KOLA.map((t) => (
+                <Tabs.Tab key={t} id={t}>
+                  <span style={{ whiteSpace: 'nowrap' }}>{KOLA_LABEL[t]}</span>
+                  <Tabs.Indicator />
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs.ListContainer>
+        </Tabs>
+      </div>
+    </div>
+  )
+})
+
 type StavJizdy = 'aktivni' | 'odjeto' | 'merene' | 'ceka' | 'bezRostu'
 
 function stavJizdy(jz: JizdaKolaRadek, aktivniId: number | null, merene: Set<number>): StavJizdy {
@@ -1353,8 +1372,10 @@ function ZivyCas({
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!running) return
-    const t = setInterval(() => setNow(Date.now()), 53)
-    return () => clearInterval(t)
+    let rafId: number
+    const tick = (): void => { setNow(Date.now()); rafId = requestAnimationFrame(tick) }
+    rafId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafId)
   }, [running])
   const ms = running && startEpoch != null ? baseMs + (now - startEpoch) : baseMs
   return <>{fmtTime(ms)}</>
