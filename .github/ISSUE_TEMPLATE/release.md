@@ -1,6 +1,6 @@
 ---
 name: Release
-about: Checklist pro vydání nové verze Časomíry
+about: Checklist pro vydání nové verze Verdictu
 title: "Release vX.Y.Z"
 labels: release
 assignees: ""
@@ -32,8 +32,8 @@ assignees: ""
 - [ ] Tag vytvořený ve tvaru `vX.Y.Z` nebo `vX.Y.Z-beta`
 - [ ] Tag pushnutý na GitHub
 - [ ] GitHub Release vznikl jako draft a po buildech se publikoval
-- [ ] Release obsahuje Windows `Casomira-Setup-*.exe`
-- [ ] Release obsahuje macOS `Casomira-*-mac-universal.dmg`
+- [ ] Release obsahuje Windows `Verdict-Setup-*.exe`
+- [ ] Release obsahuje macOS `Verdict-*-mac-universal.dmg`
 - [ ] Popis Release odpovídá sekci v `CHANGELOG.md`
 - [ ] První spuštění na macOS ověřené přes Gatekeeper postup
 

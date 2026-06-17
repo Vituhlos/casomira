@@ -33,7 +33,7 @@ function releaseChannel() {
 
 const info = {
   name: pkg.name,
-  productName: 'Časomíra',
+  productName: 'Verdict',
   version: pkg.version,
   commitSha,
   shortCommitSha,

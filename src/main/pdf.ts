@@ -558,7 +558,7 @@ async function withTiskOkno<T>(fn: (win: BrowserWindow) => Promise<T>): Promise<
 async function nactiHtml(win: BrowserWindow, html: string): Promise<void> {
   const tmp = join(
     app.getPath('temp'),
-    `casomira-print-${Date.now()}-${Math.random().toString(36).slice(2)}.html`
+    `verdict-print-${Date.now()}-${Math.random().toString(36).slice(2)}.html`
   )
   await writeFile(tmp, html, 'utf8')
   try {
@@ -571,7 +571,7 @@ async function nactiHtml(win: BrowserWindow, html: string): Promise<void> {
 async function tiskni(win: BrowserWindow, html: string): Promise<Buffer> {
   const tmp = join(
     app.getPath('temp'),
-    `casomira-print-${Date.now()}-${Math.random().toString(36).slice(2)}.html`
+    `verdict-print-${Date.now()}-${Math.random().toString(36).slice(2)}.html`
   )
   await writeFile(tmp, html, 'utf8')
   try {

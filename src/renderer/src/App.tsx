@@ -344,15 +344,15 @@ export function App(): React.JSX.Element {
   // Dynamický titulek okna — operátor vidí kontext i v taskbaru.
   useEffect(() => {
     if (view === 'list') {
-      document.title = 'Časomíra'
+      document.title = 'Verdict'
       return
     }
     const subLabel = SUB_PHASES.has(phase)
       ? subView === 'rost' ? ' Rošt' : ' Výsledky'
       : ''
     document.title = catLabel
-      ? `Časomíra — ${catLabel} · ${phaseLabel}${subLabel}`
-      : 'Časomíra'
+      ? `Verdict — ${catLabel} · ${phaseLabel}${subLabel}`
+      : 'Verdict'
   }, [view, catLabel, phase, phaseLabel, subView])
 
   // Když se fáze ocitne mimo seznam povolených (přepnutí RAC→RX nebo otevření
@@ -382,7 +382,7 @@ export function App(): React.JSX.Element {
   const onPdf = (): Promise<void> => exportujAktualni(false)
   const onPdfSaveAs = (): Promise<void> => exportujAktualni(true)
 
-  const PREF_TISKARNA_KEY = 'casomira.preferovanaTiskarna'
+  const PREF_TISKARNA_KEY = 'verdict.preferovanaTiskarna'
 
   const onPrint = async (shiftKey = false): Promise<void> => {
     if (activeCat == null) { oznam('Nejdřív vyber kategorii v levém panelu.'); return }

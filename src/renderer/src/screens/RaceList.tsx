@@ -2,8 +2,8 @@ import type { ZavodInfo } from '@shared/types'
 import { Button, ButtonGroup, Card, Chip, Typography } from '@heroui/react'
 import { ArrowDownToSquare, ArrowUpFromSquare, Flag, LayoutCells, Moon, Pencil, Persons, Plus, Sun, TrashBin } from '@gravity-ui/icons'
 import type { Theme } from '../hooks/useTheme'
-import logoDarkUrl from '../assets/brand/casomira-lockup-dark.svg?url'
-import logoLightUrl from '../assets/brand/casomira-lockup-light.svg?url'
+import logoDarkUrl from '../assets/brand/verdict-lockup-dark.svg?url'
+import logoLightUrl from '../assets/brand/verdict-lockup-light.svg?url'
 
 function czDate(iso: string): string {
   const parts = iso.split('-').map(Number)
@@ -41,13 +41,13 @@ export function RaceList({
         <div className="h-8">
           <img
             src={logoLightUrl}
-            alt="Časomíra"
-            className="casomira-logo-light h-full w-auto max-w-[200px] object-contain"
+            alt="Verdict"
+            className="verdict-logo-light h-full w-auto max-w-[200px] object-contain"
           />
           <img
             src={logoDarkUrl}
-            alt="Časomíra"
-            className="casomira-logo-dark h-full w-auto max-w-[200px] object-contain"
+            alt="Verdict"
+            className="verdict-logo-dark h-full w-auto max-w-[200px] object-contain"
           />
         </div>
         <div className="flex shrink-0 items-center gap-1.5">

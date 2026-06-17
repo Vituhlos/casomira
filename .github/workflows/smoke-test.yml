@@ -71,9 +71,9 @@ jobs:
       - name: Spusť appku a zkontroluj startup crash
         run: |
           APP="${{ steps.find_app.outputs.app_path }}"
-          echo "Spouštím: $APP/Contents/MacOS/Časomíra"
+          echo "Spouštím: $APP/Contents/MacOS/Verdict"
 
-          "$APP/Contents/MacOS/Časomíra" \
+          "$APP/Contents/MacOS/Verdict" \
             --no-sandbox \
             --disable-gpu \
             --disable-software-rasterizer \

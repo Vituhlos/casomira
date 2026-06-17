@@ -8,7 +8,7 @@ let transactionDepth = 0
  * Ekvivalent better-sqlite3 `db.transaction()` včetně vnořených volání.
  */
 export function runInTransaction<T>(db: DatabaseSync, fn: () => T): T {
-  const savepoint = `casomira_sp_${transactionDepth}`
+  const savepoint = `verdict_sp_${transactionDepth}`
   transactionDepth++
 
   db.exec(`SAVEPOINT ${savepoint}`)

@@ -1,7 +1,9 @@
-// Formát zálohy Časomíry — JSON, verze 1. Sdílené typy pro export/import a UI.
+// Formát zálohy Verdictu — JSON, verze 1. Sdílené typy pro export/import a UI.
 
-export const BACKUP_FORMAT = 'casomira-backup' as const
+export const BACKUP_FORMAT = 'verdict-backup' as const
+export const LEGACY_BACKUP_FORMAT = 'casomira-backup' as const
 export const BACKUP_FORMAT_VERSION = 1
+export type BackupFormat = typeof BACKUP_FORMAT | typeof LEGACY_BACKUP_FORMAT
 
 export type BackupScope = 'zavod' | 'database'
 
@@ -135,8 +137,8 @@ export interface BackupZavodPayload {
 }
 
 /** Kořen zálohy — jeden závod nebo celá databáze. */
-export interface CasomiraBackupFile {
-  format: typeof BACKUP_FORMAT
+export interface VerdictBackupFile {
+  format: BackupFormat
   formatVersion: number
   appVersion: string
   schemaVersion: number

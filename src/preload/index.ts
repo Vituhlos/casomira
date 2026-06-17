@@ -8,7 +8,7 @@ const _isWin11 = process.platform === 'win32' && (() => {
 })()
 import type { BackupRestoreArg } from '../shared/backup'
 import type {
-  CasomiraApi,
+  VerdictApi,
   ImportCommit,
   JezdecUprava,
   KoloTyp,
@@ -27,7 +27,7 @@ import type {
 
 // Vystavíme do okna jen tyto konkrétní funkce (žádný přímý přístup k Node ani
 // k databázi). Každá jen pošle zprávu hlavnímu procesu a počká na odpověď.
-const api: CasomiraApi = {
+const api: VerdictApi = {
   platform: process.platform,
   nativeVibrancy: process.platform === 'darwin' || _isWin11,
   getDiagnostics: () => ipcRenderer.invoke('app:diagnostics'),

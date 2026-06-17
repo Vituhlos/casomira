@@ -26,7 +26,7 @@ přepisují. Pravidla jsou v dokumentu „Časoměřičská bible".
 - **Electron** (desktopový obal, „appka jako Chrome / VS Code / Discord").
 - **React + Vite + TypeScript** (UI).
 - **SQLite** přes `node:sqlite` (vestavěný v Node.js 22+) — lokálně, offline. Migrace z `better-sqlite3` dokončena v `0.9.9-beta`.
-- **Instalačky** přes `electron-builder`. Windows: **instalátor** (`Casomira-Setup-x.y.z.exe`,
+- **Instalačky** přes `electron-builder`. Windows: **instalátor** (`Verdict-Setup-x.y.z.exe`,
   NSIS) — appka se **nainstaluje jako normální program** (ikona na ploše i v Start menu,
   záznam v „Přidat/odebrat programy", čistá odinstalace). NE portable .exe.
   macOS: `.dmg`.

@@ -54,7 +54,7 @@ export function openStopky(): void {
     // Okno ukážeme až je obsah připravený (ready-to-show) — jinak bliká prázdné
     // průhledné okno, než se renderer vykreslí.
     show: false,
-    title: 'Stopky — Časomíra',
+    title: 'Stopky — Verdict',
     // Průhledné pozadí + Windows 11 „Mica" materiál — jemné protónování plochy,
     // floating panely plavou nad pozadím (Microsoft doporučuje Micu pro pozadí
     // dlouho otevřených oken). Mica vyžaduje průhledný backgroundColor.
@@ -75,7 +75,7 @@ export function openStopky(): void {
     return { action: 'deny' }
   })
 
-  // Zabránit přepsání titulku z HTML (<title>Časomíra</title>) — titulek „Stopky"
+  // Zabránit přepsání titulku z HTML (<title>Verdict</title>) — titulek „Stopky"
   // musí zůstat, aby ho stopkyClose.ts (before-quit) správně identifikoval.
   stopkyWin.on('page-title-updated', (e) => e.preventDefault())
 

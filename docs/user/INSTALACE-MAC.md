@@ -1,4 +1,4 @@
-# Časomíra — instalace na Macu (testovací verze)
+# Verdict — instalace na Macu (testovací verze)
 
 Návod pro časoměřiče bez technických znalostí. Platí pro **macOS 11 (Big Sur) a novější**, Mac s procesorem **Intel** i **Apple Silicon (M1/M2/M3…)**.
 
@@ -8,7 +8,7 @@ Návod pro časoměřiče bez technických znalostí. Platí pro **macOS 11 (Big
 
 Dostaneš odkaz na soubor:
 
-**`Casomira-0.9.1-mac-universal.dmg`**
+**`Verdict-0.9.1-mac-universal.dmg`**
 
 (nebo novější verzi se stejným názvem — číslo verze se může lišit)
 
@@ -20,11 +20,11 @@ Dostaneš odkaz na soubor:
 ## 2. Otevřít disk a přesunout aplikaci
 
 1. V **Stažených** (nebo v prohlížeči) **dvakrát klikni** na soubor `.dmg`.
-2. Otevře se okno s ikonou **Časomíra** a složkou **Applications** (Aplikace).
+2. Otevře se okno s ikonou **Verdict** a složkou **Applications** (Aplikace).
 3. **Přetáhni** ikonu Časomíry do složky Applications (stejně jako u běžných programů).
-4. Zavři okno disku a v postranním panelu Finderu **vysuň** disk Časomíra (ikona šipky „vysunout“), případně ho přetáhni do Koše — to jen odpojí instalační obraz, aplikaci to nesmaže.
+4. Zavři okno disku a v postranním panelu Finderu **vysuň** disk Verdict (ikona šipky „vysunout“), případně ho přetáhni do Koše — to jen odpojí instalační obraz, aplikaci to nesmaže.
 
-Aplikace je nainstalovaná ve **Aplikace → Časomíra**.
+Aplikace je nainstalovaná ve **Aplikace → Verdict**.
 
 ---
 
@@ -37,7 +37,7 @@ Aplikace zatím není podepsaná u Apple („vývojář není ověřený“). To
 ### Varianta A — doporučená
 
 1. Otevři **Finder → Aplikace**.
-2. Najdi **Časomíra**.
+2. Najdi **Verdict**.
 3. **Pravé tlačítko** (nebo Ctrl + klik) → **Otevřít**.
 4. V dialogu znovu klikni **Otevřít**.
 
@@ -83,7 +83,7 @@ Stačí **jednou**. Další spuštění už půjde obyčejným dvojklikem.
 
 ## Co dál po instalaci
 
-Jak appku používat (závod, kategorie, rošty, časy, PDF, Stopky): soubor **Word** [Casomira-navod-pro-testery.docx](./Casomira-navod-pro-testery.docx) (zdroj: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md))
+Jak appku používat (závod, kategorie, rošty, časy, PDF, Stopky): soubor **Word** [Verdict-navod-pro-testery.docx](./Verdict-navod-pro-testery.docx) (zdroj: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md))
 
 ---
 

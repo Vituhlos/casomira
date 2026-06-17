@@ -551,7 +551,7 @@ export interface AppDiagnostics {
 }
 
 /** Tvar API, které preload most vystaví do okna jako `window.api`. */
-export interface CasomiraApi {
+export interface VerdictApi {
   /** Platforma hostitele ('darwin' | 'win32' | 'linux') — pro platform-specifické styly. */
   readonly platform: NodeJS.Platform
   /** True pokud okno používá nativní vibrancy/Mica material (macOS vždy, Win11+). */

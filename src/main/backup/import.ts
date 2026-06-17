@@ -6,7 +6,7 @@ import type {
   BackupCollisionMatch,
   BackupRestorePreview,
   BackupZavodPayload,
-  CasomiraBackupFile
+  VerdictBackupFile
 } from './types'
 import { parseBackupJson, BackupValidationError } from './validate'
 
@@ -189,7 +189,7 @@ function insertZavodBlock(db: DatabaseSync, block: BackupZavodPayload): number {
   return newZavodId
 }
 
-function importGlobalTables(db: DatabaseSync, data: CasomiraBackupFile): void {
+function importGlobalTables(db: DatabaseSync, data: VerdictBackupFile): void {
   if (!data.zebricek?.length && !data.pravidla?.length && !data.nastaveni?.length) return
 
   if (data.zebricek?.length) {

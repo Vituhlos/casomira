@@ -6,8 +6,8 @@
 
 | Systém | Soubor | Kde vznikne |
 |--------|--------|-------------|
-| **Windows** | `Casomira-Setup-0.9.0.exe` | složka `release/` |
-| **Mac** | `Casomira-0.9.0-mac-universal.dmg` | složka `release/` (Intel x64 + Apple Silicon; jen na Macu nebo v CI) |
+| **Windows** | `Verdict-Setup-0.9.0.exe` | složka `release/` |
+| **Mac** | `Verdict-0.9.0-mac-universal.dmg` | složka `release/` (Intel x64 + Apple Silicon; jen na Macu nebo v CI) |
 
 Instalátor na Windows přidá program do menu Start, zástupce na plochu (volitelně) a odinstalaci v Nastavení.
 
@@ -28,7 +28,7 @@ Instalátor na Windows přidá program do menu Start, zástupce na plochu (volit
    npm run dist:win
    ```
 
-4. Výsledek: `release/Casomira-Setup-0.9.0.exe` — ten pošli časoměřiči nebo ho spusť na testovacím PC.
+4. Výsledek: `release/Verdict-Setup-0.9.0.exe` — ten pošli časoměřiči nebo ho spusť na testovacím PC.
 
 **Rychlý test bez instalátoru** (složka s programem, ne Setup.exe):
 
@@ -36,7 +36,7 @@ Instalátor na Windows přidá program do menu Start, zástupce na plochu (volit
 npm run dist:win:dir
 ```
 
-→ `release/win-unpacked/Casomira.exe`
+→ `release/win-unpacked/Verdict.exe`
 
 ---
 
@@ -74,7 +74,7 @@ npm install
 npm run dist:mac
 ```
 
-→ `release/Casomira-0.9.0-mac-universal.dmg` (jeden soubor pro **Intel i Apple Silicon**)
+→ `release/Verdict-0.9.0-mac-universal.dmg` (jeden soubor pro **Intel i Apple Silicon**)
 
 Bez Apple Developer účtu může Mac při prvním spuštění ukázat varování — to se řeší později notarizací (není nutné pro závod u tebe doma).
 
@@ -90,14 +90,14 @@ Upgrade Electronu (37 → 39) tento problém sám neřeší — jde o macOS hard
 
 **macOS 26: exit 133 hned po startu (Helper apps)**
 
-Na macOS 26 může pád **nesouviset s better-sqlite3**, ale s bugem electron-builder: Helper bundly se přejmenují na `Časomíra Helper`, ale Electron binárka pořád hledá `Electron Helper` → fatální chyba při startu (SIGTRAP / exit 133). Viz [electron-builder#9771](https://github.com/electron-userland/electron-builder/issues/9771).
+Na macOS 26 může pád **nesouviset s node:sqlite**, ale s bugem electron-builder: Helper bundly se přejmenují na `Verdict Helper`, ale Electron binárka pořád hledá `Electron Helper` → fatální chyba při startu (SIGTRAP / exit 133). Viz [electron-builder#9771](https://github.com/electron-userland/electron-builder/issues/9771).
 
 Workaround v repu: `scripts/afterPack-mac-helpers.cjs` (hook `afterPack` v `electron-builder.yml`).
 
 Ověření z terminálu (místo dvojkliku):
 
 ```bash
-"release/mac-arm64/Časomíra.app/Contents/MacOS/Časomíra"
+"release/mac-arm64/Verdict.app/Contents/MacOS/Verdict"
 # očekávaná fatální hláška před fixem: Unable to find helper app
 ```
 

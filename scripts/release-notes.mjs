@@ -34,8 +34,8 @@ const paticka = `
 ---
 
 ### Instalace
-- **Windows:** stáhni \`Casomira-Setup-*.exe\` a spusť instalátor.
-- **macOS:** stáhni \`Casomira-*-mac-universal.dmg\` (Intel i Apple Silicon).
+- **Windows:** stáhni \`Verdict-Setup-*.exe\` a spusť instalátor.
+- **macOS:** stáhni \`Verdict-*-mac-universal.dmg\` (Intel i Apple Silicon).
 
 > ⚠️ **macOS — aplikace není podepsaná Apple certifikátem.** Otevři ji poprvé přes
 > **pravý klik (Ctrl+klik) na ikonu aplikace → Otevřít** a potvrď **Otevřít**.

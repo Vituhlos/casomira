@@ -16,7 +16,7 @@ import type {
   BackupZavodPayload,
   BackupZavodRow,
   BackupZebricekRow,
-  CasomiraBackupFile
+  VerdictBackupFile
 } from './types'
 
 function idsIn(ids: number[]): string {
@@ -151,7 +151,7 @@ function exportGlobalTables(db: DatabaseSync): {
   return { zebricek, pravidla, nastaveni }
 }
 
-export function buildZavodBackup(zavodId: number): CasomiraBackupFile {
+export function buildZavodBackup(zavodId: number): VerdictBackupFile {
   const db = getDb()
   return {
     ...backupEnvelopeBase('zavod'),
@@ -159,7 +159,7 @@ export function buildZavodBackup(zavodId: number): CasomiraBackupFile {
   }
 }
 
-export function buildDatabaseBackup(): CasomiraBackupFile {
+export function buildDatabaseBackup(): VerdictBackupFile {
   const db = getDb()
   const ids = db.prepare('SELECT id FROM zavod ORDER BY id').all() as { id: number }[]
   const zavody = ids.map((r) => exportZavodPayload(db, r.id))
@@ -171,6 +171,6 @@ export function buildDatabaseBackup(): CasomiraBackupFile {
   }
 }
 
-export function serializeBackup(data: CasomiraBackupFile): string {
+export function serializeBackup(data: VerdictBackupFile): string {
   return JSON.stringify(data, null, 2)
 }

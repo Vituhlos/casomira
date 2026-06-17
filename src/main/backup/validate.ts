@@ -2,8 +2,9 @@ import { SCHEMA_VERSION } from '../db/migrate'
 import {
   BACKUP_FORMAT,
   BACKUP_FORMAT_VERSION,
+  LEGACY_BACKUP_FORMAT,
   type BackupZavodPayload,
-  type CasomiraBackupFile
+  type VerdictBackupFile
 } from './types'
 
 export class BackupValidationError extends Error {
@@ -47,7 +48,7 @@ function vyzadujZavodPayload(raw: unknown, index: number): BackupZavodPayload {
 }
 
 /** Načte JSON text a ověří strukturu. Při chybě hodí BackupValidationError. */
-export function parseBackupJson(text: string): CasomiraBackupFile {
+export function parseBackupJson(text: string): VerdictBackupFile {
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
@@ -57,9 +58,9 @@ export function parseBackupJson(text: string): CasomiraBackupFile {
   if (!jeObjekt(parsed)) {
     throw new BackupValidationError('Záloha musí být JSON objekt.')
   }
-  if (parsed.format !== BACKUP_FORMAT) {
+  if (parsed.format !== BACKUP_FORMAT && parsed.format !== LEGACY_BACKUP_FORMAT) {
     throw new BackupValidationError(
-      'Neznámý formát souboru. Očekávána záloha Časomíry (casomira-backup).'
+      'Neznámý formát souboru. Očekávána záloha Verdictu (verdict-backup) nebo starší Časomíry (casomira-backup).'
     )
   }
   const fv = parsed.formatVersion
@@ -85,7 +86,7 @@ export function parseBackupJson(text: string): CasomiraBackupFile {
   }
   const zavody = parsed.zavody.map((z, i) => vyzadujZavodPayload(z, i))
   return {
-    ...(parsed as unknown as CasomiraBackupFile),
+    ...(parsed as unknown as VerdictBackupFile),
     zavody
   }
 }

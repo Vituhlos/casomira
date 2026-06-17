@@ -1,8 +1,8 @@
 {
-  "name": "casomira",
+  "name": "verdict",
   "version": "0.9.13-beta",
-  "description": "Časomíra — správce závodu autokros / rallycross",
-  "author": "Časomíra",
+  "description": "Verdict — správce závodu autokros / rallycross",
+  "author": "Verdict",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "dist:win:dir": "npm run build && electron-builder --win dir --config electron-builder.yml --publish never",
     "dist:mac": "npm run build && electron-builder --mac --config electron-builder.yml --publish never -c.npmRebuild=true",
     "dist:mac:dir": "npm run build && electron-builder --mac dir --config electron-builder.yml --publish never -c.npmRebuild=true",
-    "docs:word": "npx --yes @mohtasham/md-to-docx docs/user/INSTALACE-MAC.md docs/user/Casomira-instalace-Mac.docx && npx --yes @mohtasham/md-to-docx docs/user/NAVOD-PRO-TESTERY.md docs/user/Casomira-navod-pro-testery.docx"
+    "docs:word": "npx --yes @mohtasham/md-to-docx docs/user/INSTALACE-MAC.md docs/user/Verdict-instalace-Mac.docx && npx --yes @mohtasham/md-to-docx docs/user/NAVOD-PRO-TESTERY.md docs/user/Verdict-navod-pro-testery.docx"
   },
   "dependencies": {
     "@fontsource-variable/figtree": "^5.2.10",

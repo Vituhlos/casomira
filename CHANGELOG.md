@@ -1,10 +1,39 @@
 # Changelog
 
-Všechny podstatné změny v aplikaci **Časomíra**. Formát vychází z
+Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), čísla verzí dle
 [SemVer](https://semver.org/lang/cs/). Nejnovější verze je nahoře.
 
 ## [Nevydáno]
+
+### Přidáno
+- **Bezpečná migrace dat z Časomíry do Verdictu** — při prvním startu vydané
+  aplikace se stará databáze z `%APPDATA%\Časomíra\casomira.db` zkopíruje do
+  nové složky Verdictu jako `verdict.db`. Původní data se nemažou; stará
+  Časomíra tak zůstává použitelná jako záloha.
+- **Nové Verdict ikony, favicon a logo v aplikaci** — Windows/macOS ikony,
+  favicon i světlý/tmavý lockup v sidebaru a seznamu závodů používají nový
+  brand. Stejné logo je doplněné i do README.
+
+### Změněno
+- **Aplikace se přejmenovává z Časomíry na Verdict** — nový název je v titulcích
+  oken, macOS menu, chybových dialozích, obrazovce Stopek, dokumentaci,
+  generovaných Word návodech i release textech.
+- **Verdict se instaluje jako samostatná aplikace vedle Časomíry** — nové
+  `appId` je `cz.verdict.app`, spustitelný soubor je `Verdict` a instalační
+  artefakty se jmenují `Verdict-Setup-x.y.z.exe` a
+  `Verdict-x.y.z-mac-universal.dmg`. Tím se při testování nepřepíše stará
+  instalace Časomíry.
+- **Interní názvy a uživatelská nastavení jsou sjednocené na Verdict** — API typy,
+  CSS třídy, theme/import soubory, hotkey prefixy, nastavení tiskárny, savepointy
+  a dočasné tiskové soubory už nepoužívají staré `casomira` prefixy.
+- **Zálohy mají nový formát, ale zůstávají zpětně kompatibilní** — nové exporty
+  zapisují `verdict-backup`, import ale dál přijímá starší
+  `casomira-backup`, takže existující `.json` zálohy půjdou obnovit i ve
+  Verdictu.
+- **Build a release dokumentace mluví jazykem Verdictu** — README, checklisty,
+  macOS instalační návod, testerský návod, CI workflow, issue template a release
+  notes používají nové názvy artefaktů a nové odkazy na Word dokumenty.
 
 ### Opraveno
 - **Stopky se už při zápisu času neseknou** — tabulka naměřených časů byla

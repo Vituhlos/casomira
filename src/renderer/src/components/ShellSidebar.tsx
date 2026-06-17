@@ -2,8 +2,8 @@ import { memo, useEffect, useState } from 'react'
 import { Button, Label, ListBox } from '@heroui/react'
 import type { Kategorie, UpdateInfo } from '@shared/types'
 import { APP_NAME, APP_VERSION_LABEL } from '../lib/version'
-import logoDarkUrl from '../assets/brand/casomira-lockup-dark.svg?url'
-import logoLightUrl from '../assets/brand/casomira-lockup-light.svg?url'
+import logoDarkUrl from '../assets/brand/verdict-lockup-dark.svg?url'
+import logoLightUrl from '../assets/brand/verdict-lockup-light.svg?url'
 
 interface ShellSidebarProps {
   kategorie: Kategorie[]
@@ -40,12 +40,12 @@ export const ShellSidebar = memo(function ShellSidebar({
           <img
             src={logoLightUrl}
             alt={APP_NAME}
-            className="casomira-logo casomira-logo-light h-full w-auto"
+            className="verdict-logo verdict-logo-light h-full w-auto"
           />
           <img
             src={logoDarkUrl}
             alt={APP_NAME}
-            className="casomira-logo casomira-logo-dark h-full w-auto"
+            className="verdict-logo verdict-logo-dark h-full w-auto"
           />
         </button>
       </div>
@@ -118,7 +118,7 @@ export const ShellSidebar = memo(function ShellSidebar({
 
       <div className="border-t border-border px-4 py-2.5 flex items-center gap-2.5">
         <span className="size-7 shrink-0 rounded-full bg-default grid place-items-center text-[11px] font-semibold">
-          ČM
+          V
         </span>
         <div className="flex flex-col leading-[1.3] min-w-0">
           <span className="text-[12.5px] font-semibold truncate">{operator}</span>

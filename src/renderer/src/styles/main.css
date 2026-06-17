@@ -1,19 +1,19 @@
 @import '@fontsource-variable/figtree';
 @import 'tailwindcss';
 @import '@heroui/styles';
-@import './theme/casomira.css';
+@import './theme/verdict.css';
 
-.casomira-logo-dark {
+.verdict-logo-dark {
   display: none;
 }
 
-.dark .casomira-logo-light,
-[data-theme='dark'] .casomira-logo-light {
+.dark .verdict-logo-light,
+[data-theme='dark'] .verdict-logo-light {
   display: none;
 }
 
-.dark .casomira-logo-dark,
-[data-theme='dark'] .casomira-logo-dark {
+.dark .verdict-logo-dark,
+[data-theme='dark'] .verdict-logo-dark {
   display: block;
 }
 

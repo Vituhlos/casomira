@@ -16,7 +16,7 @@ import type {
   BackupRestoreResult
 } from './types'
 
-const JSON_FILTER = [{ name: 'Záloha Časomíry (.json)', extensions: ['json'] }]
+const JSON_FILTER = [{ name: 'Záloha Verdictu (.json)', extensions: ['json'] }]
 
 export async function exportZavodDialog(
   parentWin: BrowserWindow | null,

@@ -1,10 +1,10 @@
-# Balení Časomíry pro Windows (NSIS) a macOS (DMG). Viz docs/dev/BUILD.md.
+# Balení Verdictu pro Windows (NSIS) a macOS (DMG). Viz docs/dev/BUILD.md.
 # Release na GitHub řeší .github/workflows/release.yml (ne auto-publish z tagu).
 publish: null
 
-appId: cz.casomira.app
-productName: Časomíra
-copyright: Copyright © Časomíra
+appId: cz.verdict.app
+productName: Verdict
+copyright: Copyright © Verdict
 
 directories:
   output: release
@@ -36,10 +36,10 @@ npmRebuild: false
 win:
   target:
     - nsis
-  executableName: Casomira
-  artifactName: Casomira-Setup-${version}.${ext}
+  executableName: Verdict
+  artifactName: Verdict-Setup-${version}.${ext}
   # Ikona appky. .ico obsahuje multi-rozlišení 16/24/32/48/64/128/256 px.
-  # rcedit ji embedne do Casomira.exe (= ikona v Průzkumníku i v taskbaru).
+  # rcedit ji embedne do Verdict.exe (= ikona v Průzkumníku i v taskbaru).
   # POZOR: signAndEditExecutable nesmí být false — to by zakázalo i embedding ikony.
   icon: build/icon.ico
 
@@ -50,8 +50,8 @@ nsis:
   allowElevation: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Časomíra
-  uninstallDisplayName: Časomíra
+  shortcutName: Verdict
+  uninstallDisplayName: Verdict
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
 
@@ -61,7 +61,7 @@ mac:
     - target: dmg
       arch: universal
   category: public.app-category.sports
-  artifactName: Casomira-${version}-mac-universal.${ext}
+  artifactName: Verdict-${version}-mac-universal.${ext}
   # Ad-hoc podpis (bez Apple Developer účtu). Povinné s hardenedRuntime — jinak
   # se entitlements.plist do .app neaplikují a V8/JIT nestartuje.
   # CSC_IDENTITY_AUTO_DISCOVERY=false v CI samo o sobě podpis vypne.
@@ -79,7 +79,7 @@ mac:
   icon: build/icon.icns
 
 dmg:
-  title: Časomíra ${version}
+  title: Verdict ${version}
   # icon: build/dmg-icon.icns
 
 linux:

@@ -1,11 +1,11 @@
-# Časomíra
+# Verdict
 
 Desktopová aplikace pro **časoměřičství autokrosu a rallycrossu** — náhrada sady Excelových sešitů jedním offline programem pro Windows a macOS.
 
 Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Pravidla RAC Race (Hobby), RX Cup a Šotolina podle časoměřičské bible, v MVP co nejvěrněji stávajícímu workflow.
 
 <p align="center">
-  <img src="assets/brand/casomira-lockup-light-800x200.png" alt="Časomíra" width="520">
+  <img src="docs/user/verdict/logo/png/verdict-lockup-horizontal-light.png" alt="Verdict" width="520">
 </p>
 
 ---
@@ -14,7 +14,7 @@ Jeden operátor, jeden počítač, žádná síť. Data v lokální SQLite. Prav
 
 | Formát | Instalace Mac | Návod k použití |
 |--------|---------------|-----------------|
-| **Word (.docx)** — k poslání testerům | [docs/user/Casomira-instalace-Mac.docx](./docs/user/Casomira-instalace-Mac.docx) | [docs/user/Casomira-navod-pro-testery.docx](./docs/user/Casomira-navod-pro-testery.docx) |
+| **Word (.docx)** — k poslání testerům | [docs/user/Verdict-instalace-Mac.docx](./docs/user/Verdict-instalace-Mac.docx) | [docs/user/Verdict-navod-pro-testery.docx](./docs/user/Verdict-navod-pro-testery.docx) |
 | Markdown (zdroj v repu) | [docs/user/INSTALACE-MAC.md](./docs/user/INSTALACE-MAC.md) | [docs/user/NAVOD-PRO-TESTERY.md](./docs/user/NAVOD-PRO-TESTERY.md) |
 
 Přegenerovat Word z Markdownu: `npm run docs:word`
@@ -25,8 +25,8 @@ Instalátory najdeš u **[GitHub Releases](https://github.com/Vituhlos/casomira/
 
 | Platforma | Soubor |
 |-----------|--------|
-| Windows | `Casomira-Setup-x.y.z.exe` — NSIS instalátor (Start menu, odinstalace) |
-| macOS | `Casomira-x.y.z-mac-universal.dmg` (Intel + Apple Silicon) |
+| Windows | `Verdict-Setup-x.y.z.exe` — NSIS instalátor (Start menu, odinstalace) |
+| macOS | `Verdict-x.y.z-mac-universal.dmg` (Intel + Apple Silicon) |
 
 Bez release tagu můžeš sestavit lokálně — viz [docs/dev/BUILD.md](./docs/dev/BUILD.md).
 

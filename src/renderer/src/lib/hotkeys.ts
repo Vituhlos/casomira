@@ -17,7 +17,7 @@ export const ALT = isMac ? '⌥' : 'Alt'
 export const SHIFT = isMac ? '⇧' : 'Shift'
 
 /** Custom event „vygeneruj rošt" — App → aktuálně zobrazený RostGrid (bez prop-threadingu). */
-export const HK_GENERATE_ROST = 'casomira:generate-rost'
+export const HK_GENERATE_ROST = 'verdict:generate-rost'
 
 export interface HotkeyItem {
   keys: string[]

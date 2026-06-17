@@ -90,7 +90,7 @@ export function DevKit(): React.JSX.Element {
     <div className="min-h-screen bg-background p-8 font-sans text-[13px] text-foreground">
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">Časomíra DevKit</h1>
+          <h1 className="text-xl font-bold">Verdict DevKit</h1>
           <p className="text-muted">
             Kitchen-sink HeroUI theme — vizuální kontrakt (Fáze 2)
           </p>
@@ -114,7 +114,7 @@ export function DevKit(): React.JSX.Element {
         </div>
       </Section>
 
-      <Section title="Tokeny — app-specific (casomira.css)">
+      <Section title="Tokeny — app-specific (verdict.css)">
         <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
           <Swatch label="medal-gold" cls="bg-medal-gold" />
           <Swatch label="medal-silver" cls="bg-medal-silver" />

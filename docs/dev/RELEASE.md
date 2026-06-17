@@ -1,6 +1,6 @@
 # Release proces
 
-Časomíra je offline Electron desktop aplikace. Release proces proto nestaví
+Verdict je offline Electron desktop aplikace. Release proces proto nestaví
 Docker image ani `/api/health`; důležité jsou instalátory, dohledatelnost buildu
 a diagnostika v aplikaci.
 

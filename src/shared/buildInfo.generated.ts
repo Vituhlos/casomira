@@ -2,12 +2,12 @@
 // Commit this file so local typecheck works; release builds regenerate it.
 
 export const BUILD_INFO = {
-  "name": "casomira",
-  "productName": "Časomíra",
+  "name": "verdict",
+  "productName": "Verdict",
   "version": "0.9.13-beta",
-  "commitSha": "60c06eec6fa6247ba3971a6abbb3f590c12251b9",
-  "shortCommitSha": "60c06ee",
-  "buildDate": "2026-06-16T13:37:36.996Z",
+  "commitSha": "89d90832fadac8aa1e23d274d3972696976b2c77",
+  "shortCommitSha": "89d9083",
+  "buildDate": "2026-06-17T08:45:20.433Z",
   "releaseChannel": "beta",
   "gitRef": "heroui-native",
   "packagedBy": "local"

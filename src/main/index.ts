@@ -49,7 +49,7 @@ process.on('uncaughtException', (err) => {
   logStartup(`uncaughtException: ${e?.stack ?? e?.message ?? String(err)}`)
   try {
     dialog.showErrorBox(
-      'Časomíra — neočekávaná chyba',
+      'Verdict — neočekávaná chyba',
       `${e?.message ?? err}\n\nPodrobnosti: ${join(app.getPath('userData'), 'startup.log')}`
     )
   } catch {
@@ -65,15 +65,15 @@ function setupMacMenu(): void {
     {
       label: app.name,
       submenu: [
-        { role: 'about', label: `O Časomíře` },
+        { role: 'about', label: 'O Verdictu' },
         { type: 'separator' },
         { role: 'services', label: 'Služby' },
         { type: 'separator' },
-        { role: 'hide', label: 'Skrýt Časomíru' },
+        { role: 'hide', label: 'Skrýt Verdict' },
         { role: 'hideOthers', label: 'Skrýt ostatní' },
         { role: 'unhide', label: 'Zobrazit vše' },
         { type: 'separator' },
-        { role: 'quit', label: 'Ukončit Časomíru' }
+        { role: 'quit', label: 'Ukončit Verdict' }
       ]
     },
     {
@@ -120,7 +120,7 @@ function createWindow(): void {
     backgroundColor: useNativeVibrancy ? '#00000000' : '#f4f4f6',
     // macOS: sidebar vibrancy material (bluruje plochu/jiné appky za oknem).
     vibrancy: isMac ? 'sidebar' : undefined,
-    title: 'Časomíra',
+    title: 'Verdict',
     icon: appIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -167,7 +167,7 @@ app.whenReady().then(() => {
 
     // Databázi otevřeme, vytvoříme schéma (migrace) a při prvním běhu naplníme daty.
     // Breadcrumbs okolo otevření DB: kdyby nativní modul spadl, log skončí přesně tady.
-    logStartup('otevírám databázi (better-sqlite3)…')
+    logStartup('otevírám databázi (node:sqlite)…')
     const db = getDb()
     logStartup('databáze otevřena → migrace schématu')
     migrate(db)
@@ -193,7 +193,7 @@ app.whenReady().then(() => {
     const e = err as Error
     logStartup(`CHYBA při startu: ${e?.stack ?? e?.message ?? String(err)}`)
     dialog.showErrorBox(
-      'Časomíra — chyba při spuštění',
+      'Verdict — chyba při spuštění',
       `Aplikaci se nepodařilo spustit.\n\n${e?.message ?? err}\n\n` +
         `Log: ${join(app.getPath('userData'), 'startup.log')}`
     )

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type Theme = 'light' | 'dark'
 
-const STORAGE_KEY = 'casomira:theme'
+const STORAGE_KEY = 'verdict:theme'
 
 function initial(): Theme {
   const saved = localStorage.getItem(STORAGE_KEY)

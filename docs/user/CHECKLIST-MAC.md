@@ -1,9 +1,9 @@
-# Časomíra — checklist pro testera na Macu
+# Verdict — checklist pro testera na Macu
 
 Stručný průvodce pro **první ověření na macOS** — projdi ho na jeden zátah.  
 Obecný návod k appce: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md).
 
-**Co připravit:** stažený `Casomira-x.x.x-mac-universal.dmg` z GitHub Releases. Funguje na Intel i Apple Silicon.
+**Co připravit:** stažený `Verdict-x.x.x-mac-universal.dmg` z GitHub Releases. Funguje na Intel i Apple Silicon.
 
 ---
 
@@ -12,12 +12,12 @@ Obecný návod k appce: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md).
 - Otevři `.dmg`, přetáhni Časomíru do `Aplikace`.
 - V Launchpadu klikni — macOS zobrazí hlášku „appka od neznámého vývojáře" → **zavři dialog**.
 - V Finderu klikni na Časomíru **pravým tlačítkem → Otevřít → Otevřít**.
-- Appka se spustí. V menu baru nahoře vlevo musí stát **„Časomíra"**, ne „Electron".
-- Zkontroluj menu bar: musí být **Časomíra / Upravit / Okno** — žádné „View → Reload" ani „Developer Tools".
+- Appka se spustí. V menu baru nahoře vlevo musí stát **„Verdict"**, ne „Electron".
+- Zkontroluj menu bar: musí být **Verdict / Upravit / Okno** — žádné „View → Reload" ani „Developer Tools".
 
 ## 2. Databáze a první závod
 
-- Appka se otevře bez dotazu na složku (databázi si sama vytvoří v `~/Library/Application Support/Časomíra`).
+- Appka se otevře bez dotazu na složku (databázi si sama vytvoří v `~/Library/Application Support/Verdict`).
 - Klikni **+ Nový závod** → vyplň název, datum, typ RAC → Vytvořit.
 - Kategorie se zobrazí v levém panelu; klikni na libovolnou.
 
@@ -65,7 +65,7 @@ Obecný návod k appce: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md).
 
 - Zavři okno **Stopky** červeným X — pokud jsou nezapsaná měření, appka se zeptá na potvrzení.
 - Zavři **hlavní okno** — appka **neskončí** (zůstane v docku). ✓ Správné chování macOS.
-- `⌘Q` nebo **Časomíra → Ukončit Časomíru** → appka se ukončí.
+- `⌘Q` nebo **Verdict → Ukončit Verdict** → appka se ukončí.
 
 ---
 
@@ -73,9 +73,9 @@ Obecný návod k appce: [NAVOD-PRO-TESTERY.md](./NAVOD-PRO-TESTERY.md).
 
 | Co nahlásit | Co přiložit |
 |---|---|
-| Pád appky při startu nebo za běhu | `~/Library/Application Support/Časomíra/startup.log` |
+| Pád appky při startu nebo za běhu | `~/Library/Application Support/Verdict/startup.log` |
 | Zamrzlé UI nebo nereagující okno | Screenshot + popis kroku, při kterém nastalo |
-| „Electron" místo „Časomíra" v menu | Screenshot menu baru |
+| „Electron" místo „Verdict" v menu | Screenshot menu baru |
 | PDF s chybějícím nebo nečitelným textem | Daný PDF soubor |
 | Cokoli, co nesedí s výsledkem z Excelu | Popis kategorie + co se čekalo vs co appka zobrazila |
 

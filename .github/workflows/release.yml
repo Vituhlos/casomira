@@ -57,7 +57,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.value }}
-          name: Časomíra ${{ steps.tag.outputs.value }}
+          name: Verdict ${{ steps.tag.outputs.value }}
           draft: true
           prerelease: ${{ contains(steps.tag.outputs.value, '-') }}
           body_path: RELEASE_NOTES.md
@@ -74,11 +74,11 @@ jobs:
           - os: windows-latest
             os_label: Windows
             dist_cmd: dist:win
-            artifact_glob: release/Casomira-Setup-*.exe
+            artifact_glob: release/Verdict-Setup-*.exe
           - os: macos-latest
             os_label: macOS
             dist_cmd: dist:mac
-            artifact_glob: release/Casomira-*-mac-universal.dmg
+            artifact_glob: release/Verdict-*-mac-universal.dmg
 
     runs-on: ${{ matrix.os }}
 
