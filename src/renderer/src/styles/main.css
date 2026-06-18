@@ -58,8 +58,18 @@ body,
 /* Segmentové přepínače (kola, jízdy) — NEprůhledný šedý kontejner, ať je vidět
    i na průhledném Mica pozadí (průsvitný by splynul). Pilulka (bílá) vystoupí. */
 .stopky-segment .tabs__list {
+  width: max-content;
   background: color-mix(in srgb, var(--color-foreground) 9%, var(--color-background));
   border-radius: 11px;
+}
+.stopky-segment .tabs__list-container,
+.stopky-segment .tabs__list[data-orientation='horizontal'] {
+  width: max-content;
+  max-width: none;
+}
+.stopky-segment .tabs__tab {
+  width: auto;
+  flex: 0 0 auto;
 }
 .stopky-segment .tabs__tab,
 .stopky-segment .tabs__indicator {
@@ -133,6 +143,26 @@ body,
    `poradi`) — žádný CSS counter, který by nutil O(N) style-recalc při každém
    vložení řádku. */
 
+/* Scroll viewport pro sticky tabulky ve Stopkách. Když sticky header při scrollu
+   vystoupí z původní pozice, clipping musí držet scroll container, ne jen
+   vnitřní HeroUI `.table-root`, jinak se horní rohy změní na hranaté. */
+.stopky-table-viewport {
+  border-radius: min(32px, calc(var(--radius) * 2.5));
+  background: var(--color-surface-secondary);
+  isolation: isolate;
+  overflow: auto;
+  scrollbar-gutter: auto;
+}
+
+.stopky-table-viewport .table-root {
+  min-width: 100%;
+}
+
+.stopky-table-viewport .table__header .table__column {
+  background: var(--color-surface-secondary);
+  background-clip: padding-box;
+}
+
 /* Zebra: sudé řádky jemně tónované (stejný odstín jako jinde v appce). */
 .stopky-cas-tabulka .table__body .table__row:nth-child(even) > * {
   background: color-mix(in srgb, var(--color-foreground) 4%, transparent);
@@ -147,24 +177,59 @@ body,
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
-/* Příjezd banneru „Další jízda" */
-@keyframes stopky-baner-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* Plain ghost buttons v řádcích tabulky — bez React Aria useLayoutEffect overhead.
+   Vizuálně shodné s HeroUI Button variant="ghost", ale žádný nested-update při mountu. */
+.stopky-btn-ghost {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  border-radius: 5px;
+  padding: 0 6px;
+  height: 32px;
+  font-size: 17px;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+@media (hover: hover) {
+  .stopky-btn-ghost:hover {
+    background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
   }
 }
-.stopky-baner {
-  animation: stopky-baner-in 0.22s ease-out;
+.stopky-btn-ghost:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary);
+  border-radius: 5px;
+}
+
+.stopky-btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  padding: 0;
+  flex-shrink: 0;
+}
+@media (hover: hover) {
+  .stopky-btn-icon:hover {
+    background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+}
+.stopky-btn-icon:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stopky-puls,
-  .stopky-baner {
+  .stopky-puls {
     animation: none;
   }
   .stopky-dlazdice:hover {

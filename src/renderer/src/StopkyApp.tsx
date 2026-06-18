@@ -9,10 +9,11 @@ import type {
   RostSlot
 } from '@shared/types'
 import { useTheme } from './hooks/useTheme'
-import { Button, Label, Modal, Switch, Tabs, Toast, toast } from '@heroui/react'
+import { Button, Modal, Switch, Table, Tabs, Toast, toast } from '@heroui/react'
 import { Btn } from './components/ui'
 import { ArrowUpArrowDown, ChevronRight, Moon, Plus, Stopwatch, Sun, TrashBin } from '@gravity-ui/icons'
 import { fmtTime, parseTimeLoose } from './lib/time'
+import { FastHeroTable, type FastHeroColumn } from './components/FastHeroTable'
 import { safeCall } from './lib/api'
 import { profilStopek, zacniMereniZapisu } from './lib/perf'
 
@@ -53,6 +54,11 @@ function timerPayload(k: Kanal): MereniTimerStav {
   return { jizdaId: k.jizdaId, running: k.running, baseMs: k.baseMs, startEpochMs: k.startEpoch }
 }
 
+function odfokusujAktivniOvladac(): void {
+  const el = document.activeElement
+  if (el instanceof HTMLElement && el !== document.body) el.blur()
+}
+
 export function StopkyApp(): React.JSX.Element {
   const { theme, toggle } = useTheme()
   const [kategorie, setKategorie] = useState<Kategorie[]>([])
@@ -67,20 +73,20 @@ export function StopkyApp(): React.JSX.Element {
   const [vybraneKolo, setVybraneKolo] = useState<KoloTyp>('Q1')
   const [vybranaKategorie, setVybranaKategorie] = useState<number | null>(null)
   const [jizdyKola, setJizdyKola] = useState<JizdaKolaRadek[]>([])
-  const [dalsiJizda, setDalsiJizda] = useState<{
-    jizdaId: number
-    label: string
-    koloTyp: KoloTyp
-    kategorieId: number
-  } | null>(null)
   const cisloRefs = useRef<Map<number, HTMLInputElement | null>>(new Map())
   const aktKlikRef = useRef<MereniRadek[]>([])
+  const poradiMapRef = useRef<Map<number, number>>(new Map())
   // Refy s vždy aktuálními daty, ať jsou handlery (zaznamenej, pauza, …) STABILNÍ
   // (useCallback bez závislosti na `kanaly`). Tím se při záznamu času nepřekresluje
   // StopkyPruh ani se nepřepisuje keydown listener.
   const aktRef = useRef<Kanal | null>(null)
   const kanalyRef = useRef<Kanal[]>([])
   const aktivniIdRef = useRef<number | null>(null)
+  const posledniPointerInterakceRef = useRef(false)
+  const vybraneKoloRef = useRef<KoloTyp>('Q1')
+  const vybranaKategorieRef = useRef<number | null>(null)
+  const nactiJizdyRequestRef = useRef(0)
+  const autoOtevreniRequestRef = useRef(0)
   // Mutex — zabrání souběžným IPC zápisům při velmi rychlém double-tapu mezerníku.
   const recordingRef = useRef(false)
   // Refy pro nove/potvrd — keydown listener se nemusí re-registrovat při každém modalu.
@@ -90,10 +96,30 @@ export function StopkyApp(): React.JSX.Element {
   const akt = kanaly.find((k) => k.jizdaId === aktivniId) ?? null
   aktKlikRef.current = akt?.klik ?? []
   aktRef.current = akt
+  // Synchronní update před renderem — FastHeroTable buňky čtou aktuální pořadí přes ref.
+  poradiMapRef.current = new Map(akt?.klik.map((r, i) => [r.poradi_kliku, i + 1]) ?? [])
   kanalyRef.current = kanaly
   aktivniIdRef.current = aktivniId
+  vybraneKoloRef.current = vybraneKolo
+  vybranaKategorieRef.current = vybranaKategorie
   noveRef.current = nove
   potvrdRef.current = potvrd != null
+
+  useEffect(() => {
+    const onPointerDown = (): void => { posledniPointerInterakceRef.current = true }
+    const onKeyDown = (): void => { posledniPointerInterakceRef.current = false }
+    window.addEventListener('pointerdown', onPointerDown, true)
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown, true)
+      window.removeEventListener('keydown', onKeyDown, true)
+    }
+  }, [])
+
+  const odfokusujPoPointerVyberu = useCallback((): void => {
+    if (!posledniPointerInterakceRef.current) return
+    window.requestAnimationFrame(odfokusujAktivniOvladac)
+  }, [])
 
   // Stabilní handlery pro memoizované buňky řádků (CisloInput, CasCell) — díky
   // nim se při záznamu času překreslí jen nový řádek, ne všech 8 existujících.
@@ -212,8 +238,11 @@ export function StopkyApp(): React.JSX.Element {
     const aktivniKanal = full.find((k) => k.jizdaId === aktivni)
     const aktKolo = aktivniKanal?.koloTyp
     const kolo = aktKolo && MERENA_KOLA.includes(aktKolo) ? aktKolo : 'Q1'
+    vybraneKoloRef.current = kolo
     setVybraneKolo(kolo)
-    setVybranaKategorie(aktivniKanal?.kategorieId ?? kats[0]?.id ?? null)
+    const kategorieId = aktivniKanal?.kategorieId ?? kats[0]?.id ?? null
+    vybranaKategorieRef.current = kategorieId
+    setVybranaKategorie(kategorieId)
     // Spolehlivý init mřížky jízd (nezávislý na timingu useEffectu).
     if (zId != null) setJizdyKola(await window.api.mereniJizdyKola(kolo))
     setNove(false)
@@ -225,11 +254,15 @@ export function StopkyApp(): React.JSX.Element {
 
   const nactiJizdyKola = useCallback(
     async (kolo: KoloTyp): Promise<void> => {
+      const requestId = ++nactiJizdyRequestRef.current
       if (zavodId == null) {
         setJizdyKola([])
         return
       }
-      setJizdyKola(await window.api.mereniJizdyKola(kolo))
+      const list = await window.api.mereniJizdyKola(kolo)
+      if (requestId === nactiJizdyRequestRef.current && vybraneKoloRef.current === kolo) {
+        setJizdyKola(list)
+      }
     },
     [zavodId]
   )
@@ -282,7 +315,7 @@ export function StopkyApp(): React.JSX.Element {
 
   // Záznam času: okamžitě zobrazí placeholder (stejný frame jako stisk mezerníku),
   // pak po IPC (~10 ms) nahradí reálným řádkem ze DB. Výsledek: nulová vnímaná latence.
-  // Klíčem řádku je poradi_kliku (stabilní i po swapu placeholder→real) → CasRadek
+  // Klíčem řádku je poradi_kliku (stabilní i po swapu placeholder→real) → řádek
   // přežije bez remountu. Stabilní callback (čte z aktRef) → nepřekresluje StopkyPruh.
   // recordingRef mutex zabrání duplicitním IPC při velmi rychlém double-tapu.
   const zaznamenej = useCallback(async (): Promise<void> => {
@@ -312,7 +345,7 @@ export function StopkyApp(): React.JSX.Element {
     try {
       const real = await window.api.mereniPridej(k.jizdaId, cas)
       perf?.(performance.now())
-      // Non-urgent: swap placeholder→real (poradi_kliku stejné → žádný remount CasRadek).
+      // Non-urgent: swap placeholder→real (poradi_kliku stejné → žádný remount řádku).
       startTransition(() => {
         setKanaly((prev) =>
           prev.map((x) =>
@@ -390,9 +423,10 @@ export function StopkyApp(): React.JSX.Element {
       const editovatelne = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA'
       if (e.code === 'Space' && !editovatelne) {
         e.preventDefault()
-        // Zafokusované tlačítko by jinak na mezerník zareagovalo (klik) —
+        // Zafokusované tlačítko/tab by jinak na mezerník zareagovalo —
         // sebereme mu focus, ať mezerník vždy znamená „záznam / start".
-        if (el?.tagName === 'BUTTON') el.blur()
+        const ovladac = el?.closest('button,[role="button"],[role="tab"]')
+        if (ovladac instanceof HTMLElement) ovladac.blur()
         if (aktRef.current?.running) void zaznamenej()
         else pauza()
       } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !editovatelne) {
@@ -414,7 +448,6 @@ export function StopkyApp(): React.JSX.Element {
       kategorieId: number | null = null
     ): void => {
       setNove(false)
-      setDalsiJizda(null)
       setKanaly((prev) =>
         prev.some((k) => k.jizdaId === jizdaId)
           ? prev
@@ -427,6 +460,19 @@ export function StopkyApp(): React.JSX.Element {
       void window.api.ulozMereniAktivniJizdu(jizdaId)
     },
     []
+  )
+
+  const otevriPrvniNeodjetouJizdu = useCallback(
+    async (kolo: KoloTyp, kategorieId: number): Promise<void> => {
+      if (zavodId == null) return
+      const requestId = ++autoOtevreniRequestRef.current
+      const list = await window.api.mereniJizdyKola(kolo)
+      if (requestId !== autoOtevreniRequestRef.current) return
+      if (vybraneKoloRef.current === kolo) setJizdyKola(list)
+      const jizda = najdiPrvniNeodjetouJizdu(list, kategorieId)
+      if (jizda) zalozMereni(jizda.jizdaId, jizda.label, jizda.koloTyp, jizda.kategorieId)
+    },
+    [zavodId, zalozMereni]
   )
 
   const priradCislo = useCallback(async (row: MereniRadek, raw: string): Promise<boolean> => {
@@ -472,35 +518,78 @@ export function StopkyApp(): React.JSX.Element {
     })
   }, [])
 
-  // Po zápisu nabídne první neodměřenou jízdu (využívá stávající mereniDalsiJizda).
-  const nabidniDalsiJizdu = useCallback(async (): Promise<void> => {
-    const d = await window.api.mereniDalsiJizda()
-    if (!d) {
-      setDalsiJizda(null)
-      return
-    }
-    const list = await window.api.mereniJizdyKola(d.koloTyp)
-    const found = list.find((j) => j.jizdaId === d.jizdaId)
-    setDalsiJizda(
-      found
-        ? {
-            jizdaId: found.jizdaId,
-            label: found.label,
-            koloTyp: found.koloTyp,
-            kategorieId: found.kategorieId
-          }
-        : null
-    )
-  }, [])
+  // FastHeroTable columns — stabilní reference (všechny deps jsou stable callbacks).
+  // Poradi čte z poradiMapRef.current (synchronně aktualizovaný před renderem).
+  // CasCell/CisloInput/akční tlačítka jsou memoizované nebo jednoduché native prvky.
+  const casColumns = useMemo<FastHeroColumn<MereniRadek>[]>(() => [
+    {
+      id: 'poradi',
+      header: '#',
+      cellStyle: { color: T3, fontVariantNumeric: 'tabular-nums', fontSize: 14, padding: '0 14px', height: 48, verticalAlign: 'middle' },
+      render: (row) => `${poradiMapRef.current.get(row.poradi_kliku) ?? 0}.`,
+    },
+    {
+      id: 'cas',
+      header: 'Čas',
+      cellStyle: { padding: '0 14px', height: 48, verticalAlign: 'middle' },
+      render: (row) => <CasCell row={row} onCommit={opravCas} />,
+    },
+    {
+      id: 'cislo',
+      header: 'St. č.',
+      cellStyle: { padding: '0 8px', height: 48, verticalAlign: 'middle' },
+      render: (row) => (
+        <CisloInput row={row} setRef={setRefCb} onCommit={priradCislo} onEnter={focusDalsi} />
+      ),
+    },
+    {
+      id: 'jezdec',
+      header: 'Jezdec',
+      cellStyle: { fontSize: 14.5, padding: '0 14px', height: 48, verticalAlign: 'middle' },
+      render: (row) =>
+        row.jezdec_id != null ? (
+          <span>
+            <b style={{ fontWeight: 600 }}>{row.prijmeni}</b>{' '}
+            <span style={{ color: T2 }}>{row.jmeno}</span>
+          </span>
+        ) : (
+          <span style={{ color: T4 }}>čeká na číslo</span>
+        ),
+    },
+    {
+      id: 'auto',
+      header: 'Auto',
+      cellStyle: { fontSize: 13.5, padding: '0 14px', height: 48, verticalAlign: 'middle', color: T2 },
+      render: (row) =>
+        row.jezdec_id != null && (row.znacka || row.model) ? (
+          [row.znacka, row.model].filter(Boolean).join(' ')
+        ) : (
+          <span style={{ color: T4 }}>—</span>
+        ),
+    },
+    {
+      id: 'smaz',
+      header: '',
+      headerClassName: 'w-[50px]',
+      cellStyle: { padding: '0 8px', height: 48, verticalAlign: 'middle', textAlign: 'right' },
+      render: (row) => (
+        <button type="button" className="stopky-btn-icon" onClick={() => smazCas(row)} aria-label="Smazat čas">
+          <TrashBin />
+        </button>
+      ),
+    },
+  ], [opravCas, priradCislo, focusDalsi, smazCas, setRefCb])
 
   const zapisDoVysledku = useCallback(
     async (jizdaId: number): Promise<void> => {
       await window.api.zapisMereniDoVysledku(jizdaId)
       setPotvrd(null)
-      oznam('Zapsáno do Výsledků — pořadí a body se spočítaly.')
-      await nabidniDalsiJizdu()
+      toast('Zapsáno do Výsledků', {
+        description: 'Pořadí i body jsou přepočítané.',
+        timeout: 5000
+      })
     },
-    [oznam, nabidniDalsiJizdu]
+    []
   )
 
   const zkusZapsat = useCallback(async (): Promise<void> => {
@@ -527,14 +616,22 @@ export function StopkyApp(): React.JSX.Element {
 
   // Stabilní handler výběru kategorie (pro memoizovaný sidebar).
   const vyberKategorii = useCallback((id: number): void => {
+    vybranaKategorieRef.current = id
     setVybranaKategorie(id)
     setNove(false)
-  }, [])
+    void otevriPrvniNeodjetouJizdu(vybraneKoloRef.current, id)
+    odfokusujPoPointerVyberu()
+  }, [otevriPrvniNeodjetouJizdu, odfokusujPoPointerVyberu])
 
   const onVybratKolo = useCallback((kolo: KoloTyp): void => {
+    vybraneKoloRef.current = kolo
     setVybraneKolo(kolo)
+    setJizdyKola([])
     setNove(false)
-  }, [])
+    const kategorieId = vybranaKategorieRef.current
+    if (kategorieId != null) void otevriPrvniNeodjetouJizdu(kolo, kategorieId)
+    odfokusujPoPointerVyberu()
+  }, [otevriPrvniNeodjetouJizdu, odfokusujPoPointerVyberu])
 
   // Stabilní handlery pro memoizovaný StopkyPruh / JizdyVyber (čtou z aktRef).
   const onStartZaznam = useCallback((): void => {
@@ -548,8 +645,11 @@ export function StopkyApp(): React.JSX.Element {
     if (k) setPotvrd({ typ: 'zahodit', jizdaId: k.jizdaId, label: k.label })
   }, [])
   const onVyberJizdy = useCallback(
-    (jz: JizdaKolaRadek): void => zalozMereni(jz.jizdaId, jz.label, jz.koloTyp, jz.kategorieId),
-    [zalozMereni]
+    (jz: JizdaKolaRadek): void => {
+      zalozMereni(jz.jizdaId, jz.label, jz.koloTyp, jz.kategorieId)
+      odfokusujPoPointerVyberu()
+    },
+    [zalozMereni, odfokusujPoPointerVyberu]
   )
 
   // Odvozené hodnoty pro layout — memoizované, ať se identity nemění při
@@ -587,6 +687,42 @@ export function StopkyApp(): React.JSX.Element {
     (akt.kategorieId == null || akt.kategorieId === vybranaKategorie) &&
     (akt.koloTyp == null || akt.koloTyp === vybraneKolo)
 
+  const stopkyNavigace = useMemo<React.ReactNode>(() => (
+    <>
+      <KoloVyber vybraneKolo={vybraneKolo} onVybrat={onVybratKolo} />
+
+      {!nove && jizdyVybrane.length > 0 && (
+        <div
+          style={{
+            width: 1,
+            height: 26,
+            background: 'var(--color-border)',
+            flexShrink: 0
+          }}
+        />
+      )}
+      {!nove && (
+        <JizdyVyber
+          jizdy={jizdyVybrane}
+          aktivniId={aktivniId}
+          merene={mereneSet}
+          bezi={beziSet}
+          onVyber={onVyberJizdy}
+        />
+      )}
+
+      <div style={{ flex: 1 }} />
+      <Btn
+        variant="tertiary"
+        icon={<Plus />}
+        onClick={() => setNove(true)}
+        title="Změřit jinou jízdu (ručně)"
+      >
+        Jiná jízda
+      </Btn>
+    </>
+  ), [aktivniId, beziSet, jizdyVybrane, mereneSet, nove, onVyberJizdy, onVybratKolo, vybraneKolo])
+
   return (
     <div
       style={{
@@ -611,70 +747,24 @@ export function StopkyApp(): React.JSX.Element {
       <div style={{ flex: 1, minWidth: 0, display: 'flex' }}>
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* Navigace: floating panel (neprůhledný, ať je čitelná i na Mica skle) */}
+          {/* Navigace: samostatný panel pro kolo, jízdu a ruční výběr. */}
           <div style={{ padding: '12px 20px 6px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              flexWrap: 'wrap',
-              padding: '8px 14px',
-              background: 'var(--color-background)',
-              border: '0.5px solid var(--color-border)',
-              borderRadius: 14,
-              boxShadow: PANEL_SHADOW
-            }}
-          >
-            <KoloVyber vybraneKolo={vybraneKolo} onVybrat={onVybratKolo} />
-
-            {!nove && jizdyVybrane.length > 0 && (
-              <div
-                style={{
-                  width: 1,
-                  height: 26,
-                  background: 'var(--color-border)',
-                  flexShrink: 0
-                }}
-              />
-            )}
-            {!nove && (
-              <JizdyVyber
-                jizdy={jizdyVybrane}
-                aktivniId={aktivniId}
-                merene={mereneSet}
-                bezi={beziSet}
-                onVyber={onVyberJizdy}
-              />
-            )}
-
-            <div style={{ flex: 1 }} />
-            <Btn
-              variant="tertiary"
-              icon={<Plus />}
-              onClick={() => setNove(true)}
-              title="Změřit jinou jízdu (ručně)"
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                flexWrap: 'wrap',
+                padding: '8px 14px',
+                background: 'var(--color-background)',
+                border: '0.5px solid var(--color-border)',
+                borderRadius: 14,
+                boxShadow: PANEL_SHADOW
+              }}
             >
-              Jiná jízda
-            </Btn>
-          </div>
-          </div>
-
-          {/* Další jízda (po zápisu) — fáze B */}
-          {dalsiJizda && !nove && (
-            <div style={{ padding: '10px 20px 0' }}>
-              <DalsiJizdaBaner
-                label={dalsiJizda.label}
-                onJet={() => {
-                  const d = dalsiJizda
-                  setVybraneKolo(d.koloTyp)
-                  setVybranaKategorie(d.kategorieId)
-                  zalozMereni(d.jizdaId, d.label, d.koloTyp, d.kategorieId)
-                }}
-                onZavri={() => setDalsiJizda(null)}
-              />
+              {stopkyNavigace}
             </div>
-          )}
+          </div>
 
           {nove && (
             <NoveMereni
@@ -686,36 +776,36 @@ export function StopkyApp(): React.JSX.Element {
           )}
 
           <div
-              style={{
-                flex: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '4px 20px 18px',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Měřící oblast nebo výzva k výběru jízdy */}
-              {!akt || !aktSedi ? (
-                <VyberVyzva
-                  maKategorie={vybranaKategorie != null}
-                  maJizdy={jizdyVybrane.length > 0}
-                  kolo={vybraneKolo}
-                />
-              ) : (
-                <div
-                  style={{
-                    flex: 1,
-                    minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: '0.5px solid var(--color-border)',
-                    borderRadius: 16,
-                    background: 'var(--color-background)',
-                    boxShadow: PANEL_SHADOW,
-                    overflow: 'hidden'
-                  }}
-                >
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '4px 20px 18px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Měřící oblast nebo výzva k výběru jízdy */}
+            {!akt || !aktSedi ? (
+              <VyberVyzva
+                maKategorie={vybranaKategorie != null}
+                maJizdy={jizdyVybrane.length > 0}
+                kolo={vybraneKolo}
+              />
+            ) : (
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '0.5px solid var(--color-border)',
+                  borderRadius: 16,
+                  background: 'var(--color-background)',
+                  boxShadow: PANEL_SHADOW,
+                  overflow: 'hidden'
+                }}
+              >
                   {/* Stopky — pruh nad tabulkou. Dostává primitiva (ne celý `akt`
                       objekt), aby memoizace fungovala a záznam času ho nepřekresloval. */}
                   <StopkyPruh
@@ -731,13 +821,15 @@ export function StopkyApp(): React.JSX.Element {
 
                   {/* Tabulka naměřených časů + náhled roštu */}
                   <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                    <div style={{ flex: 1, minWidth: 0, overflowY: 'scroll', padding: '14px 18px' }}>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: '14px 18px', minHeight: 0 }}>
+                      {/* Nadpis je vně scroll containeru — vždy viditelný (HeroUI Table.ScrollContainer pattern) */}
                       <div
                         style={{
                           display: 'flex',
                           alignItems: 'baseline',
                           justifyContent: 'space-between',
-                          padding: '0 2px 8px'
+                          padding: '0 2px 8px',
+                          flexShrink: 0
                         }}
                       >
                         <span style={{ fontSize: 13.5, fontWeight: 620 }}>Naměřené časy</span>
@@ -765,50 +857,28 @@ export function StopkyApp(): React.JSX.Element {
                           Zmáčkni <b>mezerník</b> (nebo velké tlačítko) při průjezdu cílem.
                         </div>
                       ) : (
-                        <Profiler id="stopky-tabulka" onRender={profilStopek}>
-                        {/* Čistá <table> s memoizovanými řádky (CasRadek) — záznam času
-                            přidá JEN nový <tr>, existující React přeskočí (O(1)). Třídy
-                            table__* jsou HeroUI, takže vzhled je identický. Pořadí „1., 2.",
-                            zebra a zvýraznění aktivního řádku řeší CSS (counter / :nth-child
-                            / :focus-within) — viz main.css. */}
-                        <div className="table__scroll-container">
-                        <table className="table__content stopky-cas-tabulka" style={{ width: '100%' }}>
-                          <thead className="table__header sticky top-0 z-10">
-                            <tr>
-                              <th className="table__column" style={{ width: 52 }}>#</th>
-                              <th className="table__column" style={{ width: 134 }}>Čas</th>
-                              <th className="table__column" style={{ width: 116 }}>St. č.</th>
-                              <th className="table__column" style={{ width: 210 }}>Jezdec</th>
-                              <th className="table__column">Auto</th>
-                              <th className="table__column" style={{ width: 50 }} aria-label="Smazat" />
-                            </tr>
-                          </thead>
-                          <tbody className="table__body">
-                            {akt.klik.map((row, i) => (
-                              <CasRadek
-                                key={row.poradi_kliku}
-                                row={row}
-                                poradi={i + 1}
-                                onOpravCas={opravCas}
-                                onPriradCislo={priradCislo}
-                                onEnter={focusDalsi}
-                                onSmaz={smazCas}
-                                setRef={setRefCb}
-                              />
-                            ))}
-                          </tbody>
-                        </table>
+                        <div className="scrollbar stopky-table-viewport" style={tableScrollStyle}>
+                          <Profiler id="stopky-fast-hero-table" onRender={profilStopek}>
+                            <FastHeroTable<MereniRadek>
+                              rows={akt.klik}
+                              columns={casColumns}
+                              getRowKey={(r) => r.poradi_kliku}
+                              variant="primary"
+                              ariaLabel="Naměřené časy"
+                              className="stopky-cas-tabulka"
+                              stickyHeader
+                            />
+                          </Profiler>
                         </div>
-                        </Profiler>
                       )}
                     </div>
 
                     {/* Read-only náhled roštu */}
                     <RostNahled sloty={aktRost} prirazeni={prirazeniRost} />
                   </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1204,6 +1274,16 @@ function stavJizdy(jz: JizdaKolaRadek, aktivniId: number | null, merene: Set<num
   return 'ceka'
 }
 
+function najdiPrvniNeodjetouJizdu(jizdy: JizdaKolaRadek[], kategorieId: number): JizdaKolaRadek | null {
+  const vKategorii = jizdy.filter((j) => j.kategorieId === kategorieId)
+  return (
+    vKategorii.find((j) => !j.maVysledky && j.obsazenoRostem > 0) ??
+    vKategorii.find((j) => !j.maVysledky) ??
+    vKategorii[0] ??
+    null
+  )
+}
+
 // Floating sidebar: hlavička „Stopky" + seznam kategorií + patička s režimem.
 const SidebarKategorie = memo(function SidebarKategorie({
   zavodNazev,
@@ -1311,21 +1391,21 @@ const SidebarKategorie = memo(function SidebarKategorie({
         }}
       >
         <Switch isSelected={dark} onChange={onToggleTheme} size="md">
-          <Switch.Control>
-            <Switch.Thumb>
-              <Switch.Icon>
-                {dark ? (
-                  <Moon className="size-3 text-inherit" />
-                ) : (
-                  <Sun className="size-3 text-inherit" />
-                )}
-              </Switch.Icon>
-            </Switch.Thumb>
-          </Switch.Control>
           <Switch.Content>
-            <Label className="text-sm" style={{ color: T2 }}>
+            <Switch.Control>
+              <Switch.Thumb>
+                <Switch.Icon>
+                  {dark ? (
+                    <Moon className="size-3 text-inherit" />
+                  ) : (
+                    <Sun className="size-3 text-inherit" />
+                  )}
+                </Switch.Icon>
+              </Switch.Thumb>
+            </Switch.Control>
+            <span className="text-sm" style={{ color: T2 }}>
               {dark ? 'Tmavý režim' : 'Světlý režim'}
-            </Label>
+            </span>
           </Switch.Content>
         </Switch>
       </div>
@@ -1348,13 +1428,15 @@ const JizdyVyber = memo(function JizdyVyber({
   onVyber: (jz: JizdaKolaRadek) => void
 }): React.JSX.Element | null {
   const vybrano =
-    aktivniId != null && jizdy.some((j) => j.jizdaId === aktivniId) ? String(aktivniId) : ''
+    aktivniId != null && jizdy.some((j) => j.jizdaId === aktivniId) ? String(aktivniId) : undefined
+  const jizdyKey = jizdy.map((j) => j.jizdaId).join(',')
   if (jizdy.length === 0) return null
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
       <span style={labelMini}>Jízda</span>
-      <div style={{ minWidth: 0, overflowX: 'auto' }}>
+      <div style={{ minWidth: 0, overflowX: 'auto', overflowY: 'hidden' }}>
         <Tabs
+          key={jizdyKey}
           className="stopky-segment w-fit"
           selectedKey={vybrano}
           onSelectionChange={(k) => {
@@ -1567,52 +1649,6 @@ function VyberVyzva({
   )
 }
 
-function DalsiJizdaBaner({
-  label,
-  onJet,
-  onZavri
-}: {
-  label: string
-  onJet: () => void
-  onZavri: () => void
-}): React.JSX.Element {
-  return (
-    <div
-      className="stopky-baner"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '8px 10px 8px 16px',
-        background: 'color-mix(in srgb, var(--color-primary) 7%, var(--color-background))',
-        border: '0.5px solid color-mix(in srgb, var(--color-primary) 22%, transparent)',
-        borderRadius: 12,
-      }}
-    >
-      <span style={{ fontSize: 12, color: T3, flexShrink: 0 }}>Další na řadě</span>
-      <span
-        style={{
-          fontSize: 13.5,
-          fontWeight: 640,
-          color: 'var(--color-foreground)',
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {label}
-      </span>
-      <Btn variant="primary" size="sm" icon={<ChevronRight />} onClick={onJet}>
-        Jet
-      </Btn>
-      <Btn variant="plain" size="sm" onClick={onZavri}>
-        Zavřít
-      </Btn>
-    </div>
-  )
-}
-
 const RostNahled = memo(function RostNahled({
   sloty,
   prirazeni
@@ -1631,7 +1667,9 @@ const RostNahled = memo(function RostNahled({
         flexShrink: 0,
         borderLeft: '0.5px solid var(--color-border)',
         padding: '18px 18px 22px',
-        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
         background: 'var(--color-background)'
       }}
     >
@@ -1640,7 +1678,8 @@ const RostNahled = memo(function RostNahled({
           display: 'flex',
           alignItems: 'baseline',
           justifyContent: 'space-between',
-          padding: '0 2px 8px'
+          padding: '0 2px 8px',
+          flexShrink: 0
         }}
       >
         <span style={{ fontSize: 13.5, fontWeight: 620 }}>Rošt jízdy</span>
@@ -1671,73 +1710,75 @@ const RostNahled = memo(function RostNahled({
           Rošt ještě není nasazen.
         </div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '0.5px solid var(--color-border)' }}>
-              <th style={{ ...rostTh, width: 30 }}>#</th>
-              <th style={{ ...rostTh, width: 46 }}>St.č.</th>
-              <th style={rostTh}>Jezdec</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sloty.map((slot, i) => {
-              const hotovo = slot.jezdec != null && prirazeni.has(slot.jezdec.id)
-              return (
-                <tr
-                  key={slot.pozice}
-                  style={{
-                    opacity: hotovo ? 0.42 : 1,
-                    transition: 'opacity 0.15s',
-                    background: i % 2 ? CARD_ALT : 'transparent'
-                  }}
-                >
-                  <td style={{ ...rostTd, color: T3, fontVariantNumeric: 'tabular-nums' }}>
-                    {slot.pozice}.
-                  </td>
-                  <td style={{ ...rostTd, color: 'var(--color-primary)', fontWeight: 660, fontVariantNumeric: 'tabular-nums', paddingLeft: 0 }}>
-                    {slot.jezdec?.st_cislo ?? <span style={{ color: T4 }}>—</span>}
-                  </td>
-                  <td style={{ ...rostTd, minWidth: 0 }}>
-                    {slot.jezdec ? (
-                      <>
-                        <div
-                          style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontWeight: 580,
-                            color: 'var(--color-foreground)'
-                          }}
-                        >
-                          {slot.jezdec.prijmeni}
-                          {slot.jezdec.jmeno && (
-                            <> <span style={{ color: T2, fontWeight: 440 }}>{slot.jezdec.jmeno}</span></>
-                          )}
-                        </div>
-                        {(slot.jezdec.znacka || slot.jezdec.model) && (
+        <div className="scrollbar stopky-table-viewport" style={tableScrollStyle}>
+        <Table>
+          <Table.Content aria-label="Rošt jízdy" style={{ width: '100%' }}>
+            <Table.Header style={stickyTableHeaderStyle}>
+              <Table.Column isRowHeader style={{ width: 30 }}>#</Table.Column>
+              <Table.Column style={{ width: 46 }}>St.č.</Table.Column>
+              <Table.Column>Jezdec</Table.Column>
+            </Table.Header>
+            <Table.Body>
+              {sloty.map((slot) => {
+                const hotovo = slot.jezdec != null && prirazeni.has(slot.jezdec.id)
+                return (
+                  <Table.Row
+                    key={slot.pozice}
+                    id={slot.pozice}
+                    style={{
+                      opacity: hotovo ? 0.42 : 1,
+                      transition: 'opacity 0.15s'
+                    }}
+                  >
+                    <Table.Cell style={{ ...rostTd, color: T3, fontVariantNumeric: 'tabular-nums' }}>
+                      {slot.pozice}.
+                    </Table.Cell>
+                    <Table.Cell style={{ ...rostTd, color: 'var(--color-primary)', fontWeight: 660, fontVariantNumeric: 'tabular-nums', paddingLeft: 0 }}>
+                      {slot.jezdec?.st_cislo ?? <span style={{ color: T4 }}>—</span>}
+                    </Table.Cell>
+                    <Table.Cell style={{ ...rostTd, minWidth: 0 }}>
+                      {slot.jezdec ? (
+                        <>
                           <div
                             style={{
-                              fontSize: 11,
-                              color: T3,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
-                              marginTop: 2
+                              fontWeight: 580,
+                              color: 'var(--color-foreground)'
                             }}
                           >
-                            {[slot.jezdec.znacka, slot.jezdec.model].filter(Boolean).join(' ')}
+                            {slot.jezdec.prijmeni}
+                            {slot.jezdec.jmeno && (
+                              <> <span style={{ color: T2, fontWeight: 440 }}>{slot.jezdec.jmeno}</span></>
+                            )}
                           </div>
-                        )}
-                      </>
-                    ) : (
-                      <span style={{ color: T4 }}>prázdná pozice</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                          {(slot.jezdec.znacka || slot.jezdec.model) && (
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: T3,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                marginTop: 2
+                              }}
+                            >
+                              {[slot.jezdec.znacka, slot.jezdec.model].filter(Boolean).join(' ')}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: T4 }}>prázdná pozice</span>
+                      )}
+                    </Table.Cell>
+                  </Table.Row>
+                )
+              })}
+            </Table.Body>
+          </Table.Content>
+        </Table>
+        </div>
       )}
     </div>
   )
@@ -1750,15 +1791,7 @@ const rostTd: React.CSSProperties = {
   verticalAlign: 'top'
 }
 
-const rostTh: React.CSSProperties = {
-  padding: '6px 12px',
-  fontSize: 11,
-  fontWeight: 600,
-  color: T3,
-  textAlign: 'left',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em'
-}
+
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
@@ -1769,72 +1802,17 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase' as const
 }
 
-// Jeden řádek tabulky naměřených časů. Memoizovaný podle dat řádku — při záznamu
-// nového času se existující řádky NEPŘEKRESLÍ (drží referenční identitu), takže
-// přidání je O(1) bez ohledu na počet řádků. Pořadí/zebra/aktivní řádek řeší CSS.
-const CasRadek = memo(function CasRadek({
-  row,
-  poradi,
-  onOpravCas,
-  onPriradCislo,
-  onEnter,
-  onSmaz,
-  setRef
-}: {
-  row: MereniRadek
-  poradi: number
-  onOpravCas: (row: MereniRadek, ms: number) => void
-  onPriradCislo: (row: MereniRadek, raw: string) => Promise<boolean>
-  onEnter: (id: number) => void
-  onSmaz: (row: MereniRadek) => void
-  setRef: (id: number, el: HTMLInputElement | null) => void
-}): React.JSX.Element {
-  const assigned = row.jezdec_id != null
-  return (
-    <tr className="table__row">
-      <td
-        className="table__cell"
-        style={{ color: T3, fontVariantNumeric: 'tabular-nums', fontSize: 14, padding: '0 14px', height: 48, verticalAlign: 'middle' }}
-      >
-        {poradi}.
-      </td>
-      <td className="table__cell" style={{ padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
-        <CasCell row={row} onCommit={onOpravCas} />
-      </td>
-      <td className="table__cell" style={{ padding: '0 8px', height: 48, verticalAlign: 'middle' }}>
-        <CisloInput row={row} setRef={setRef} onCommit={onPriradCislo} onEnter={onEnter} />
-      </td>
-      <td className="table__cell" style={{ fontSize: 14.5, padding: '0 14px', height: 48, verticalAlign: 'middle' }}>
-        {assigned ? (
-          <span>
-            <b style={{ fontWeight: 600 }}>{row.prijmeni}</b>{' '}
-            <span style={{ color: T2 }}>{row.jmeno}</span>
-          </span>
-        ) : (
-          <span style={{ color: T4 }}>čeká na číslo</span>
-        )}
-      </td>
-      <td className="table__cell" style={{ fontSize: 13.5, padding: '0 14px', height: 48, verticalAlign: 'middle', color: T2 }}>
-        {assigned && (row.znacka || row.model) ? (
-          [row.znacka, row.model].filter(Boolean).join(' ')
-        ) : (
-          <span style={{ color: T4 }}>—</span>
-        )}
-      </td>
-      <td className="table__cell" style={{ padding: '0 8px', height: 48, verticalAlign: 'middle', textAlign: 'right' }}>
-        <Button
-          variant="ghost"
-          size="sm"
-          isIconOnly
-          onPress={() => onSmaz(row)}
-          aria-label="Smazat čas"
-        >
-          <TrashBin />
-        </Button>
-      </td>
-    </tr>
-  )
-})
+const tableScrollStyle: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflow: 'auto'
+}
+
+const stickyTableHeaderStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 10
+}
 
 const CasCell = memo(function CasCell({
   row,
@@ -1848,14 +1826,14 @@ const CasCell = memo(function CasCell({
   const cas = row.cas_ms
   if (!edit) {
     return (
-      <Button
-        variant="ghost"
-        onPress={() => { setV(fmtTime(cas)); setEdit(true) }}
+      <button
+        type="button"
+        className="stopky-btn-ghost"
+        onClick={() => { setV(fmtTime(cas)); setEdit(true) }}
         aria-label="Upravit čas"
-        style={{ height: 32, minWidth: 'auto', padding: '0 6px', borderRadius: 5, fontSize: 17, fontWeight: 560, fontVariantNumeric: 'tabular-nums' }}
       >
         {fmtTime(cas)}
-      </Button>
+      </button>
     )
   }
   const uloz = (): void => {

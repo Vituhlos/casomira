@@ -14,6 +14,11 @@ Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
 - **Nové Verdict ikony, favicon a logo v aplikaci** — Windows/macOS ikony,
   favicon i světlý/tmavý lockup v sidebaru a seznamu závodů používají nový
   brand. Stejné logo je doplněné i do README.
+- **FastHeroTable pro měřicí tabulku ve Stopkách** — nová tabulka drží vizuální
+  třídy HeroUI, ale obchází React Aria Collection render, kvůli kterému při
+  každém novém čase vznikal druhý React commit. Součástí jsou testy pro DOM
+  strukturu, sticky hlavičku, řazení, klávesovou aktivaci řádku a memoizaci
+  existujících řádků.
 
 ### Změněno
 - **Aplikace se přejmenovává z Časomíry na Verdict** — nový název je v titulcích
@@ -34,10 +39,19 @@ Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
 - **Build a release dokumentace mluví jazykem Verdictu** — README, checklisty,
   macOS instalační návod, testerský návod, CI workflow, issue template a release
   notes používají nové názvy artefaktů a nové odkazy na Word dokumenty.
+- **HeroUI aktualizováno na 3.2.1** — projekt používá novější `@heroui/react`
+  a `@heroui/styles` včetně navazujících React Aria/React Stately balíčků.
+- **Stopky po výběru kategorie nebo kola otevírají první dostupnou neodjetou
+  jízdu** — operátor nemusí po přepnutí znovu hledat nejbližší měřitelnou jízdu;
+  ruční výběr konkrétní jízdy zůstává zachovaný.
+- **Zápis měření do výsledků už nenabízí další jízdu bannerem** — po úspěšném
+  zápisu se zobrazí jen krátký HeroUI toast `Zapsáno do Výsledků`; další jízda
+  se po zápisu automaticky neotevírá.
 
 ### Opraveno
 - **Stopky se už při zápisu času neseknou** — tabulka naměřených časů byla
-  přestavěna tak, že se při každém stisku mezerníku překreslí jen nový řádek
+  přestavěna na `FastHeroTable` a řádková tlačítka už nepoužívají drahé React
+  Aria mount efekty. Při každém stisku mezerníku se překreslí jen nový řádek
   (dřív se přepočítávala celá tabulka, a to dvakrát). Zápis je teď plynulý i
   s desítkami řádků a bez ohledu na to, jak rychle časy naskakují.
 - **Dev režim po rebrandingu najde stará data** — migrace teď kromě produkční
@@ -46,6 +60,15 @@ Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
   naměřené časy.
 - **Okno Stopek už nebliká prázdné** — zobrazí se až s vykresleným obsahem,
   ne jako prázdné okno, které se teprve doplňuje.
+- **Hlavičky tabulek ve Stopkách drží při scrollování** — v naměřených časech i
+  v náhledu roštu zůstávají hlavičky viditelné, tabulky si při scrollu zachovají
+  kulaté rohy a pod sticky hlavičkou neprosvítají řádky.
+- **Přepínače jízd ve Stopkách se po automatickém výběru nerozjíždějí** —
+  aktivní pilulka zůstává na správné jízdě a při jediné jízdě se pod segmentem
+  nezobrazuje zbytečný scrollbar.
+- **Mezerník ve Stopkách po kliknutí na segmenty dál měří čas** — kliknutí na
+  tlačítka, kolo nebo jízdu už nenechá focus v ovladači tak, aby další mezerník
+  omylem aktivoval UI místo startu nebo záznamu stopek.
 
 ## [0.9.13-beta] – 2026-06-16
 
