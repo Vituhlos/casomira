@@ -1582,19 +1582,31 @@ function DalsiJizdaBaner({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        padding: '10px 18px',
-        background: 'color-mix(in srgb, var(--color-primary) 10%, var(--color-background))',
-        borderBottom: '0.5px solid var(--color-border)'
+        gap: 10,
+        padding: '8px 10px 8px 16px',
+        background: 'color-mix(in srgb, var(--color-primary) 7%, var(--color-background))',
+        border: '0.5px solid color-mix(in srgb, var(--color-primary) 22%, transparent)',
+        borderRadius: 12,
       }}
     >
-      <span style={{ fontSize: 13, color: T2 }}>Hotovo. Další na řadě:</span>
-      <b style={{ fontSize: 13.5, fontWeight: 620 }}>{label}</b>
-      <div style={{ flex: 1 }} />
-      <Btn variant="primary" icon={<ChevronRight />} onClick={onJet}>
+      <span style={{ fontSize: 12, color: T3, flexShrink: 0 }}>Další na řadě</span>
+      <span
+        style={{
+          fontSize: 13.5,
+          fontWeight: 640,
+          color: 'var(--color-foreground)',
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+      </span>
+      <Btn variant="primary" size="sm" icon={<ChevronRight />} onClick={onJet}>
         Jet
       </Btn>
-      <Btn variant="plain" onClick={onZavri}>
+      <Btn variant="plain" size="sm" onClick={onZavri}>
         Zavřít
       </Btn>
     </div>
