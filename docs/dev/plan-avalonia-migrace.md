@@ -223,24 +223,28 @@ medaile). **Názvy souborů zachovat identické** (`Q1_rošty.pdf`, …, diakrit
 
 ---
 
-## 8. Otevřené otázky (k rozhodnutí před Fází 1)
+## 8. Rozhodnutá nastavení (bylo otevřené, nyní uzavřeno)
 
-1. **Cesta k DB** — sdílet s Electronem (in-place upgrade), nebo nová cesta +
-   jednorázový import staré DB? *(Doporučení: sdílet, ať uživatel nepřijde o data.)*
-2. **`.xls` vs `.xlsx`** — používají se reálně staré `.xls`? *(→ ExcelDataReader pro jistotu.)*
-3. **PDF parita** — stačí „vizuálně shodné a stejné názvy", nebo musí být
-   pixel-identické? *(Doporučení: vizuálně shodné; pixel-parita je drahá a zbytečná.)*
-4. **Rozsah MVP .NET** — portovat rovnou i fáze 2 funkce (penalizace, stopky,
-   záloha), nebo nejdřív holé MVP a pak zbytek? *(Doporučení: nejdřív Core+MVP
-   obrazovky, stopky a záloha až po paritě jádra.)*
-5. **Souběh** — držet Electron a .NET paralelně do plné parity? *(Doporučení: ano.)*
-6. **Rebranding Casomira → Verdict** — v branchi `heroui-native` je zatím
-   **jen částečný** (jméno produktu nese pouze CI `package-check.yml`:
-   `Verdict-Setup-*.exe`, `Verdict-*-mac-universal.dmg`). `package.json`
-   (`"name": "casomira"`), CLAUDE.md, README i `BACKUP_FORMAT` pořád říkají
-   Casomira/Časomíra. → Vyjasnit: dotáhnout rebrand v Electronu zvlášť, nebo ho
-   provést rovnou v nové .NET verzi? *(Doporučení: .NET projekty pojmenovat
-   `Verdict.*`, ale datový formát `casomira-backup` zachovat kvůli kompatibilitě.)*
+1. **Cesta k DB** → **Shodná s Electronem.**
+   Win: `%AppData%\verdict`, macOS: `~/Library/Application Support/verdict`.
+   .NET to nasměruje přesně tam přes `Environment.SpecialFolder` — uživatel při
+   přechodu na .NET verzi prostě otevře appku a vidí svá existující data.
+
+2. **Excel import** → **ExcelDataReader** (čte `.xls` i `.xlsx`).
+   Uživatel nemůže ovlivnit formát který přinese, takže oba musíme zvládnout.
+
+3. **PDF parita** → **Vizuálně shodné + stejné názvy souborů, klidně čistší typografie.**
+   QuestPDF, ručně napsaný layout, sdílené komponenty (hlavička, zebra tabulka,
+   badge, medaile). Pixel-identické není cíl.
+
+4. **Rozsah MVP** → **Holé MVP první** (startovka, rošty, výsledky, klasifikace,
+   SF/F, celkově, PDF export). Stopky, penalizace a záloha až po paritě jádra.
+
+5. **Souběh s Electronem** → **Neřeší se.** Electron je na jiném branchi,
+   .NET verze je čistý nový start. Jedinou vazbou zůstává cesta k DB (bod 1).
+
+6. **Rebranding** → **Vyřešeno rebasem.** .NET projekty pojmenovány `Verdict.*`.
+   Datový identifikátor `casomira-backup` zachován kvůli čtení starých záloh.
 
 ---
 
