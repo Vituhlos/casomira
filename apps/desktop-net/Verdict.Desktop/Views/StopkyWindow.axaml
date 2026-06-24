@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Verdict.Desktop.ViewModels"
+        xmlns:local="using:Verdict.Desktop.Views"
+        x:Class="Verdict.Desktop.Views.StopkyWindow"
+        x:DataType="vm:StopkyViewModel"
+        Title="Stopky"
+        Width="640" Height="700"
+        MinWidth="500" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+
+  <local:StopkyView DataContext="{Binding}" />
+
+</Window>

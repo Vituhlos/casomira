@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Verdict.Desktop.ViewModels"
+             xmlns:model="using:Verdict.Core.Model"
+             x:Class="Verdict.Desktop.Views.StopkyView"
+             x:DataType="vm:StopkyViewModel">
+
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Space"  Command="{Binding KlikCommand}" />
+    <KeyBinding Gesture="Back"   Command="{Binding VratPosledniCommand}" />
+    <KeyBinding Gesture="Delete" Command="{Binding VratPosledniCommand}" />
+  </UserControl.KeyBindings>
+
+  <Grid RowDefinitions="Auto,*" Margin="16">
+
+    <!-- Horní panel: výběr jízdy + stopky -->
+    <StackPanel Grid.Row="0" Spacing="12">
+
+      <!-- Výběr jízdy -->
+      <Grid ColumnDefinitions="Auto,*">
+        <TextBlock Grid.Column="0" Text="Jízda:" VerticalAlignment="Center"
+                   Margin="0,0,8,0" FontWeight="Medium"/>
+        <ComboBox Grid.Column="1"
+                  ItemsSource="{Binding Jizdy}"
+                  SelectedItem="{Binding SelectedJizda}"
+                  HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="model:JizdaKolaRadek">
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </Grid>
+
+      <!-- Displej a ovládání stopek -->
+      <Border Background="{DynamicResource SurfaceColor}" CornerRadius="8" Padding="20">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+
+          <!-- Elapsed display -->
+          <TextBlock Grid.Row="0" Grid.Column="0"
+                     Text="{Binding ElapsedText}"
+                     FontSize="56" FontWeight="Bold"
+                     FontFamily="Cascadia Code, Consolas, monospace"
+                     VerticalAlignment="Center" />
+
+          <!-- Start/Stop + Reset -->
+          <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical" Spacing="8" VerticalAlignment="Center">
+            <Button Command="{Binding StartStopCommand}"
+                    Classes="primary"
+                    Width="120" Height="44"
+                    HorizontalContentAlignment="Center"
+                    Content="{Binding StartStopLabel}" />
+            <Button Command="{Binding ResetCommand}"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    Content="Reset" />
+          </StackPanel>
+
+          <!-- Klik + Vrátit -->
+          <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+            <Button Grid.Column="0"
+                    Command="{Binding KlikCommand}"
+                    Classes="primary"
+                    Height="60"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    FontSize="18" FontWeight="Bold"
+                    Content="⏱ KLIK  [Mezerník]" />
+            <Button Grid.Column="1"
+                    Command="{Binding VratPosledniCommand}"
+                    Margin="8,0,0,0"
+                    Height="60" Width="120"
+                    HorizontalContentAlignment="Center"
+                    ToolTip.Tip="Vrátit poslední [Backspace]"
+                    Content="↩ Vrátit" />
+          </Grid>
+
+        </Grid>
+      </Border>
+
+      <!-- Status -->
+      <TextBlock Text="{Binding StatusText}"
+                 IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Foreground="{DynamicResource AccentColor}"
+                 FontSize="13" />
+    </StackPanel>
+
+    <!-- Tabulka zaznamů -->
+    <Grid Grid.Row="1" RowDefinitions="*,Auto" Margin="0,12,0,0">
+      <DataGrid Grid.Row="0"
+                ItemsSource="{Binding Zaznamy}"
+                IsReadOnly="False"
+                CanUserReorderColumns="False"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="False"
+                GridLinesVisibility="Horizontal"
+                HeadersVisibility="Column">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="#"
+                              Binding="{Binding Poradí}"
+                              IsReadOnly="True"
+                              Width="40" />
+          <DataGridTextColumn Header="Čas"
+                              Binding="{Binding CasText}"
+                              IsReadOnly="True"
+                              Width="100" />
+          <DataGridTextColumn Header="St.č."
+                              Binding="{Binding StCisloText}"
+                              Width="60" />
+          <DataGridTextColumn Header="Příjmení"
+                              Binding="{Binding Prijmeni}"
+                              IsReadOnly="True"
+                              Width="140" />
+          <DataGridTextColumn Header="Jméno"
+                              Binding="{Binding Jmeno}"
+                              IsReadOnly="True"
+                              Width="110" />
+          <DataGridTextColumn Header="Značka"
+                              Binding="{Binding Znacka}"
+                              IsReadOnly="True"
+                              Width="*" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <!-- Zapsat do výsledků -->
+      <Button Grid.Row="1"
+              Command="{Binding ZapsatDoVysledkuCommand}"
+              IsEnabled="{Binding MaVseStCislo}"
+              Classes="primary"
+              Margin="0,8,0,0"
+              HorizontalAlignment="Right"
+              Content="Zapsat do výsledků" />
+    </Grid>
+
+  </Grid>
+</UserControl>

@@ -13,6 +13,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IRaceService _svc;
     private readonly ImportService _importSvc;
 
+    public event EventHandler<StopkyViewModel>? StopkyOtevrit;
+
     // ── Závod ─────────────────────────────────────────────────────────────────
 
     public ObservableCollection<ZavodInfo> Zavody { get; } = [];
@@ -204,7 +206,11 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OtevritStopky() { }
+    private void OtevritStopky()
+    {
+        if (CurrentZavod is null) return;
+        StopkyOtevrit?.Invoke(this, new StopkyViewModel(_svc, CurrentZavod.Id));
+    }
 
     [RelayCommand]
     private void UlozitPdf() { }

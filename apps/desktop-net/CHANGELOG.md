@@ -1,5 +1,26 @@
 # Changelog — migrace na .NET / Avalonia
 
+## Stopky
+
+### Přidáno
+- **Okno Stopky** otevíraná tlačítkem v toolbaru — pluje nezávisle vedle hlavního okna.
+- **Výběr jízdy** ze všech jízd aktuálního závodu (přes všechny kategorie a kola).
+- **Časomíra** s displejem `mm:ss.s` (aktualizace 100 ms), tlačítko Start/Stop.
+- **Klik** — zaznamená průjezd v čase od startu; klávesová zkratka **Mezerník**,
+  alternativně velké tlačítko v UI.
+- **Vrátit poslední** — smaže poslední záznam; klávesová zkratka **Backspace / Delete**.
+- **Přiřazení st. čísel** — inline editace buňky „St.č." v tabulce zaznamů;
+  po zadání se doplní příjmení/jméno/značka; chybná nebo duplicitní čísla hlásí chybu.
+- **Zapsat do výsledků** — propíše časy (záznamy s přiřazeným jezdcem) do tabulky
+  výsledků dané jízdy a přepočítá pořadí + body; tlačítko aktivní, jakmile mají
+  všechny záznamy přiřazené st. číslo.
+- **Persistence stavu časomíry** v DB tabulce `mereni_timer` — po znovuotevření
+  okna se timer obnoví do uloženého stavu (pozastaveno, celkový čas zachován).
+- Nové metody v `IRaceService` a `RaceService` pro veškerou práci se stopkami
+  (`GetStopkyJizdy`, `GetMereni`, `PridejMereni`, `VratPosledniMereni`,
+   `SetMereniStCislo`, `ZapisMereniDoVysledku`, `GetTimerStav`, `UlozTimerStav`, …).
+
+
 Průběh přepisu Verdictu z Electron/TypeScript na nativní .NET + AvaloniaUI.
 Žije odděleně od kořenového [`CHANGELOG.md`](../../CHANGELOG.md), který sleduje
 vydané verze produkční (Electron) aplikace. Tady se vede přehled o postupu

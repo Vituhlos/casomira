@@ -913,6 +913,182 @@ public sealed class RaceService : IRaceService
         }).ToList();
     }
 
+    // ── Stopky ────────────────────────────────────────────────────────────────
+
+    public IReadOnlyList<JizdaKolaRadek> GetStopkyJizdy(int zavodId)
+    {
+        const string sql = """
+            SELECT jz.id          AS JizdaId,
+                   k.id           AS KategorieId,
+                   k.nazev        AS KatNazev,
+                   ko.typ         AS KoloTyp,
+                   jz.cislo       AS JizdaCislo,
+                   (SELECT COUNT(*) FROM mereni m WHERE m.jizda_id = jz.id) AS PocetKliku,
+                   (SELECT COUNT(*) FROM vysledek v WHERE v.jizda_id = jz.id
+                      AND (v.namereny_cas_ms IS NOT NULL OR v.stav <> 'OK' OR v.poradi IS NOT NULL))
+                   AS MaVysledkyN,
+                   (SELECT COUNT(*) FROM rost_pozice rp WHERE rp.jizda_id = jz.id) AS ObsazenoRostem
+            FROM jizda jz
+            JOIN kolo ko   ON ko.id = jz.kolo_id
+            JOIN kategorie k ON k.id = ko.kategorie_id
+            WHERE k.zavod_id = @ZavodId
+            ORDER BY k.nazev, ko.poradi, jz.cislo
+            """;
+        var rows = _db.Connection.Query<MereniJizdaRow>(sql, new { ZavodId = zavodId }).ToList();
+        return rows.Select(r => new JizdaKolaRadek(
+            r.JizdaId, r.KategorieId, r.KatNazev,
+            Enum.Parse<KoloTyp>(r.KoloTyp),
+            r.JizdaCislo, r.PocetKliku,
+            r.MaVysledkyN > 0, r.ObsazenoRostem,
+            $"{r.KatNazev} · {r.KoloTyp} · {r.JizdaCislo}. jízda")).ToList();
+    }
+
+    public IReadOnlyList<MereniRadek> GetMereni(int jizdaId)
+    {
+        const string sql = """
+            SELECT m.id AS Id, m.jizda_id AS JizdaId, m.poradi_kliku AS PoradiKliku,
+                   m.cas_ms AS CasMs, m.jezdec_id AS JezdecId,
+                   j.st_cislo AS StCislo, j.prijmeni AS Prijmeni, j.jmeno AS Jmeno,
+                   j.znacka AS Znacka, j.model AS Model
+            FROM mereni m
+            LEFT JOIN jezdec j ON j.id = m.jezdec_id
+            WHERE m.jizda_id = @JizdaId
+            ORDER BY m.poradi_kliku
+            """;
+        return _db.Connection.Query<MereniRadek>(sql, new { JizdaId = jizdaId }).ToList();
+    }
+
+    public MereniRadek PridejMereni(int jizdaId, int casMs)
+    {
+        var con = _db.Connection;
+        var zavodId = con.QuerySingle<int>(
+            "SELECT k.zavod_id FROM jizda jz JOIN kolo ko ON ko.id = jz.kolo_id JOIN kategorie k ON k.id = ko.kategorie_id WHERE jz.id = @Id",
+            new { Id = jizdaId });
+        var max = con.QuerySingle<int>(
+            "SELECT COALESCE(MAX(poradi_kliku), 0) FROM mereni WHERE jizda_id = @Id",
+            new { Id = jizdaId });
+        con.Execute(
+            "INSERT INTO mereni (jizda_id, zavod_id, poradi_kliku, cas_ms) VALUES (@J, @Z, @P, @C)",
+            new { J = jizdaId, Z = zavodId, P = max + 1, C = casMs });
+        var newId = (int)con.ExecuteScalar<long>("SELECT last_insert_rowid()");
+        return GetMereni(jizdaId).First(r => r.Id == newId);
+    }
+
+    public void VratPosledniMereni(int jizdaId)
+    {
+        var con = _db.Connection;
+        var id = con.QueryFirstOrDefault<int?>(
+            "SELECT id FROM mereni WHERE jizda_id = @Id ORDER BY poradi_kliku DESC LIMIT 1",
+            new { Id = jizdaId });
+        if (id is not null)
+            con.Execute("DELETE FROM mereni WHERE id = @Id", new { Id = id });
+    }
+
+    public void SmazMereniRadek(int id)
+    {
+        _db.Connection.Execute("DELETE FROM mereni WHERE id = @Id", new { Id = id });
+    }
+
+    public MereniSetCisloResult SetMereniStCislo(int id, int? stCislo)
+    {
+        var con = _db.Connection;
+        if (stCislo is null)
+        {
+            con.Execute("UPDATE mereni SET jezdec_id = NULL WHERE id = @Id", new { Id = id });
+            return new MereniSetCisloResult(true, null);
+        }
+
+        var jizdaId = con.QuerySingle<int>("SELECT jizda_id FROM mereni WHERE id = @Id", new { Id = id });
+        var jezdec = con.QueryFirstOrDefault<Jezdec>(
+            """
+            SELECT j.id AS Id, j.kategorie_id AS KategorieId, j.st_cislo AS StCislo,
+                   j.prijmeni AS Prijmeni, j.jmeno AS Jmeno,
+                   j.znacka AS Znacka, j.model AS Model, j.rok_narozeni AS RokNarozeni, j.los AS Los
+            FROM jezdec j
+            JOIN kategorie k ON k.id = j.kategorie_id
+            JOIN kolo ko ON ko.kategorie_id = k.id
+            JOIN jizda jz ON jz.kolo_id = ko.id
+            WHERE jz.id = @JizdaId AND j.st_cislo = @StCislo
+            LIMIT 1
+            """,
+            new { JizdaId = jizdaId, StCislo = stCislo });
+
+        if (jezdec is null)
+            return new MereniSetCisloResult(false, null);
+
+        var duplicate = con.QueryFirstOrDefault<int?>(
+            "SELECT 1 FROM mereni WHERE jizda_id = @JizdaId AND jezdec_id = @JezdecId AND id <> @Id",
+            new { JizdaId = jizdaId, JezdecId = jezdec.Id, Id = id });
+
+        if (duplicate is not null)
+            return new MereniSetCisloResult(false, jezdec, Duplicitni: true);
+
+        con.Execute("UPDATE mereni SET jezdec_id = @JezdecId WHERE id = @Id",
+            new { JezdecId = jezdec.Id, Id = id });
+        return new MereniSetCisloResult(true, jezdec);
+    }
+
+    public void ZapisMereniDoVysledku(int jizdaId)
+    {
+        var con = _db.Connection;
+        var zavodId = con.QuerySingle<int>(
+            "SELECT k.zavod_id FROM jizda jz JOIN kolo ko ON ko.id = jz.kolo_id JOIN kategorie k ON k.id = ko.kategorie_id WHERE jz.id = @Id",
+            new { Id = jizdaId });
+        var rows = con.Query<MereniZapisRow>(
+            "SELECT cas_ms AS CasMs, jezdec_id AS JezdecId FROM mereni WHERE jizda_id = @J AND zavod_id = @Z AND jezdec_id IS NOT NULL ORDER BY poradi_kliku",
+            new { J = jizdaId, Z = zavodId }).ToList();
+
+        using var tx = con.BeginTransaction();
+        var maxPoz = con.QuerySingle<int>(
+            "SELECT COALESCE(MAX(pozice), 0) FROM rost_pozice WHERE jizda_id = @Id",
+            new { Id = jizdaId }, tx);
+        foreach (var r in rows)
+        {
+            var inRost = con.QueryFirstOrDefault<int?>(
+                "SELECT 1 FROM rost_pozice WHERE jizda_id = @J AND jezdec_id = @JezdecId",
+                new { J = jizdaId, JezdecId = r.JezdecId }, tx);
+            if (inRost is null)
+            {
+                maxPoz++;
+                con.Execute("INSERT INTO rost_pozice (jizda_id, pozice, jezdec_id) VALUES (@J, @P, @JezdecId)",
+                    new { J = jizdaId, P = maxPoz, JezdecId = r.JezdecId }, tx);
+            }
+            con.Execute("INSERT OR IGNORE INTO vysledek (jizda_id, jezdec_id, penalizace_ms, stav) VALUES (@J, @JezdecId, 0, 'OK')",
+                new { J = jizdaId, JezdecId = r.JezdecId }, tx);
+            con.Execute("UPDATE vysledek SET namereny_cas_ms = @Cas, stav = 'OK' WHERE jizda_id = @J AND jezdec_id = @JezdecId",
+                new { Cas = r.CasMs, J = jizdaId, JezdecId = r.JezdecId }, tx);
+        }
+        tx.Commit();
+
+        PrepocitejPoradi(jizdaId);
+    }
+
+    public MereniTimerStav? GetTimerStav(int jizdaId)
+    {
+        return _db.Connection.QueryFirstOrDefault<MereniTimerStav>(
+            "SELECT jizda_id AS JizdaId, running AS Running, base_ms AS BaseMs, start_epoch_ms AS StartEpochMs FROM mereni_timer WHERE jizda_id = @Id",
+            new { Id = jizdaId });
+    }
+
+    public void UlozTimerStav(int jizdaId, int zavodId, bool running, int baseMs, long? startEpochMs)
+    {
+        _db.Connection.Execute(
+            """
+            INSERT INTO mereni_timer (jizda_id, zavod_id, running, base_ms, start_epoch_ms)
+            VALUES (@JizdaId, @ZavodId, @Running, @BaseMs, @StartEpochMs)
+            ON CONFLICT(jizda_id) DO UPDATE SET
+                running = excluded.running,
+                base_ms = excluded.base_ms,
+                start_epoch_ms = excluded.start_epoch_ms
+            """,
+            new { JizdaId = jizdaId, ZavodId = zavodId, Running = running ? 1 : 0, BaseMs = baseMs, StartEpochMs = startEpochMs });
+    }
+
+    public void SmazTimerStav(int jizdaId)
+    {
+        _db.Connection.Execute("DELETE FROM mereni_timer WHERE jizda_id = @Id", new { Id = jizdaId });
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private sealed record RostPoziceRow(
@@ -929,6 +1105,12 @@ public sealed class RaceService : IRaceService
 
     private sealed record VysledekPrepocitejRow(
         int JezdecId, int? CasMs, int PenalizaceMs, string Stav, int? RucniPoradi);
+
+    private sealed record MereniJizdaRow(
+        int JizdaId, int KategorieId, string KatNazev, string KoloTyp,
+        int JizdaCislo, int PocetKliku, int MaVysledkyN, int ObsazenoRostem);
+
+    private sealed record MereniZapisRow(int CasMs, int JezdecId);
 
     private static ZavodInfo Map(ZavodRow r) => new(
         r.Id, r.Nazev, r.Datum, r.Misto,

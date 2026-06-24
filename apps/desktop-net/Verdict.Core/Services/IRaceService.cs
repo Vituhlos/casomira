@@ -48,4 +48,16 @@ public interface IRaceService
     RostNavrh NavrhFinale(int kategorieId);
     RostKolo ZapisRost(int kategorieId, KoloTyp typ, IReadOnlyList<RostZapisJizda> jizdy);
     IReadOnlyList<CelkoveRadek> GetCelkove(int kategorieId);
+
+    // ── Stopky (měření časů) ──────────────────────────────────────────────────
+    IReadOnlyList<JizdaKolaRadek> GetStopkyJizdy(int zavodId);
+    IReadOnlyList<MereniRadek> GetMereni(int jizdaId);
+    MereniRadek PridejMereni(int jizdaId, int casMs);
+    void VratPosledniMereni(int jizdaId);
+    void SmazMereniRadek(int id);
+    MereniSetCisloResult SetMereniStCislo(int id, int? stCislo);
+    void ZapisMereniDoVysledku(int jizdaId);
+    MereniTimerStav? GetTimerStav(int jizdaId);
+    void UlozTimerStav(int jizdaId, int zavodId, bool running, int baseMs, long? startEpochMs);
+    void SmazTimerStav(int jizdaId);
 }
