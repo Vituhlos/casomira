@@ -6,9 +6,7 @@
              x:DataType="vm:StopkyViewModel">
 
   <UserControl.KeyBindings>
-    <KeyBinding Gesture="Space"  Command="{Binding KlikCommand}" />
-    <KeyBinding Gesture="Back"   Command="{Binding VratPosledniCommand}" />
-    <KeyBinding Gesture="Delete" Command="{Binding VratPosledniCommand}" />
+    <KeyBinding Gesture="Space" Command="{Binding KlikCommand}" />
   </UserControl.KeyBindings>
 
   <Grid RowDefinitions="Auto,*" Margin="16">
@@ -72,7 +70,6 @@
                     Margin="8,0,0,0"
                     Height="60" Width="120"
                     HorizontalContentAlignment="Center"
-                    ToolTip.Tip="Vrátit poslední [Backspace]"
                     Content="↩ Vrátit" />
           </Grid>
 
