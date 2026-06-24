@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Verdict.Desktop.ViewModels"
+             x:Class="Verdict.Desktop.Views.KlasifikaceView"
+             x:DataType="vm:KlasifikaceViewModel">
+
+    <DockPanel>
+
+        <!-- Prázdný stav -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Klasifikace je zatím prázdná — nejdřív zadej výsledky kvalifikačních kol."
+                   Margin="16,16,16,8"
+                   FontSize="13"
+                   Opacity="0.7"
+                   IsVisible="{Binding JePrazdne}"/>
+
+        <DataGrid x:Name="Grid"
+                  ItemsSource="{Binding Radky}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  CanUserResizeColumns="True"/>
+
+    </DockPanel>
+
+</UserControl>

@@ -80,6 +80,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 return _startListVm;
             }
 
+            // Klasifikace — sčítá body přes kola; staví se vždy čerstvě, ať odráží
+            // poslední zadané výsledky (Q2: Q1+Q2; Q3: Q1+Q2+Q3). CLAUDE.md §7.
+            if (key is ListKey.ClassQ2 or ListKey.ClassQ3)
+            {
+                var koloTypy = key == ListKey.ClassQ2
+                    ? new[] { KoloTyp.Q1, KoloTyp.Q2 }
+                    : new[] { KoloTyp.Q1, KoloTyp.Q2, KoloTyp.Q3 };
+                return new KlasifikaceViewModel(_svc, katId, koloTypy);
+            }
+
             var koloTyp = key switch
             {
                 ListKey.GridQ1 or ListKey.ResQ1     => KoloTyp.Q1,

@@ -491,6 +491,80 @@ public sealed class RaceService : IRaceService
         }
     }
 
+    // ── Klasifikace ───────────────────────────────────────────────────────────
+
+    // Součet bodů přes jízdy uvedených kol; tiebreak dle lepšího kola (Q3→Q2→Q1).
+    // Bere jen jezdce s losem (skuteční účastníci). CLAUDE.md §7.
+    public IReadOnlyList<KlasifikaceRadek> GetKlasifikace(int kategorieId, IReadOnlyList<KoloTyp> koloTypy)
+    {
+        if (koloTypy.Count == 0) return [];
+
+        var typy = koloTypy.Select(t => t.ToString()).ToArray();
+
+        const string sql = """
+            SELECT v.jezdec_id AS JezdecId, k.typ AS Typ, v.body AS Body
+            FROM vysledek v
+            JOIN jizda jz  ON jz.id = v.jizda_id
+            JOIN kolo k    ON k.id  = jz.kolo_id
+            JOIN jezdec j  ON j.id  = v.jezdec_id
+            WHERE k.kategorie_id = @K AND k.typ IN @Typy AND j.los IS NOT NULL
+            """;
+
+        var rows = _db.Connection
+            .Query<(int JezdecId, string Typ, int? Body)>(sql, new { K = kategorieId, Typy = typy })
+            .ToList();
+
+        var agg = new Dictionary<int, (Dictionary<string, int> PerKolo, int Celkem)>();
+        foreach (var r in rows)
+        {
+            if (!agg.TryGetValue(r.JezdecId, out var e))
+            {
+                e = (new Dictionary<string, int>(), 0);
+            }
+            int b = r.Body ?? 0;
+            e.PerKolo[r.Typ] = (e.PerKolo.TryGetValue(r.Typ, out int prev) ? prev : 0) + b;
+            e.Celkem += b;
+            agg[r.JezdecId] = e;
+        }
+
+        if (agg.Count == 0) return [];
+
+        var ids = agg.Keys.ToArray();
+        var jezdci = _db.Connection
+            .Query<JezdecRow>("""
+                SELECT id, kategorie_id AS KategorieId, st_cislo AS StCislo,
+                       prijmeni, jmeno, znacka, model,
+                       rok_narozeni AS RokNarozeni, los
+                FROM jezdec WHERE id IN @Ids
+                """, new { Ids = ids })
+            .ToDictionary(j => j.Id);
+
+        var list = agg.Select(kv =>
+        {
+            var j = jezdci.GetValueOrDefault(kv.Key);
+            return new
+            {
+                JezdecId = kv.Key,
+                StCislo  = j?.StCislo,
+                Prijmeni = j?.Prijmeni ?? "",
+                Jmeno    = j?.Jmeno ?? "",
+                Los      = j?.Los,
+                kv.Value.PerKolo,
+                kv.Value.Celkem
+            };
+        }).ToList();
+
+        list.Sort((a, b) =>
+        {
+            if (a.Celkem != b.Celkem) return b.Celkem - a.Celkem;
+            return ScoringEngine.TiebreakPerKolo(a.PerKolo, b.PerKolo, typy);
+        });
+
+        return list.Select((r, i) => new KlasifikaceRadek(
+            i + 1, r.JezdecId, r.StCislo, r.Prijmeni, r.Jmeno, r.Los,
+            r.PerKolo, r.Celkem)).ToList();
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private sealed record RostPoziceRow(
