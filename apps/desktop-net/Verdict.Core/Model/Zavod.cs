@@ -23,3 +23,5 @@ public record Kategorie(
     /// <summary>Počet jezdců — dopočítává se, není to sloupec v DB.</summary>
     int Pocet,
     int FinaleVelikost);
+
+public record Kolo(int Id, int KategorieId, KoloTyp Typ, int Poradi);

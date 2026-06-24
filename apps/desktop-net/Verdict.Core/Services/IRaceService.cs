@@ -20,4 +20,21 @@ public interface IRaceService
     int VytvorJezdce(int kategorieId, ParsedJezdec vstup);
     void AktualizujJezdce(JezdecUprava uprava);
     void SmazJezdce(int id);
+
+    // ── Kola + jizdy ──────────────────────────────────────────────────────────
+    Kolo? GetKolo(int kategorieId, KoloTyp typ);
+    int EnsureKolo(int kategorieId, KoloTyp typ);
+    int VytvorJizdu(int koloId);
+    void SmazJizdu(int jizdaId);
+
+    // ── Rošty ─────────────────────────────────────────────────────────────────
+    RostKolo GetRost(int koloId);
+    SetRostResult SetRostPozice(int jizdaId, int pozice, int? stCislo);
+    void SmazRostPozice(int jizdaId, int pozice);
+
+    // ── Výsledky ──────────────────────────────────────────────────────────────
+    VysledekKolo GetVysledky(int koloId);
+    void InicializujVysledky(int koloId);
+    void NastavVysledek(SetVysledekArg arg);
+    void PrepocitejPoradi(int jizdaId);
 }

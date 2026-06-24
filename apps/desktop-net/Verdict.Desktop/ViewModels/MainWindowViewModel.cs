@@ -37,9 +37,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CurrentContent))]
     private FazeTabViewModel? _selectedFaze;
 
-    // ── Obsah — cached ViewModel pro aktuální tab ─────────────────────────────
+    // ── Cached ViewModels pro aktuální tab ────────────────────────────────────
 
     private StartListViewModel? _startListVm;
+    private readonly Dictionary<KoloTyp, RostViewModel>     _rostVms     = new();
+    private readonly Dictionary<KoloTyp, VysledkyViewModel> _vysledkyVms = new();
 
     // ── Breadcrumb ────────────────────────────────────────────────────────────
 
@@ -68,11 +70,51 @@ public partial class MainWindowViewModel : ViewModelBase
                         : "Vyberte kategorii."
                 };
 
-            if (SelectedFaze.Key == ListKey.Start)
+            var key    = SelectedFaze.Key;
+            var katId  = SelectedKategorie.Id;
+
+            if (key == ListKey.Start)
             {
-                if (_startListVm?.KategorieId != SelectedKategorie.Id)
+                if (_startListVm?.KategorieId != katId)
                     _startListVm = new StartListViewModel(_svc, _importSvc, SelectedKategorie.Model);
                 return _startListVm;
+            }
+
+            var koloTyp = key switch
+            {
+                ListKey.GridQ1 or ListKey.ResQ1     => KoloTyp.Q1,
+                ListKey.GridQ2 or ListKey.ResQ2     => KoloTyp.Q2,
+                ListKey.GridQ3 or ListKey.ResQ3     => KoloTyp.Q3,
+                ListKey.SfRost or ListKey.SfRes     => KoloTyp.SF,
+                ListKey.FinalRost or ListKey.FinalRes => KoloTyp.F,
+                _ => (KoloTyp?)null
+            };
+
+            if (koloTyp.HasValue)
+            {
+                bool isRost = key is ListKey.GridQ1 or ListKey.GridQ2 or ListKey.GridQ3
+                                  or ListKey.SfRost or ListKey.FinalRost;
+
+                if (isRost)
+                {
+                    if (!_rostVms.TryGetValue(koloTyp.Value, out var vm))
+                    {
+                        int koloId = _svc.EnsureKolo(katId, koloTyp.Value);
+                        vm = new RostViewModel(_svc, koloId, koloTyp.Value);
+                        _rostVms[koloTyp.Value] = vm;
+                    }
+                    return vm;
+                }
+                else
+                {
+                    if (!_vysledkyVms.TryGetValue(koloTyp.Value, out var vm))
+                    {
+                        int koloId = _svc.EnsureKolo(katId, koloTyp.Value);
+                        vm = new VysledkyViewModel(_svc, koloId, koloTyp.Value);
+                        _vysledkyVms[koloTyp.Value] = vm;
+                    }
+                    return vm;
+                }
             }
 
             return new PlaceholderViewModel
@@ -96,6 +138,8 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedKategorieChanged(KategorieRowViewModel? value)
     {
         _startListVm = null;
+        _rostVms.Clear();
+        _vysledkyVms.Clear();
         FazeTabs.Clear();
         SelectedFaze = null;
         if (value is null || CurrentZavod is null) return;

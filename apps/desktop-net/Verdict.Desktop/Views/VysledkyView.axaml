@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Verdict.Desktop.ViewModels"
+             x:Class="Verdict.Desktop.Views.VysledkyView"
+             x:DataType="vm:VysledkyViewModel">
+
+    <DockPanel>
+
+        <!-- Status bar -->
+        <Border DockPanel.Dock="Top"
+                Padding="12,8"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource BorderColor}"
+                IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding StatusText}"
+                       FontSize="13"
+                       Opacity="0.75"/>
+        </Border>
+
+        <!-- Jizdy -->
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Jizdy}"
+                          Margin="0,4,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:JizdaVysledkyViewModel">
+                        <StackPanel Margin="0,0,0,20">
+
+                            <TextBlock Text="{Binding CisloLabel}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Margin="12,6,12,4"/>
+
+                            <!-- Paste-box -->
+                            <Border Padding="12,4,12,8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBox Text="{Binding PasteText}"
+                                             PlaceholderText="Vložit časy ze schránky (jeden čas na řádek)…"
+                                             AcceptsReturn="True"
+                                             MinWidth="340"
+                                             MaxHeight="80"
+                                             FontSize="12"
+                                             FontFamily="Cascadia Code,Consolas,monospace"/>
+                                    <Button Content="Načíst"
+                                            Command="{Binding NacistCasyCommand}"
+                                            Classes="outline"
+                                            VerticalAlignment="Top"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Výsledky tabulka -->
+                            <DataGrid ItemsSource="{Binding Radky}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="False"
+                                      GridLinesVisibility="Horizontal"
+                                      CanUserResizeColumns="True"
+                                      CellEditEnded="OnVysledekCellEditEnded">
+
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="St.č."   Binding="{Binding StCislo}"  Width="60"  IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Příjmení" Binding="{Binding Prijmeni}" Width="160" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Jméno"   Binding="{Binding Jmeno}"    Width="120" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Čas"     Binding="{Binding CasText}"  Width="105"/>
+                                    <DataGridTextColumn Header="Stav"    Binding="{Binding StavText}" Width="70"/>
+                                    <DataGridTextColumn Header="Pořadí"  Binding="{Binding Poradi}"   Width="72"  IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Body"    Binding="{Binding Body}"     Width="64"  IsReadOnly="True"/>
+                                </DataGrid.Columns>
+
+                            </DataGrid>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+    </DockPanel>
+
+</UserControl>
