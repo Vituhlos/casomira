@@ -12,6 +12,10 @@
                 BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource BorderColor}">
             <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{Binding NavrhLabel}"
+                        Command="{Binding NavrhnoutCommand}"
+                        IsVisible="{Binding MuzeNavrhnout}"
+                        Classes="primary"/>
                 <Button Content="＋ Přidat jízdu"
                         Command="{Binding PridatJizduCommand}"
                         Classes="outline"/>

@@ -40,4 +40,11 @@ public interface IRaceService
 
     // ── Klasifikace ───────────────────────────────────────────────────────────
     IReadOnlyList<KlasifikaceRadek> GetKlasifikace(int kategorieId, IReadOnlyList<KoloTyp> koloTypy);
+
+    // ── Závěr závodu (SF / Finále / Celkově) ──────────────────────────────────
+    ZaverStav GetZaverStav(int kategorieId);
+    RostNavrh NavrhSF(int kategorieId);
+    RostNavrh NavrhFinale(int kategorieId);
+    RostKolo ZapisRost(int kategorieId, KoloTyp typ, IReadOnlyList<RostZapisJizda> jizdy);
+    IReadOnlyList<CelkoveRadek> GetCelkove(int kategorieId);
 }

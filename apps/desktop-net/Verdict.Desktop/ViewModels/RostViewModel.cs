@@ -9,20 +9,29 @@ namespace Verdict.Desktop.ViewModels;
 public partial class RostViewModel : ViewModelBase
 {
     private readonly IRaceService _svc;
-    private readonly int _koloId;
+    private readonly int _kategorieId;
+    private int _koloId;
 
     public KoloTyp KoloTyp { get; }
+
+    /// <summary>Automatické nasazení dává smysl jen pro SF a Finále (z klasifikace).</summary>
+    public bool MuzeNavrhnout => KoloTyp is KoloTyp.SF or KoloTyp.F;
+
+    public string NavrhLabel => KoloTyp == KoloTyp.SF
+        ? "Navrhnout semifinále"
+        : "Navrhnout finále";
 
     public ObservableCollection<RostJizdaViewModel> Jizdy { get; } = [];
 
     [ObservableProperty] private RostJizdaViewModel? _selectedJizda;
     [ObservableProperty] private string? _statusText;
 
-    public RostViewModel(IRaceService svc, int koloId, KoloTyp koloTyp)
+    public RostViewModel(IRaceService svc, int kategorieId, int koloId, KoloTyp koloTyp)
     {
-        _svc    = svc;
-        _koloId = koloId;
-        KoloTyp = koloTyp;
+        _svc         = svc;
+        _kategorieId = kategorieId;
+        _koloId      = koloId;
+        KoloTyp      = koloTyp;
         Nacti();
     }
 
@@ -50,6 +59,32 @@ public partial class RostViewModel : ViewModelBase
         _svc.SmazJizdu(jizda.Id);
         Jizdy.Remove(jizda);
         StatusText = null;
+    }
+
+    [RelayCommand]
+    private void Navrhnout()
+    {
+        var navrh = KoloTyp == KoloTyp.SF
+            ? _svc.NavrhSF(_kategorieId)
+            : _svc.NavrhFinale(_kategorieId);
+
+        if (!navrh.Ok)
+        {
+            StatusText = navrh.Chyba;
+            return;
+        }
+
+        var zapis = navrh.Jizdy
+            .Select(j => new RostZapisJizda(j.Cislo, j.Jezdci.Select(jz => jz.Id).ToList()))
+            .ToList();
+
+        _svc.ZapisRost(_kategorieId, KoloTyp, zapis);
+        Nacti();
+
+        int pocet = navrh.Jizdy.Sum(j => j.Jezdci.Count);
+        StatusText = KoloTyp == KoloTyp.SF
+            ? $"Semifinále nasazeno: {pocet} jezdců ve 2 jízdách."
+            : $"Finále nasazeno: {pocet} jezdců.";
     }
 
     public void OnSlotStCisloChanged(RostJizdaViewModel jizda, RostSlotViewModel slot)

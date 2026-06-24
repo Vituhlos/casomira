@@ -90,6 +90,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 return new KlasifikaceViewModel(_svc, katId, koloTypy);
             }
 
+            // Celkové výsledky — řídí je finále; staví se vždy čerstvě. CLAUDE.md §9.
+            if (key == ListKey.Overall)
+                return new CelkoveViewModel(_svc, katId);
+
             var koloTyp = key switch
             {
                 ListKey.GridQ1 or ListKey.ResQ1     => KoloTyp.Q1,
@@ -110,7 +114,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     if (!_rostVms.TryGetValue(koloTyp.Value, out var vm))
                     {
                         int koloId = _svc.EnsureKolo(katId, koloTyp.Value);
-                        vm = new RostViewModel(_svc, koloId, koloTyp.Value);
+                        vm = new RostViewModel(_svc, katId, koloId, koloTyp.Value);
                         _rostVms[koloTyp.Value] = vm;
                     }
                     return vm;

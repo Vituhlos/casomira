@@ -565,6 +565,253 @@ public sealed class RaceService : IRaceService
             r.PerKolo, r.Celkem)).ToList();
     }
 
+    // ── Závěr závodu (SF / Finále / Celkově) ──────────────────────────────────
+
+    // Kvalifikovaní jezdci seřazení dle Klasifikace po Q3 (nejlepší první).
+    private List<int> KvalifikovaniPoradi(int kategorieId)
+    {
+        const string sql = """
+            SELECT v.jezdec_id AS JezdecId,
+                   SUM(CASE WHEN v.stav = 'OK' AND v.namereny_cas_ms IS NOT NULL THEN 1 ELSE 0 END) AS Dokoncil,
+                   SUM(CASE WHEN v.stav IN ('OK','DNF') THEN 1 ELSE 0 END) AS Odstartoval
+            FROM vysledek v
+            JOIN jizda jz ON jz.id = v.jizda_id
+            JOIN kolo k   ON k.id  = jz.kolo_id
+            WHERE k.kategorie_id = @K AND k.typ IN ('Q1','Q2','Q3')
+            GROUP BY v.jezdec_id
+            """;
+        var stats = _db.Connection
+            .Query<(int JezdecId, int Dokoncil, int Odstartoval)>(sql, new { K = kategorieId })
+            .ToList();
+
+        var kval = stats
+            .Where(s => ZaverEngine.JeKvalifikovan(s.Dokoncil, s.Odstartoval))
+            .Select(s => s.JezdecId)
+            .ToHashSet();
+
+        return GetKlasifikace(kategorieId, [KoloTyp.Q1, KoloTyp.Q2, KoloTyp.Q3])
+            .Where(r => kval.Contains(r.JezdecId))
+            .Select(r => r.JezdecId)
+            .ToList();
+    }
+
+    private bool MaJizdy(int kategorieId, KoloTyp typ)
+    {
+        var kolo = GetKolo(kategorieId, typ);
+        if (kolo is null) return false;
+        return _db.Connection.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM jizda WHERE kolo_id = @K", new { K = kolo.Id }) > 0;
+    }
+
+    private bool RostObsazen(int kategorieId, KoloTyp typ)
+    {
+        var kolo = GetKolo(kategorieId, typ);
+        if (kolo is null) return false;
+        return _db.Connection.ExecuteScalar<int>("""
+            SELECT COUNT(*) FROM rost_pozice rp
+            JOIN jizda jz ON jz.id = rp.jizda_id
+            WHERE jz.kolo_id = @K
+            """, new { K = kolo.Id }) > 0;
+    }
+
+    private Jezdec? NajdiJezdce(int id)
+    {
+        var r = _db.Connection.QueryFirstOrDefault<JezdecRow>("""
+            SELECT id, kategorie_id AS KategorieId, st_cislo AS StCislo,
+                   prijmeni, jmeno, znacka, model,
+                   rok_narozeni AS RokNarozeni, los
+            FROM jezdec WHERE id = @Id
+            """, new { Id = id });
+        return r is null ? null : new Jezdec(r.Id, r.KategorieId, r.StCislo,
+            r.Prijmeni, r.Jmeno, r.Znacka, r.Model, r.RokNarozeni, r.Los);
+    }
+
+    public ZaverStav GetZaverStav(int kategorieId)
+    {
+        var kval = KvalifikovaniPoradi(kategorieId);
+        int finaleVelikost = _db.Connection.ExecuteScalar<int>(
+            "SELECT finale_velikost FROM kategorie WHERE id = @K", new { K = kategorieId });
+
+        return new ZaverStav(
+            Kvalifikovani: kval.Count,
+            PrahSF: ZaverEngine.PrahSF,
+            SfSeKona: kval.Count >= ZaverEngine.PrahSF,
+            SfHotovo: MaJizdy(kategorieId, KoloTyp.SF),
+            FinaleHotovo: MaJizdy(kategorieId, KoloTyp.F),
+            FinaleVelikost: finaleVelikost);
+    }
+
+    public RostNavrh NavrhSF(int kategorieId)
+    {
+        var kval = KvalifikovaniPoradi(kategorieId);
+        bool obsazeno = RostObsazen(kategorieId, KoloTyp.SF);
+
+        if (kval.Count < ZaverEngine.PrahSF)
+            return new RostNavrh(false,
+                $"Semifinále se nekoná — jen {kval.Count} kvalifikovaných (potřeba {ZaverEngine.PrahSF}). Jeď rovnou finále.",
+                obsazeno, [], 0, 0, 0);
+
+        var (heat1, heat2) = ZaverEngine.NasazSF(kval);
+
+        List<Jezdec> ToJezdci(IEnumerable<int> ids) =>
+            ids.Select(NajdiJezdce).Where(j => j is not null).Select(j => j!).ToList();
+
+        return new RostNavrh(true, null, obsazeno,
+            [new RostNavrhJizda(1, ToJezdci(heat1)), new RostNavrhJizda(2, ToJezdci(heat2))],
+            2, 2, 2);
+    }
+
+    public RostNavrh NavrhFinale(int kategorieId)
+    {
+        var stav = GetZaverStav(kategorieId);
+        int n = stav.FinaleVelikost;
+        bool obsazeno = RostObsazen(kategorieId, KoloTyp.F);
+        const int maxNahradnici = 5;
+
+        RostNavrh Chyba(string msg) => new(false, msg, obsazeno, [], 0, 0, 0);
+
+        RostNavrh Jizda(IReadOnlyList<int> ids, IReadOnlyList<int> nahradniciIds)
+        {
+            var vsichni = ids.Concat(nahradniciIds.Take(maxNahradnici))
+                .Select(NajdiJezdce).Where(j => j is not null).Select(j => j!).ToList();
+            return new RostNavrh(true, null, obsazeno,
+                [new RostNavrhJizda(1, vsichni)], 1, 1, 1, n);
+        }
+
+        if (stav.SfSeKona)
+        {
+            if (!stav.SfHotovo) return Chyba("Nejdřív vygeneruj semifinále (záložka Semifinále).");
+
+            var sfKolo = GetKolo(kategorieId, KoloTyp.SF)!;
+            var sfJizdy = _db.Connection
+                .Query<(int Id, int Cislo)>(
+                    "SELECT id, cislo FROM jizda WHERE kolo_id = @K ORDER BY cislo", new { K = sfKolo.Id })
+                .ToList();
+
+            List<(int JezdecId, int? Poradi)> PoradiJizdy(int jizdaId) =>
+                _db.Connection.Query<(int JezdecId, int? Poradi)>(
+                    "SELECT jezdec_id, poradi FROM vysledek WHERE jizda_id = @J ORDER BY (poradi IS NULL), poradi",
+                    new { J = jizdaId }).ToList();
+
+            var h1 = sfJizdy.Count > 0 ? PoradiJizdy(sfJizdy[0].Id) : [];
+            var h2 = sfJizdy.Count > 1 ? PoradiJizdy(sfJizdy[1].Id) : [];
+
+            if (!h1.Concat(h2).Any(r => r.Poradi is not null))
+                return Chyba("Nejdřív zadej výsledky semifinále.");
+
+            int naJizdu = n / 2;  // 8 → 4, 10 → 5
+            var postup1 = h1.Take(naJizdu).Select(r => r.JezdecId).ToList();
+            var postup2 = h2.Take(naJizdu).Select(r => r.JezdecId).ToList();
+
+            var bodyQ3 = GetKlasifikace(kategorieId, [KoloTyp.Q1, KoloTyp.Q2, KoloTyp.Q3])
+                .ToDictionary(r => r.JezdecId, r => r.Celkem);
+
+            var finalisteIds = ZaverEngine.NasazFinaleZeSF(postup1, postup2, bodyQ3);
+            var finalisteSet = finalisteIds.ToHashSet();
+
+            var sfJezdci = h1.Concat(h2).Select(r => r.JezdecId).ToList();
+            var nepostupujiciSF = sfJezdci.Where(id => !finalisteSet.Contains(id)).ToList();
+            var sfSet = sfJezdci.ToHashSet();
+            var zbyliQ3 = KvalifikovaniPoradi(kategorieId)
+                .Where(id => !finalisteSet.Contains(id) && !sfSet.Contains(id)).ToList();
+            var nahradniciIds = nepostupujiciSF.Concat(zbyliQ3).Distinct().ToList();
+
+            return Jizda(finalisteIds, nahradniciIds);
+        }
+
+        var kval = KvalifikovaniPoradi(kategorieId);
+        if (kval.Count == 0) return Chyba("Nejsou kvalifikovaní jezdci — zadej výsledky kvalifikace.");
+        return Jizda(kval.Take(n).ToList(), kval.Skip(n).ToList());
+    }
+
+    public RostKolo ZapisRost(int kategorieId, KoloTyp typ, IReadOnlyList<RostZapisJizda> jizdy)
+    {
+        int koloId = EnsureKolo(kategorieId, typ);
+        int potreba = Math.Max(1, jizdy.Count);
+
+        using var tx = _db.Connection.BeginTransaction();
+        try
+        {
+            int mam = _db.Connection.ExecuteScalar<int>(
+                "SELECT COUNT(*) FROM jizda WHERE kolo_id = @K", new { K = koloId }, tx);
+            for (int c = mam + 1; c <= potreba; c++)
+                _db.Connection.Execute("INSERT INTO jizda (kolo_id, cislo) VALUES (@K, @C)",
+                    new { K = koloId, C = c }, tx);
+            _db.Connection.Execute("DELETE FROM jizda WHERE kolo_id = @K AND cislo > @P",
+                new { K = koloId, P = potreba }, tx);
+
+            var jizdyDb = _db.Connection
+                .Query<(int Id, int Cislo)>(
+                    "SELECT id, cislo FROM jizda WHERE kolo_id = @K ORDER BY cislo", new { K = koloId }, tx)
+                .ToDictionary(j => j.Cislo, j => j.Id);
+
+            foreach (var jid in jizdyDb.Values)
+                _db.Connection.Execute("DELETE FROM rost_pozice WHERE jizda_id = @J", new { J = jid }, tx);
+
+            foreach (var jz in jizdy)
+            {
+                if (!jizdyDb.TryGetValue(jz.Cislo, out int jizdaId)) continue;
+                // Finále má až 10 míst v jedné jízdě, proto neořezáváme na 8.
+                var ids = jz.JezdecIds.Take(16).ToList();
+                for (int i = 0; i < ids.Count; i++)
+                    _db.Connection.Execute(
+                        "INSERT INTO rost_pozice (jizda_id, pozice, jezdec_id) VALUES (@J, @P, @Id)",
+                        new { J = jizdaId, P = i + 1, Id = ids[i] }, tx);
+            }
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+
+        return GetRost(koloId);
+    }
+
+    // Celkové výsledky (§9). Pořadí řídí finále, body se nepřičítají (Bq = body po Q3).
+    public IReadOnlyList<CelkoveRadek> GetCelkove(int kategorieId)
+    {
+        var klas = GetKlasifikace(kategorieId, [KoloTyp.Q1, KoloTyp.Q2, KoloTyp.Q3]);
+
+        Dictionary<int, int> PoradiKola(KoloTyp typ)
+        {
+            var kolo = GetKolo(kategorieId, typ);
+            var m = new Dictionary<int, int>();
+            if (kolo is null) return m;
+            var rows = _db.Connection.Query<(int JezdecId, int? Poradi)>("""
+                SELECT v.jezdec_id AS JezdecId, v.poradi AS Poradi
+                FROM vysledek v JOIN jizda jz ON jz.id = v.jizda_id
+                WHERE jz.kolo_id = @K
+                """, new { K = kolo.Id });
+            foreach (var r in rows)
+                if (r.Poradi is not null) m[r.JezdecId] = r.Poradi.Value;
+            return m;
+        }
+
+        var psfMap = PoradiKola(KoloTyp.SF);
+        var pfMap  = PoradiKola(KoloTyp.F);
+
+        var vstupy = klas.Select((r, i) => new CelkovyVstup(
+            r.JezdecId,
+            Pq: i + 1,
+            Psf: psfMap.TryGetValue(r.JezdecId, out int psf) ? psf : null,
+            Pf: pfMap.TryGetValue(r.JezdecId, out int pf) ? pf : null,
+            Bq: r.Celkem)).ToList();
+
+        var info  = klas.ToDictionary(r => r.JezdecId);
+        var byId  = vstupy.ToDictionary(v => v.JezdecId);
+
+        return ZaverEngine.CelkovePoradi(vstupy).Select((id, i) =>
+        {
+            var v = byId[id];
+            var j = info[id];
+            return new CelkoveRadek(i + 1, id, j.StCislo, j.Prijmeni, j.Jmeno,
+                v.Pq, v.Psf, v.Pf, v.Bq);
+        }).ToList();
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private sealed record RostPoziceRow(

@@ -9,6 +9,22 @@ fáze složí do hlavního changelogu jako jedno vydání.
 Formát dle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), nejnovější
 fáze nahoře. Plán migrace: [`docs/dev/plan-avalonia-migrace.md`](../../docs/dev/plan-avalonia-migrace.md).
 
+## Fáze 6 — Semifinále, Finále a Celkové výsledky
+
+### Přidáno
+- **Kvalifikace do závěru** — jezdec postupuje, má-li aspoň jednu Q jízdu
+  kompletní (dojel s časem) a zároveň aspoň dvě, do kterých nastoupil
+  (OK/DNF; DNS a DQ se nepočítají). CLAUDE.md §8.
+- **Automatické nasazení semifinále** — z Klasifikace po Q3 jdou liché pozice
+  do 1. jízdy, sudé do 2. (max 16 jezdců). Tlačítkem „Navrhnout semifinále".
+- **Automatické nasazení finále** — z postupujících SF (spárováno dle bodů po
+  Q3), nebo při < 12 kvalifikovaných rovnou prvních N z Klasifikace po Q3;
+  velikost finále 8/10. Doplní i náhradníky.
+- **Celkové výsledky** — pořadí řídí finále (nesčítá body): finalisté dle
+  finále, za nimi nepostupující ze semifinále, pak zbytek dle Q3. CLAUDE.md §9.
+- 11 unit testů závěru (port z `kvalifikace.test.ts` + scénáře nasazení a
+  celkového pořadí).
+
 ## Fáze 5 — Klasifikace po Q2/Q3 + tiebreaky
 
 ### Přidáno
