@@ -11,6 +11,7 @@ namespace Verdict.Desktop.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IRaceService _svc;
+    private readonly ImportService _importSvc;
 
     // ── Závod ─────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CurrentContent))]
     private FazeTabViewModel? _selectedFaze;
 
+    // ── Obsah — cached ViewModel pro aktuální tab ─────────────────────────────
+
+    private StartListViewModel? _startListVm;
+
     // ── Breadcrumb ────────────────────────────────────────────────────────────
 
     public string Breadcrumb
@@ -44,7 +49,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (CurrentZavod is null) return "Verdict";
             if (SelectedKategorie is null) return CurrentZavod.Nazev;
-            if (SelectedFaze is null)    return $"{SelectedKategorie.Nazev}";
+            if (SelectedFaze is null) return SelectedKategorie.Nazev;
             return $"{SelectedKategorie.Nazev}  →  {SelectedFaze.Label}";
         }
     }
@@ -62,6 +67,14 @@ public partial class MainWindowViewModel : ViewModelBase
                         ? "Vyberte nebo vytvořte závod."
                         : "Vyberte kategorii."
                 };
+
+            if (SelectedFaze.Key == ListKey.Start)
+            {
+                if (_startListVm?.KategorieId != SelectedKategorie.Id)
+                    _startListVm = new StartListViewModel(_svc, _importSvc, SelectedKategorie.Model);
+                return _startListVm;
+            }
+
             return new PlaceholderViewModel
             {
                 Message = $"{SelectedKategorie.Nazev}  —  {SelectedFaze.Label}"
@@ -71,9 +84,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // ── Konstruktor ───────────────────────────────────────────────────────────
 
-    public MainWindowViewModel(IRaceService svc)
+    public MainWindowViewModel(IRaceService svc, ImportService importSvc)
     {
-        _svc = svc;
+        _svc       = svc;
+        _importSvc = importSvc;
         NactiZavod();
     }
 
@@ -81,6 +95,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedKategorieChanged(KategorieRowViewModel? value)
     {
+        _startListVm = null;
         FazeTabs.Clear();
         SelectedFaze = null;
         if (value is null || CurrentZavod is null) return;

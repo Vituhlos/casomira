@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Verdict.Desktop.ViewModels"
+             x:Class="Verdict.Desktop.Views.StartListView"
+             x:DataType="vm:StartListViewModel">
+
+    <DockPanel>
+
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top"
+                Padding="12,8"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource BorderColor}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="＋ Přidat jezdce"
+                        Command="{Binding PridatJezdceCommand}"
+                        Classes="outline"/>
+                <Button Content="Smazat"
+                        Command="{Binding SmazatJezdceCommand}"
+                        CommandParameter="{Binding SelectedJezdec}"
+                        IsEnabled="{Binding SelectedJezdec, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        Classes="outline"/>
+                <Separator Width="1" Background="{DynamicResource BorderColor}" Margin="4,0"/>
+                <Button x:Name="ImportButton"
+                        Content="Importovat Excel…"
+                        Classes="outline"
+                        Click="OnImportClick"/>
+                <TextBlock Text="{Binding StatusText}"
+                           VerticalAlignment="Center"
+                           FontSize="13"
+                           Opacity="0.75"
+                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tabulka jezdců -->
+        <DataGrid x:Name="Grid"
+                  ItemsSource="{Binding Jezdci}"
+                  SelectedItem="{Binding SelectedJezdec}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="False"
+                  GridLinesVisibility="Horizontal"
+                  CellEditEnded="OnCellEditEnded">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Los"      Binding="{Binding LosText}"      Width="70"/>
+                <DataGridTextColumn Header="St.č."    Binding="{Binding StCisloText}"   Width="70"/>
+                <DataGridTextColumn Header="Příjmení" Binding="{Binding Prijmeni}"      Width="170"/>
+                <DataGridTextColumn Header="Jméno"    Binding="{Binding Jmeno}"         Width="130"/>
+                <DataGridTextColumn Header="Značka"   Binding="{Binding Znacka}"        Width="130"/>
+                <DataGridTextColumn Header="Model"    Binding="{Binding Model}"         Width="150"/>
+            </DataGrid.Columns>
+
+        </DataGrid>
+
+    </DockPanel>
+
+</UserControl>

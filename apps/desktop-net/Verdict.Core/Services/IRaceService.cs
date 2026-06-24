@@ -14,4 +14,10 @@ public interface IRaceService
     // ── Kategorie ─────────────────────────────────────────────────────────────
     IReadOnlyList<Kategorie> GetKategorie(int zavodId);
     int VytvorKategorii(int zavodId, KategorieVstup vstup);
+
+    // ── Jezdci ────────────────────────────────────────────────────────────────
+    IReadOnlyList<Jezdec> GetJezdci(int kategorieId);
+    int VytvorJezdce(int kategorieId, ParsedJezdec vstup);
+    void AktualizujJezdce(JezdecUprava uprava);
+    void SmazJezdce(int id);
 }

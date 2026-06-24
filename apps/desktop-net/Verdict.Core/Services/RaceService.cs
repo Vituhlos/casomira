@@ -20,6 +20,11 @@ public sealed class RaceService : IRaceService
         int Id, int ZavodId, string Nazev, string Ruleset,
         int Pocet, int FinaleVelikost);
 
+    private sealed record JezdecRow(
+        int Id, int KategorieId, int? StCislo,
+        string Prijmeni, string Jmeno, string Znacka, string Model,
+        int? RokNarozeni, int? Los);
+
     // ── Závody ────────────────────────────────────────────────────────────────
 
     public IReadOnlyList<ZavodInfo> GetZavody()
@@ -140,6 +145,65 @@ public sealed class RaceService : IRaceService
             "INSERT INTO kategorie (zavod_id, nazev, ruleset) VALUES (@Z, @N, @R)",
             new { Z = zavodId, N = vstup.Nazev, R = vstup.Ruleset.ToString() });
         return (int)_db.Connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
+    }
+
+    // ── Jezdci ────────────────────────────────────────────────────────────────
+
+    public IReadOnlyList<Jezdec> GetJezdci(int kategorieId)
+    {
+        const string sql = """
+            SELECT id,
+                   kategorie_id AS KategorieId,
+                   st_cislo     AS StCislo,
+                   prijmeni, jmeno, znacka, model,
+                   rok_narozeni AS RokNarozeni,
+                   los
+            FROM jezdec
+            WHERE kategorie_id = @KategorieId
+            ORDER BY CASE WHEN los IS NULL THEN 1 ELSE 0 END, los,
+                     CASE WHEN st_cislo IS NULL THEN 1 ELSE 0 END, st_cislo,
+                     prijmeni
+            """;
+        return _db.Connection
+            .Query<JezdecRow>(sql, new { KategorieId = kategorieId })
+            .Select(r => new Jezdec(r.Id, r.KategorieId, r.StCislo,
+                r.Prijmeni, r.Jmeno, r.Znacka, r.Model, r.RokNarozeni, r.Los))
+            .ToList();
+    }
+
+    public int VytvorJezdce(int kategorieId, ParsedJezdec vstup)
+    {
+        _db.Connection.Execute(
+            """
+            INSERT INTO jezdec (kategorie_id, st_cislo, prijmeni, jmeno, znacka, model, rok_narozeni, los)
+            VALUES (@K, @S, @P, @J, @Z, @M, @R, @L)
+            """,
+            new { K = kategorieId, S = vstup.StCislo, P = vstup.Prijmeni,
+                  J = vstup.Jmeno, Z = vstup.Znacka, M = vstup.Model,
+                  R = vstup.RokNarozeni, L = vstup.Los });
+        return (int)_db.Connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
+    }
+
+    public void AktualizujJezdce(JezdecUprava uprava)
+    {
+        string col = uprava.Pole switch
+        {
+            JezdecPole.StCislo  => "st_cislo",
+            JezdecPole.Prijmeni => "prijmeni",
+            JezdecPole.Jmeno    => "jmeno",
+            JezdecPole.Znacka   => "znacka",
+            JezdecPole.Model    => "model",
+            JezdecPole.Los      => "los",
+            _ => throw new ArgumentOutOfRangeException(nameof(uprava))
+        };
+        _db.Connection.Execute(
+            $"UPDATE jezdec SET {col} = @H WHERE id = @Id",
+            new { H = uprava.Hodnota, Id = uprava.Id });
+    }
+
+    public void SmazJezdce(int id)
+    {
+        _db.Connection.Execute("DELETE FROM jezdec WHERE id = @Id", new { Id = id });
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

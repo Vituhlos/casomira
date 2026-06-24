@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Verdict.Core.Data;
 using Verdict.Core.Services;
@@ -20,6 +21,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
+
         _services = BuildServices();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -43,6 +46,7 @@ public partial class App : Application
         var sc = new ServiceCollection();
         sc.AddSingleton<DbContext>();
         sc.AddSingleton<IRaceService, RaceService>();
+        sc.AddSingleton<ImportService>();
         sc.AddTransient<MainWindowViewModel>();
         return sc.BuildServiceProvider();
     }
