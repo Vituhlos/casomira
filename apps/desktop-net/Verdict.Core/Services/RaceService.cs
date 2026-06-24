@@ -353,6 +353,107 @@ public sealed class RaceService : IRaceService
             new { J = jizdaId, P = pozice });
     }
 
+    // Q1 jízdy jako skupiny jezdců (v pořadí pozice) — podklad pro Q2 seeding.
+    private List<List<Jezdec>> Q1Jizdy(int kategorieId)
+    {
+        var kolo = GetKolo(kategorieId, KoloTyp.Q1);
+        if (kolo is null) return [];
+        return GetRost(kolo.Id).Jizdy
+            .OrderBy(j => j.Cislo)
+            .Select(j => j.Sloty
+                .Where(s => s.Jezdec is not null)
+                .OrderBy(s => s.Pozice)
+                .Select(s => s.Jezdec!)
+                .ToList())
+            .Where(g => g.Count > 0)
+            .ToList();
+    }
+
+    // Navrhne rošt podle pravidel §6 (Q1 los, Q2 obráceně, Q3 dle klasifikace).
+    // Bez zápisu — vrací jen náhled. Port z navrhniRost (repo.ts).
+    public RostNavrh NavrhniRost(int kategorieId, KoloTyp typ, int? pozadovanyPocet = null)
+    {
+        // Jezdci bez losu neprojeli přejímkou — do roštů nevstupují.
+        var jezdci = GetJezdci(kategorieId).Where(j => j.Los is not null).ToList();
+        if (jezdci.Count == 0)
+            return new RostNavrh(false, "V kategorii nejsou žádní jezdci s přiděleným losem.",
+                false, [], 0, 0, 0);
+
+        bool obsazeno = RostObsazen(kategorieId, typ);
+
+        List<Jezdec> sorted;
+        bool reverseGrouping;
+
+        if (typ == KoloTyp.Q1)
+        {
+            sorted = [.. jezdci];
+            sorted.Sort((a, b) => RostSeeder.PorovnejLos(a, b, true));
+            reverseGrouping = false;
+        }
+        else if (typ == KoloTyp.Q2)
+        {
+            // Zachová skupiny z Q1, obrátí pořadí jízd i jezdců uvnitř každé skupiny.
+            var q1 = Q1Jizdy(kategorieId);
+            if (q1.Count == 0)
+                return new RostNavrh(false, "Nejdřív nasaď Q1 rošt.", obsazeno, [], 0, 0, 0);
+
+            var jizdy = Enumerable.Reverse(q1)
+                .Select((skupina, i) => new RostNavrhJizda(i + 1, Enumerable.Reverse(skupina).ToList()))
+                .ToList();
+            int h = jizdy.Count;
+            return new RostNavrh(true, null, obsazeno, jizdy, h, h, h);
+        }
+        else if (typ == KoloTyp.Q3)
+        {
+            var klas = GetKlasifikace(kategorieId, [KoloTyp.Q1, KoloTyp.Q2]);
+            bool maData = klas.Any(r => r.Celkem != 0);
+            if (klas.Count == 0 || !maData)
+                return new RostNavrh(false,
+                    "Nejdřív zadej výsledky Q1 a Q2 — klasifikace po Q2 je zatím prázdná.",
+                    obsazeno, [], 0, 0, 0);
+
+            var poradi = klas.Select((r, i) => (r.JezdecId, i))
+                .ToDictionary(x => x.JezdecId, x => x.i);
+            sorted = [.. jezdci];
+            sorted.Sort((a, b) =>
+            {
+                int pa = poradi.TryGetValue(a.Id, out int x) ? x : int.MaxValue;
+                int pb = poradi.TryGetValue(b.Id, out int y) ? y : int.MaxValue;
+                if (pa != pb) return pa - pb;
+                return RostSeeder.PorovnejLos(a, b, true);
+            });
+            reverseGrouping = true;  // nejlepší blok do poslední jízdy
+        }
+        else
+        {
+            return new RostNavrh(false, "Generování zatím jen pro Q1–Q3.", obsazeno, [], 0, 0, 0);
+        }
+
+        int n = sorted.Count;
+        int minJizd = Math.Max(1, (int)Math.Ceiling(n / (double)RostSeeder.MaxNaJizdu));
+        int maxJizd = Math.Max(1, n);
+        int pocetJizd = Math.Min(maxJizd,
+            Math.Max(minJizd, pozadovanyPocet ?? RostSeeder.PocetJizd(n)));
+
+        var sizes = RostSeeder.RovneVelikosti(n, pocetJizd);
+        var bloky = new List<List<Jezdec>>();
+        int idx = 0;
+        foreach (var s in sizes)
+        {
+            bloky.Add(sorted.GetRange(idx, s));
+            idx += s;
+        }
+
+        var vysledneJizdy = new List<RostNavrhJizda>();
+        for (int i = 0; i < pocetJizd; i++)
+        {
+            var blok = reverseGrouping ? bloky[pocetJizd - 1 - i] : bloky[i];
+            vysledneJizdy.Add(new RostNavrhJizda(i + 1, blok));
+        }
+
+        return new RostNavrh(true, null, obsazeno, vysledneJizdy, pocetJizd, minJizd, maxJizd);
+    }
+
     // ── Výsledky ──────────────────────────────────────────────────────────────
 
     public VysledekKolo GetVysledky(int koloId)

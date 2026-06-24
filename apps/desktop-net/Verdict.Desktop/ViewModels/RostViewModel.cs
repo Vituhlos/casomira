@@ -14,12 +14,16 @@ public partial class RostViewModel : ViewModelBase
 
     public KoloTyp KoloTyp { get; }
 
-    /// <summary>Automatické nasazení dává smysl jen pro SF a Finále (z klasifikace).</summary>
-    public bool MuzeNavrhnout => KoloTyp is KoloTyp.SF or KoloTyp.F;
+    /// <summary>Automatické nasazení: Q1–Q3 dle §6, SF/F z klasifikace.</summary>
+    public bool MuzeNavrhnout =>
+        KoloTyp is KoloTyp.Q1 or KoloTyp.Q2 or KoloTyp.Q3 or KoloTyp.SF or KoloTyp.F;
 
-    public string NavrhLabel => KoloTyp == KoloTyp.SF
-        ? "Navrhnout semifinále"
-        : "Navrhnout finále";
+    public string NavrhLabel => KoloTyp switch
+    {
+        KoloTyp.SF => "Navrhnout semifinále",
+        KoloTyp.F  => "Navrhnout finále",
+        _          => "Navrhnout rošt"
+    };
 
     public ObservableCollection<RostJizdaViewModel> Jizdy { get; } = [];
 
@@ -64,9 +68,12 @@ public partial class RostViewModel : ViewModelBase
     [RelayCommand]
     private void Navrhnout()
     {
-        var navrh = KoloTyp == KoloTyp.SF
-            ? _svc.NavrhSF(_kategorieId)
-            : _svc.NavrhFinale(_kategorieId);
+        var navrh = KoloTyp switch
+        {
+            KoloTyp.SF => _svc.NavrhSF(_kategorieId),
+            KoloTyp.F  => _svc.NavrhFinale(_kategorieId),
+            _          => _svc.NavrhniRost(_kategorieId, KoloTyp)
+        };
 
         if (!navrh.Ok)
         {
@@ -82,9 +89,13 @@ public partial class RostViewModel : ViewModelBase
         Nacti();
 
         int pocet = navrh.Jizdy.Sum(j => j.Jezdci.Count);
-        StatusText = KoloTyp == KoloTyp.SF
-            ? $"Semifinále nasazeno: {pocet} jezdců ve 2 jízdách."
-            : $"Finále nasazeno: {pocet} jezdců.";
+        StatusText = KoloTyp switch
+        {
+            KoloTyp.SF => $"Semifinále nasazeno: {pocet} jezdců ve 2 jízdách.",
+            KoloTyp.F  => $"Finále nasazeno: {pocet} jezdců.",
+            _          => $"Rošt navržen: {pocet} jezdců v {navrh.Jizdy.Count} jízdách"
+                          + (navrh.Obsazeno ? " (původní přepsán)." : ".")
+        };
     }
 
     public void OnSlotStCisloChanged(RostJizdaViewModel jizda, RostSlotViewModel slot)

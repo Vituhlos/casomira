@@ -9,6 +9,17 @@ fáze složí do hlavního changelogu jako jedno vydání.
 Formát dle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), nejnovější
 fáze nahoře. Plán migrace: [`docs/dev/plan-avalonia-migrace.md`](../../docs/dev/plan-avalonia-migrace.md).
 
+## Auto-seedování roštů (§6)
+
+### Přidáno
+- **Automatické nasazení Q1–Q3** tlačítkem „Navrhnout rošt":
+  - **Q1** dle losu (jezdci bez losu nevstupují),
+  - **Q2** obráceně — zachová skupiny z Q1, otočí pořadí jízd i jezdců v nich,
+  - **Q3** dle Klasifikace po Q2, „nejpomalejší skupina jede první".
+- Rovnoměrné dělení do jízd (strop 8 na jízdu, bez „nečisté" osmičky:
+  15 → 5+5+5, 16 → 8+8).
+- 10 unit testů seedovací matematiky (`RostSeeder`).
+
 ## Založení závodu
 
 ### Přidáno

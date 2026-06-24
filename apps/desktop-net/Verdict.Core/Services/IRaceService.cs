@@ -31,6 +31,7 @@ public interface IRaceService
     RostKolo GetRost(int koloId);
     SetRostResult SetRostPozice(int jizdaId, int pozice, int? stCislo);
     void SmazRostPozice(int jizdaId, int pozice);
+    RostNavrh NavrhniRost(int kategorieId, KoloTyp typ, int? pozadovanyPocet = null);
 
     // ── Výsledky ──────────────────────────────────────────────────────────────
     VysledekKolo GetVysledky(int koloId);
