@@ -7,6 +7,8 @@ namespace Verdict.Desktop.ViewModels;
 public partial class UpravaDialogViewModel : ViewModelBase
 {
     // ── Read-only info ────────────────────────────────────────────────────────
+    public static IReadOnlyList<string> StavyMoznosti { get; } = ["OK", "DNF", "DNS", "DQ"];
+
     public int    VysledekId      { get; }
     public int    JizdaId         { get; }
     public string JezdecLabel     { get; }

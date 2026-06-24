@@ -60,12 +60,9 @@
                 <!-- Stav -->
                 <StackPanel Spacing="4">
                     <TextBlock Text="Stav" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
-                    <ComboBox SelectedItem="{Binding StavText}" HorizontalAlignment="Stretch">
-                        <ComboBoxItem Content="OK"/>
-                        <ComboBoxItem Content="DNF"/>
-                        <ComboBoxItem Content="DNS"/>
-                        <ComboBoxItem Content="DQ"/>
-                    </ComboBox>
+                    <ComboBox ItemsSource="{Binding StavyMoznosti}"
+                              SelectedItem="{Binding StavText}"
+                              HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
                 <!-- Penalizace -->

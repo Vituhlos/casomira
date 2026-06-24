@@ -8,7 +8,7 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <Version>0.9.13-beta</Version>
     <AssemblyName>Verdict</AssemblyName>
-    <ApplicationIcon>$(MSBuildThisFileDirectory)..\build\icon.ico</ApplicationIcon>
+    <ApplicationIcon>$(MSBuildThisFileDirectory)../build/icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

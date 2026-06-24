@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
-# Sestaví macOS .app + .dmg pro Verdict (.NET/Avalonia).
+# Sestaví macOS .app bundle (zabalený jako .zip) pro Verdict (.NET/Avalonia).
 # Spusť na macOS ve složce apps/desktop-net/.
+#
+# POZNÁMKA: Velopack na macOS produkuje přenosný .zip obsahující .app bundle.
+# Uživatel zip rozbalí (nebo Finder to udělá automaticky) a .app přetáhne
+# do /Applications. Pokud chceš .dmg, viz komentář na konci skriptu.
 #
 # Vyžaduje:
 #   - .NET 9 SDK  (dotnet --version)
 #   - vpk CLI     (dotnet tool install -g vpk)
-#   - create-dmg  (brew install create-dmg)   # volitelné, hezčí DMG
 #
-# Výstup: release/Verdict-<verze>-mac-universal.dmg
+# Výstup: release/Verdict-<verze>-osx.zip  (nebo podobný název)
+#
+# Pro produkci — universal binary (Intel + Apple Silicon):
+#   Nelze řešit pouhou lipo-fusí hlavní binárky — nativní Avalonia knihovny
+#   (.dylib) jsou architekturně specifické a musely by se lipo-ovat každá zvlášť.
+#   Prozatím builduj pro nativní arch (arm64 na Apple Silicon, x64 na Intel).
 
 set -euo pipefail
 
@@ -16,54 +24,43 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CSPROJ="$ROOT/Verdict.Desktop/Verdict.Desktop.csproj"
 
 # ── Verze z .csproj ───────────────────────────────────────────────────────────
-VERSION=$(grep -oP '(?<=<Version>)[^<]+' "$CSPROJ" | head -1)
+VERSION=$(grep -oP '(?<=<Version>)[^<]+' "$CSPROJ" 2>/dev/null \
+  || grep -oE '<Version>[^<]+' "$CSPROJ" | sed 's/<Version>//')
+VERSION=$(echo "$VERSION" | head -1)
 if [[ -z "$VERSION" ]]; then
   echo "Nepodařilo se načíst <Version> z .csproj" >&2; exit 1
 fi
 echo "Verze: $VERSION"
 
-PUBLISH_X64="$ROOT/publish/mac-x64"
-PUBLISH_ARM64="$ROOT/publish/mac-arm64"
+# Detekuj nativní architekturu
+ARCH=$(uname -m)
+if [[ "$ARCH" == "arm64" ]]; then
+  RID="osx-arm64"
+else
+  RID="osx-x64"
+fi
+echo "Cílová architektura: $RID"
+
+PUBLISH_DIR="$ROOT/publish/mac"
 RELEASE_DIR="$ROOT/release"
 ICON="$ROOT/build/icon.icns"
 
-# ── 1. Publish x64 + arm64 ────────────────────────────────────────────────────
+# ── 1. Publish ────────────────────────────────────────────────────────────────
 echo ""
-echo "[1/3] dotnet publish (osx-x64)..."
-rm -rf "$PUBLISH_X64"
-dotnet publish "$CSPROJ" -c Release -r osx-x64 --self-contained true -o "$PUBLISH_X64"
+echo "[1/2] dotnet publish ($RID)..."
+rm -rf "$PUBLISH_DIR"
+dotnet publish "$CSPROJ" -c Release -r "$RID" --self-contained true -o "$PUBLISH_DIR"
 
+# ── 2. vpk pack ───────────────────────────────────────────────────────────────
 echo ""
-echo "[2/3] dotnet publish (osx-arm64)..."
-rm -rf "$PUBLISH_ARM64"
-dotnet publish "$CSPROJ" -c Release -r osx-arm64 --self-contained true -o "$PUBLISH_ARM64"
-
-# ── Universal binary (lipo) ───────────────────────────────────────────────────
-PUBLISH_UNI="$ROOT/publish/mac-universal"
-rm -rf "$PUBLISH_UNI"
-cp -R "$PUBLISH_X64" "$PUBLISH_UNI"
-
-# Sloučit hlavní binárku do universal binary pomocí lipo
-if command -v lipo &>/dev/null; then
-  echo "Slučuji do universal binary (lipo)..."
-  lipo -create \
-    "$PUBLISH_X64/Verdict" \
-    "$PUBLISH_ARM64/Verdict" \
-    -output "$PUBLISH_UNI/Verdict"
-else
-  echo "lipo nenalezeno — přeskakuji universal binary, použiji pouze x64"
-fi
-
-# ── 3. vpk pack ───────────────────────────────────────────────────────────────
-echo ""
-echo "[3/3] vpk pack (macOS)..."
+echo "[2/2] vpk pack (macOS → .zip s .app bundlem)..."
 mkdir -p "$RELEASE_DIR"
 
 VPK_ARGS=(
   pack
   --packId      "Verdict"
   --packVersion "$VERSION"
-  --packDir     "$PUBLISH_UNI"
+  --packDir     "$PUBLISH_DIR"
   --mainExe     "Verdict"
   --outputDir   "$RELEASE_DIR"
   --packTitle   "Verdict"
@@ -78,3 +75,18 @@ vpk "${VPK_ARGS[@]}"
 echo ""
 echo "Hotovo — soubory v: $RELEASE_DIR"
 ls -lh "$RELEASE_DIR"
+
+# ── Volitelně: vytvoř .dmg z .zip ─────────────────────────────────────────────
+# ZIP_FILE=$(ls "$RELEASE_DIR"/Verdict*.zip 2>/dev/null | head -1)
+# if [[ -n "$ZIP_FILE" ]] && command -v create-dmg &>/dev/null; then
+#   TMPDIR=$(mktemp -d)
+#   unzip -q "$ZIP_FILE" -d "$TMPDIR"
+#   create-dmg \
+#     --volname "Verdict $VERSION" \
+#     --window-size 600 400 \
+#     --icon-size 100 \
+#     "$RELEASE_DIR/Verdict-$VERSION-mac.dmg" \
+#     "$TMPDIR"
+#   rm -rf "$TMPDIR"
+#   echo "DMG: $RELEASE_DIR/Verdict-$VERSION-mac.dmg"
+# fi
