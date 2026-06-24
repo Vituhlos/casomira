@@ -1,0 +1,144 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Verdict.Desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
+        x:Class="Verdict.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Verdict"
+        MinWidth="900" MinHeight="600"
+        Width="1200" Height="750">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <!-- Root: sidebar vlevo + hlavní oblast vpravo -->
+    <Grid ColumnDefinitions="240,*">
+
+        <!-- SIDEBAR -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource SidebarColor}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="*,Auto">
+
+                <!-- Seznam kategorií (placeholder) -->
+                <ScrollViewer Grid.Row="0" Padding="8">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="KATEGORIE"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SecondaryForegroundColor}"
+                                   Margin="8,8,8,4"/>
+                        <!-- Kategorie se sem přidají dynamicky -->
+                        <TextBlock Text="(žádný závod)"
+                                   Foreground="{DynamicResource SecondaryForegroundColor}"
+                                   FontSize="13"
+                                   Margin="8,4"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Operátor + datum dole -->
+                <Border Grid.Row="1"
+                        BorderBrush="{DynamicResource BorderColor}"
+                        BorderThickness="0,1,0,0"
+                        Padding="12,10">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Časoměřič"
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   Foreground="{DynamicResource ForegroundColor}"/>
+                        <TextBlock Text="— závod nevybrán —"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource SecondaryForegroundColor}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- HLAVNÍ OBLAST -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+
+            <!-- TOOLBAR -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource SurfaceColor}"
+                    BorderBrush="{DynamicResource BorderColor}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,10">
+                <Grid ColumnDefinitions="*,Auto">
+
+                    <!-- Breadcrumb vlevo -->
+                    <TextBlock Grid.Column="0"
+                               Text="Verdict"
+                               FontSize="13"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource SecondaryForegroundColor}"
+                               VerticalAlignment="Center"/>
+
+                    <!-- Tlačítka vpravo -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8">
+                        <Button Content="Stopky"
+                                Classes="outline"
+                                FontSize="13"/>
+                        <Button Content="Uložit PDF"
+                                Classes="primary"
+                                FontSize="13"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- SEGMENTOVÝ PŘEPÍNAČ FÁZ (placeholder) -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource SurfaceColor}"
+                    BorderBrush="{DynamicResource BorderColor}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,8">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button Content="Startovní listina" Classes="outline" FontSize="12"/>
+                        <Button Content="Q1 — Rošty" Classes="outline" FontSize="12"/>
+                        <Button Content="Q1 — Výsledky" Classes="outline" FontSize="12"/>
+                        <Button Content="Q2 — Rošty" Classes="outline" FontSize="12"/>
+                        <Button Content="Q2 — Výsledky" Classes="outline" FontSize="12"/>
+                        <Button Content="Klasifikace po Q2" Classes="outline" FontSize="12"/>
+                        <Button Content="Q3 — Rošty" Classes="outline" FontSize="12"/>
+                        <Button Content="Q3 — Výsledky" Classes="outline" FontSize="12"/>
+                        <Button Content="Klasifikace po Q3" Classes="outline" FontSize="12"/>
+                        <Button Content="Semifinále" Classes="outline" FontSize="12"/>
+                        <Button Content="Finále" Classes="outline" FontSize="12"/>
+                        <Button Content="Celkově" Classes="outline" FontSize="12"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- OBSAH -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource BackgroundColor}"
+                    Padding="24">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="12">
+                    <TextBlock Text="Verdict"
+                               FontSize="28"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource ForegroundColor}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Správce závodu autokros / rallycross"
+                               FontSize="14"
+                               Foreground="{DynamicResource SecondaryForegroundColor}"
+                               HorizontalAlignment="Center"/>
+                    <Button Content="Nový závod"
+                            Classes="primary"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+
+</Window>
