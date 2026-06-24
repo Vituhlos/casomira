@@ -2,16 +2,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Verdict.Core.Data;
 
-/// <summary>
-/// Vyplni prazdnou DB vychozimi daty (zavod + kategorie + zebricek + pravidla + dev jezdci).
-/// Port z src/main/db/seed.ts — 1:1 vcetne dev dat pro N1600.
-/// Pokud uz nejaky zavod existuje, nedela nic.
-/// </summary>
+// Naplní prázdnou DB výchozími daty. Pokud už závod existuje, nic nedělá.
 internal static class Seed
 {
-    /// <summary>
-    /// Bodovy zebricek STANDARD. CLAUDE.md §4: 1=50, 2=45, 3=42, pak 44-poradi (min 0).
-    /// </summary>
     private static int StandardBody(int pozice) => pozice switch
     {
         1 => 50,
@@ -35,7 +28,7 @@ internal static class Seed
         ("Šotolina",      "STANDARD"),
     ];
 
-    // Dev jezdci N1600 (prevzato z prototypu). [st_cislo, prijmeni, jmeno, znacka, model, los]
+    // testovací jezdci kategorie N1600
     private static readonly (int St, string Prijmeni, string Jmeno, string Znacka, string Model, int Los)[] N1600 =
     [
         (11,  "Šaroun",   "Adam",      "Volkswagen", "Lupo",    54),
@@ -66,7 +59,6 @@ internal static class Seed
         using var tx = db.BeginTransaction();
         try
         {
-            // Zavod
             long zavodId = Insert(db, tx,
                 "INSERT INTO zavod (nazev, datum, misto, typ) VALUES ($n,$d,$m,$t)",
                 ("$n", "MČR Autocross — Přerov"),

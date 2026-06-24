@@ -1,10 +1,8 @@
 namespace Verdict.Core.Data;
 
-/// <summary>
-/// Baseline SQL schema pro fresh install (user_version 0 → migrace v1).
-/// Starsi DB prochazi migracemi v1–v13 v Migrations.cs.
-/// Port z src/main/db/schema.ts — NEUPRAVOVAT bez synchronizace s migracemi.
-/// </summary>
+// Baseline SQL schema pro fresh install (user_version 0 → migrace v1).
+// Starší DB prochází migracemi v1–v13 v Migrations.cs.
+// NEUPRAVOVAT bez synchronizace s migracemi.
 internal static class Schema
 {
     public const string Sql = """

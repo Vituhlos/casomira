@@ -2,10 +2,6 @@ using Verdict.Core.Model;
 
 namespace Verdict.Core.Services;
 
-/// <summary>
-/// Minimální kontrakt pro Phase 2 shell + postupně rozšiřovaný v Phase 3.
-/// Nahrazuje IPC kanály z ipc.ts — vše je teď v jednom procesu.
-/// </summary>
 public interface IRaceService
 {
     // ── Závody ────────────────────────────────────────────────────────────────

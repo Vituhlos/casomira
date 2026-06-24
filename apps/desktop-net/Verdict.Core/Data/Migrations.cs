@@ -2,10 +2,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Verdict.Core.Data;
 
-/// <summary>
-/// Migrace databaze v1–v13. Port z src/main/db/migrate.ts — 1:1.
-/// Kazdy krok je idempotentni (IF NOT EXISTS, kontrola sloupce pred ALTER).
-/// </summary>
+/// <summary>Migrace databáze v1–v13. Každý krok je idempotentní (IF NOT EXISTS, kontrola sloupce před ALTER).</summary>
 internal static class Migrations
 {
     public const int SchemaVersion = 13;
@@ -151,7 +148,6 @@ internal static class Migrations
 
         if (version < 11)
         {
-            // Sotolina prevedena na STANDARD ruleset — v11. CLAUDE.md §3c.
             Step(db, 11, () => db.Execute(
                 "UPDATE kategorie SET ruleset = 'STANDARD' WHERE ruleset = 'SOTOLINA'"));
             version = 11;
@@ -207,7 +203,7 @@ internal static class Migrations
             version = 13;
         }
 
-        // Pojistka — synchronizuj user_version pokud bylo preskoceno vice kroku.
+        // pojistka — synchronizuje user_version při přeskočení více kroků najednou
         if (version < SchemaVersion)
             db.Execute($"PRAGMA user_version = {SchemaVersion}");
     }
@@ -241,7 +237,7 @@ internal static class Migrations
     }
 }
 
-// Pomocna extenze aby byl kod Steps strucnejsi.
+// pomocná extenze — zkracuje kód kroků migrace
 file static class SqliteConnectionExtensions
 {
     public static void Execute(this SqliteConnection db, string sql,

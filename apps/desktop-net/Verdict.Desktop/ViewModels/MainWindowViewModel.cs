@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Linq;
 using Avalonia;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -50,7 +49,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    // ── Obsah (Phase 3 nahradí PlaceholderViewModel reálnými obrazovkami) ─────
+    // ── Obsah ─────────────────────────────────────────────────────────────────
 
     public ViewModelBase CurrentContent
     {
@@ -105,16 +104,10 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OtevritStopky()
-    {
-        // TODO Phase 5 — stopky
-    }
+    private void OtevritStopky() { }
 
     [RelayCommand]
-    private void UlozitPdf()
-    {
-        // TODO Phase 4 — PDF export
-    }
+    private void UlozitPdf() { }
 
     // ── Interní ───────────────────────────────────────────────────────────────
 
@@ -123,7 +116,6 @@ public partial class MainWindowViewModel : ViewModelBase
         var zavody = _svc.GetZavody();
         if (zavody.Count == 0) return;
 
-        // Auto-výběr posledního (nejnovějšího) závodu — seed data vždy obsahují jeden.
         CurrentZavod = zavody[0];
         NactiKategorie(CurrentZavod.Id);
     }

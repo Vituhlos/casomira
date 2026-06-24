@@ -4,11 +4,6 @@ using Verdict.Core.Model;
 
 namespace Verdict.Core.Services;
 
-/// <summary>
-/// Implementace IRaceService přes Dapper + DbContext.
-/// Phase 2: pouze závody + kategorie (shell potřebuje jen to).
-/// Phase 3: rozšíří o jezdce, rošty, výsledky, klasifikaci, etc.
-/// </summary>
 public sealed class RaceService : IRaceService
 {
     private readonly DbContext _db;

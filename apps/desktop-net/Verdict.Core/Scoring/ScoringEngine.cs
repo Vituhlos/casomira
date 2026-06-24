@@ -1,21 +1,13 @@
-// ScoringEngine.cs — BODOVÁ LOGIKA (srdce závodu). Čistá funkce, žádná databáze.
-// Port z src/main/scoring.ts — 1:1. Viz CLAUDE.md §4–§5.
-
 using Verdict.Core.Model;
 
 namespace Verdict.Core.Scoring;
 
-/// <summary>Jeden jezdec vstupující do výpočtu jízdy.</summary>
 public record JizdaVstup(int JezdecId, int? CasMs, Stav Stav);
 
-/// <summary>Výsledek výpočtu pro jednoho jezdce v jízdě.</summary>
 public record JizdaVypocet(int JezdecId, int? Poradi, int? Body);
 
-/// <summary>
-/// Penalizační pravidla dle rulesetu (CLAUDE.md §5).
-/// STANDARD: offset od bodů za POSLEDNÍ místo (DNF −1, DNS −5, DQ −10).
-/// Pevné body (dnf_body/dns_body/dq_body) se použijí, pokud offset je null.
-/// </summary>
+// Offset od bodů za poslední místo (STANDARD: DNF −1, DNS −5, DQ −10),
+// nebo pevné body — záleží na tom, zda je příslušný offset null.
 public record Penalizace(
     int? DnfOffset,
     int? DnsOffset,
@@ -26,8 +18,7 @@ public record Penalizace(
 
 public static class ScoringEngine
 {
-    // Pořadí nedojezdů mezi sebou (za platné časy): DNF, pak DNS, pak DQ.
-    // CLAUDE.md §5 + scoring.ts: STAV_RANK = { OK:3, DNF:0, DNS:1, DQ:2 }
+    // DNF < DNS < DQ (nejhorší pořadí); OK = 3, vždy řadí dojezdivší první
     private static readonly Dictionary<Stav, int> StavRank = new()
     {
         [Stav.OK]  = 3,
@@ -44,34 +35,28 @@ public static class ScoringEngine
         _        => 0,
     };
 
-    /// <summary>
-    /// Spočítá pořadí a body pro JEDNU jízdu.
-    /// </summary>
-    /// <param name="vstupy">Všichni jezdci přiřazení do jízdy.</param>
-    /// <param name="bodyZaPozici">Žebříček: pozice (1..) → body (z tabulky zebricek).</param>
-    /// <param name="penalizace">Pravidla pro DNF/DNS/DQ (z tabulky pravidla).</param>
+    /// <summary>Pořadí a body pro jednu jízdu; nejrychlejší = 1., nedojezdivší za nimi.</summary>
     public static List<JizdaVypocet> SpocitejJizdu(
         IReadOnlyList<JizdaVstup> vstupy,
         Func<int, int> bodyZaPozici,
         Penalizace penalizace)
     {
-        // Dokončili s platným časem → řadí se podle času (nejrychlejší = 1.).
         var dojeli = vstupy
             .Where(v => v.Stav == Stav.OK && v.CasMs is not null)
             .OrderBy(v => v.CasMs)
             .ToList();
 
-        // Základ pro penalizace = body za POSLEDNÍ místo (§5: celkový počet jezdců v jízdě).
+        // Základ penalizace = body za POSLEDNÍ místo (počet jezdců v jízdě, ne jen dojezdivší)
         int bodyZaPosledni = bodyZaPozici(Math.Max(1, vstupy.Count));
 
-        // DNF/DNS/DQ → řadí se ZA platné časy. Pořadí: DNF < DNS < DQ (dle StavRank).
+        // DNF/DNS/DQ → za platné časy, seřazeni dle StavRank, pak jezdec_id jako tiebreak
         var nedojeli = vstupy
             .Where(v => v.Stav != Stav.OK)
             .OrderBy(v => StavRank[v.Stav])
             .ThenBy(v => v.JezdecId)
             .ToList();
 
-        // OK bez zadaného času = zatím nezadáno → bez pořadí a bodů.
+        // OK bez času = čas ještě nebyl zadán → bez pořadí a bodů
         var cekajici = vstupy
             .Where(v => v.Stav == Stav.OK && v.CasMs is null)
             .ToList();
@@ -97,11 +82,7 @@ public static class ScoringEngine
         return out_;
     }
 
-    /// <summary>
-    /// STANDARD tiebreak pro klasifikaci (CLAUDE.md §7): při shodě celkových bodů
-    /// rozhoduje poslední uvedené kolo, pak předposlední atd.
-    /// Vrací záporné číslo pokud a > b (a má být výš), kladné pokud b > a.
-    /// </summary>
+    /// <summary>Tiebreak: při shodě bodů rozhoduje pozdější kolo (Q3 > Q2 > Q1). Záporné = a výš.</summary>
     public static int TiebreakPerKolo(
         IReadOnlyDictionary<string, int> a,
         IReadOnlyDictionary<string, int> b,
@@ -117,8 +98,8 @@ public static class ScoringEngine
     }
 
     /// <summary>
-    /// Přepočte pořadí po ručním posunu (rucni_poradi) — ostatní jezdci se posunou,
-    /// body dojetých z žebříčku dle nového pořadí OK; DNF/DNS/DQ penalizace od posledního.
+    /// Přeřadí dle rucni_poradi; OK jezdci dostanou tělu z nové pozice v pořadí,
+    /// DNF/DNS/DQ stále dostávají penalizaci od posledního místa.
     /// </summary>
     public static List<JizdaVypocet> AplikujRucniPoradi(
         IReadOnlyList<JizdaVypocet> vysl,

@@ -5,10 +5,7 @@ namespace Verdict.Core.Services;
 /// <summary>Jeden tab fáze — label pro UI + klíč pro PDF/routing.</summary>
 public record FazeTabItem(ListKey Key, string Label);
 
-/// <summary>
-/// Statický seznam fází pro daný typ závodu. Pořadí přesně dle CLAUDE.md §12.
-/// RAC: 14 fází (vč. Klasifikace po Q2); RX: 13 fází (bez ní).
-/// </summary>
+/// <summary>Statický seznam fází pro daný typ závodu. RAC: 14 fází (vč. Klasifikace po Q2); RX: 13 fází (bez ní).</summary>
 public static class FazeHelper
 {
     private static readonly FazeTabItem[] RacFaze =

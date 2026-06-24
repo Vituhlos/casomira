@@ -4,18 +4,10 @@
              x:Class="Verdict.Desktop.Views.PlaceholderView"
              x:DataType="vm:PlaceholderViewModel">
 
-    <StackPanel HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Spacing="8">
-        <TextBlock Text="{Binding Message}"
-                   FontSize="16"
-                   Foreground="{DynamicResource SecondaryForegroundColor}"
-                   HorizontalAlignment="Center"/>
-        <TextBlock Text="(Phase 3 — obrazovky budou implementovány)"
-                   FontSize="12"
-                   Foreground="{DynamicResource SecondaryForegroundColor}"
-                   HorizontalAlignment="Center"
-                   Opacity="0.6"/>
-    </StackPanel>
+    <TextBlock Text="{Binding Message}"
+               FontSize="16"
+               Foreground="{DynamicResource SecondaryForegroundColor}"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"/>
 
 </UserControl>
