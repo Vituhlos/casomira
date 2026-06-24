@@ -39,6 +39,9 @@ public interface IRaceService
     void NastavVysledek(SetVysledekArg arg);
     void PrepocitejPoradi(int jizdaId);
 
+    // ── Ředitelské úpravy ─────────────────────────────────────────────────────
+    void AplikujUpravu(UpravVysledekArg arg);
+
     // ── Klasifikace ───────────────────────────────────────────────────────────
     IReadOnlyList<KlasifikaceRadek> GetKlasifikace(int kategorieId, IReadOnlyList<KoloTyp> koloTypy);
 

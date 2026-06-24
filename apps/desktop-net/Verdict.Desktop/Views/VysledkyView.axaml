@@ -57,13 +57,27 @@
                                       CellEditEnded="OnVysledekCellEditEnded">
 
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="St.č."   Binding="{Binding StCislo}"  Width="60"  IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Příjmení" Binding="{Binding Prijmeni}" Width="160" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Jméno"   Binding="{Binding Jmeno}"    Width="120" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Čas"     Binding="{Binding CasText}"  Width="105"/>
-                                    <DataGridTextColumn Header="Stav"    Binding="{Binding StavText}" Width="70"/>
-                                    <DataGridTextColumn Header="Pořadí"  Binding="{Binding Poradi}"   Width="72"  IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Body"    Binding="{Binding Body}"     Width="64"  IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="St.č."    Binding="{Binding StCislo}"       Width="60"  IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Příjmení"  Binding="{Binding Prijmeni}"      Width="160" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Jméno"    Binding="{Binding Jmeno}"          Width="120" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Čas"      Binding="{Binding CasText}"        Width="105"/>
+                                    <DataGridTextColumn Header="Stav"     Binding="{Binding StavText}"       Width="70"/>
+                                    <DataGridTextColumn Header="Pen."     Binding="{Binding PenalizaceText}" Width="80"  IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Pořadí"   Binding="{Binding PoradiText}"     Width="72"  IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Body"     Binding="{Binding Body}"           Width="64"  IsReadOnly="True"/>
+                                    <DataGridTemplateColumn Header=""     Width="40"  IsReadOnly="True">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:VysledekRadekViewModel">
+                                                <Button Content="⚙"
+                                                        Tag="{Binding}"
+                                                        Click="OnUpravitClick"
+                                                        FontSize="13"
+                                                        Padding="4,2"
+                                                        HorizontalAlignment="Center"
+                                                        Classes="outline"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                 </DataGrid.Columns>
 
                             </DataGrid>

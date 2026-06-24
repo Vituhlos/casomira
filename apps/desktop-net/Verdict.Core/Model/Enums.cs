@@ -18,7 +18,8 @@ public enum UpravaTyp
     CASOVA_PENALIZACE,
     BODOVA_PENALIZACE,
     POSUN_PORADI,
-    ZRUSENI
+    ZRUSENI,
+    ZMENA_STAVU
 }
 
 /// <summary>Pole jezdce editovatelné inline ve Startovní listině.</summary>

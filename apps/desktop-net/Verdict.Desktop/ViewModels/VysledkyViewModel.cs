@@ -39,20 +39,37 @@ public partial class VysledkyViewModel : ViewModelBase
         {
             _svc.NastavVysledek(new SetVysledekArg(jizda.JizdaId, radek.JezdecId, radek.CasMs, radek.Stav));
             _svc.PrepocitejPoradi(jizda.JizdaId);
-
-            var refreshed = _svc.GetVysledky(_koloId);
-            var jizdaModel = refreshed.Jizdy.FirstOrDefault(j => j.Id == jizda.JizdaId);
-            if (jizdaModel is not null)
-            {
-                jizda.Radky.Clear();
-                foreach (var r in jizdaModel.Vysledky)
-                    jizda.Radky.Add(new VysledekRadekViewModel(r));
-            }
+            ObnovJizdu(jizda);
             StatusText = null;
         }
         catch (Exception ex)
         {
             StatusText = $"Chyba při uložení: {ex.Message}";
         }
+    }
+
+    public void AplikujUpravu(UpravVysledekArg arg)
+    {
+        try
+        {
+            _svc.AplikujUpravu(arg);
+            var jizda = Jizdy.FirstOrDefault(j => j.JizdaId == arg.JizdaId);
+            if (jizda is not null) ObnovJizdu(jizda);
+            StatusText = null;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Chyba při uložení úpravy: {ex.Message}";
+        }
+    }
+
+    private void ObnovJizdu(JizdaVysledkyViewModel jizda)
+    {
+        var refreshed = _svc.GetVysledky(_koloId);
+        var jizdaModel = refreshed.Jizdy.FirstOrDefault(j => j.Id == jizda.JizdaId);
+        if (jizdaModel is null) return;
+        jizda.Radky.Clear();
+        foreach (var r in jizdaModel.Vysledky)
+            jizda.Radky.Add(new VysledekRadekViewModel(r, jizda.JizdaId));
     }
 }

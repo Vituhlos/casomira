@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Verdict.Desktop.ViewModels"
+        x:Class="Verdict.Desktop.Views.UpravaDialogWindow"
+        x:DataType="vm:UpravaDialogViewModel"
+        Title="Ředitelská úprava výsledku"
+        Width="480" Height="460"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <DockPanel Margin="20">
+
+        <!-- Hlavička -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Ředitelská úprava výsledku"
+                   FontSize="17"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,4"/>
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{Binding JezdecLabel}"
+                   FontSize="13"
+                   Opacity="0.7"
+                   Margin="0,0,0,16"/>
+
+        <!-- Patička -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,16,0,0">
+            <Button Content="Zrušit"
+                    Click="OnCancel"
+                    Classes="outline"/>
+            <Button Content="Uložit úpravu"
+                    Click="OnConfirm"
+                    IsEnabled="{Binding MuzeUlozit}"
+                    Classes="primary"/>
+        </StackPanel>
+
+        <!-- Tělo -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14">
+
+                <!-- Informace o záznamu -->
+                <Border Padding="12"
+                        CornerRadius="6"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="6">
+                        <StackPanel Grid.Column="0" Grid.Row="0" Spacing="2">
+                            <TextBlock Text="Naměřený čas" FontSize="11" Opacity="0.6"/>
+                            <TextBlock Text="{Binding NamerenyText}" FontSize="13" FontWeight="SemiBold" FontFamily="Cascadia Code,Consolas,monospace"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Grid.Row="0" Spacing="2">
+                            <TextBlock Text="Efektivní čas (po penalizaci)" FontSize="11" Opacity="0.6"/>
+                            <TextBlock Text="{Binding EfektivniText}" FontSize="13" FontWeight="SemiBold" FontFamily="Cascadia Code,Consolas,monospace"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Stav -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Stav" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <ComboBox SelectedItem="{Binding StavText}" HorizontalAlignment="Stretch">
+                        <ComboBoxItem Content="OK"/>
+                        <ComboBoxItem Content="DNF"/>
+                        <ComboBoxItem Content="DNS"/>
+                        <ComboBoxItem Content="DQ"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Penalizace -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Časová penalizace (v sekundách, může být záporná)" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <TextBox Text="{Binding PenalizaceSText}"
+                             PlaceholderText="0"
+                             FontFamily="Cascadia Code,Consolas,monospace"/>
+                </StackPanel>
+
+                <!-- Ruční pořadí -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Ruční pořadí (prázdné = automaticky dle času)" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <TextBox Text="{Binding RucniPoradiText}"
+                             PlaceholderText="automaticky"/>
+                    <TextBlock Text="Zadej číslo pozice (1 = první), nebo nech prázdné pro zrušení ručního pořadí."
+                               FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Důvod (povinný) -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Důvod úpravy *" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <TextBox Text="{Binding Duvod}"
+                             PlaceholderText="Uveď důvod rozhodnutí ředitele závodu…"
+                             AcceptsReturn="False"/>
+                </StackPanel>
+
+                <!-- Rozhodl -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Rozhodl" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <TextBox Text="{Binding Rozhodl}"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </DockPanel>
+
+</Window>

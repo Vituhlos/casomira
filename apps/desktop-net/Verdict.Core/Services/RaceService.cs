@@ -592,6 +592,65 @@ public sealed class RaceService : IRaceService
         }
     }
 
+    // ── Ředitelské úpravy ────────────────────────────────────────────────────
+
+    public void AplikujUpravu(UpravVysledekArg arg)
+    {
+        if (string.IsNullOrWhiteSpace(arg.Duvod))
+            throw new ArgumentException("Důvod úpravy je povinný.");
+
+        bool neco = arg.NovaPenalizaceMs.HasValue
+                 || arg.NovyRucniPoradi.HasValue
+                 || arg.NovyStav.HasValue;
+        if (!neco) return;
+
+        string kdy = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+
+        using var tx = _db.Connection.BeginTransaction();
+        try
+        {
+            if (arg.NovaPenalizaceMs.HasValue)
+            {
+                _db.Connection.Execute(
+                    "UPDATE vysledek SET penalizace_ms = @P WHERE id = @Id",
+                    new { P = arg.NovaPenalizaceMs.Value, Id = arg.VysledekId }, tx);
+                _db.Connection.Execute(
+                    "INSERT INTO uprava_log (vysledek_id, typ, hodnota, duvod, rozhodl, kdy) VALUES (@V, 'CASOVA_PENALIZACE', @H, @D, @R, @K)",
+                    new { V = arg.VysledekId, H = arg.NovaPenalizaceMs.Value, D = arg.Duvod, R = arg.Rozhodl, K = kdy }, tx);
+            }
+
+            if (arg.NovyRucniPoradi.HasValue)
+            {
+                int? rucni = arg.NovyRucniPoradi.Value == 0 ? null : arg.NovyRucniPoradi.Value;
+                _db.Connection.Execute(
+                    "UPDATE vysledek SET rucni_poradi = @P WHERE id = @Id",
+                    new { P = rucni, Id = arg.VysledekId }, tx);
+                _db.Connection.Execute(
+                    "INSERT INTO uprava_log (vysledek_id, typ, hodnota, duvod, rozhodl, kdy) VALUES (@V, 'POSUN_PORADI', @H, @D, @R, @K)",
+                    new { V = arg.VysledekId, H = arg.NovyRucniPoradi.Value, D = arg.Duvod, R = arg.Rozhodl, K = kdy }, tx);
+            }
+
+            if (arg.NovyStav.HasValue)
+            {
+                _db.Connection.Execute(
+                    "UPDATE vysledek SET stav = @S WHERE id = @Id",
+                    new { S = arg.NovyStav.Value.ToString(), Id = arg.VysledekId }, tx);
+                _db.Connection.Execute(
+                    "INSERT INTO uprava_log (vysledek_id, typ, hodnota, duvod, rozhodl, kdy) VALUES (@V, 'ZMENA_STAVU', NULL, @D, @R, @K)",
+                    new { V = arg.VysledekId, D = arg.Duvod, R = arg.Rozhodl, K = kdy }, tx);
+            }
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+
+        PrepocitejPoradi(arg.JizdaId);
+    }
+
     // ── Klasifikace ───────────────────────────────────────────────────────────
 
     // Součet bodů přes jízdy uvedených kol; tiebreak dle lepšího kola (Q3→Q2→Q1).

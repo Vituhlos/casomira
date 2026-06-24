@@ -21,7 +21,7 @@ public partial class JizdaVysledkyViewModel : ViewModelBase
         JizdaId = model.Id;
         Cislo   = model.Cislo;
         foreach (var r in model.Vysledky)
-            Radky.Add(new VysledekRadekViewModel(r));
+            Radky.Add(new VysledekRadekViewModel(r, model.Id));
     }
 
     [RelayCommand]

@@ -17,6 +17,19 @@ public record ZrusPenalizaciArg(
     UpravaTyp? Typ,
     string Duvod);
 
+/// <summary>Unifikovaný zásah ředitele z dialogu — jedno nebo více polí naráz. CLAUDE.md §13.6.</summary>
+public record UpravVysledekArg(
+    int VysledekId,
+    int JizdaId,
+    string Rozhodl,
+    string Duvod,
+    /// <summary>Nová časová penalizace v ms; null = neměnit.</summary>
+    int? NovaPenalizaceMs,
+    /// <summary>Nové ruční pořadí; 0 = zrušit manuální přepis; null = neměnit.</summary>
+    int? NovyRucniPoradi,
+    /// <summary>Nový stav; null = neměnit.</summary>
+    Stav? NovyStav);
+
 /// <summary>Jeden radek audit logu zasahu reditele (s kontextem z JOIN).</summary>
 public record UpravaLogRadek(
     int Id,

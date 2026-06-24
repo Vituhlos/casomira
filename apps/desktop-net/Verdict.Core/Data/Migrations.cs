@@ -5,7 +5,7 @@ namespace Verdict.Core.Data;
 /// <summary>Migrace databáze v1–v13. Každý krok je idempotentní (IF NOT EXISTS, kontrola sloupce před ALTER).</summary>
 internal static class Migrations
 {
-    public const int SchemaVersion = 13;
+    public const int SchemaVersion = 14;
 
     public static void Migrate(SqliteConnection db)
     {
@@ -201,6 +201,32 @@ internal static class Migrations
                 CREATE INDEX IF NOT EXISTS ix_jezdec_kategorie ON jezdec(kategorie_id);
                 """));
             version = 13;
+        }
+
+        if (version < 14)
+        {
+            Step(db, 14, () =>
+            {
+                // Přidání ZMENA_STAVU do CHECK — SQLite to vyžaduje rekreaci tabulky.
+                db.Execute("""
+                    CREATE TABLE uprava_log_new (
+                      id          INTEGER PRIMARY KEY,
+                      vysledek_id INTEGER NOT NULL REFERENCES vysledek(id) ON DELETE CASCADE,
+                      typ         TEXT NOT NULL CHECK (typ IN (
+                        'CASOVA_PENALIZACE','BODOVA_PENALIZACE','POSUN_PORADI','ZRUSENI','ZMENA_STAVU'
+                      )),
+                      hodnota     INTEGER,
+                      duvod       TEXT NOT NULL,
+                      rozhodl     TEXT NOT NULL DEFAULT 'ředitel',
+                      kdy         TEXT NOT NULL
+                    )
+                    """);
+                db.Execute("INSERT INTO uprava_log_new SELECT * FROM uprava_log");
+                db.Execute("DROP TABLE uprava_log");
+                db.Execute("ALTER TABLE uprava_log_new RENAME TO uprava_log");
+                db.Execute("CREATE INDEX ix_uprava_vysledek ON uprava_log(vysledek_id, kdy DESC)");
+            });
+            version = 14;
         }
 
         // pojistka — synchronizuje user_version při přeskočení více kroků najednou
