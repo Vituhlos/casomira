@@ -1,6 +1,6 @@
 # Plán — migrace Electron → AvaloniaUI (.NET)
 
-> **Účel:** Přepsat desktopovou aplikaci „Časomíra" z Electron (React/TS) na
+> **Účel:** Přepsat desktopovou aplikaci **Verdict** (dříve „Časomíra") z Electron (React/TS) na
 > **AvaloniaUI (.NET / C#)** se **100% zachováním chování a pravidel** (1:1).
 > **Důvod:** Electron je na cílovém HW pomalý a zasekává se; appka má dál růst.
 > **Stav:** návrh — odsouhlasit rozsah a UI kit, teprve pak scaffold.
@@ -74,7 +74,7 @@ zadané časy) → **bitově/hodnotově shodné body, pořadí a PDF obsah** jak
 
 ```
 apps/desktop-net/                 # nový .NET projekt (vedle stávajícího Electronu)
-├── Casomira.Core/                # ŽÁDNÁ závislost na UI — testovatelné
+├── Verdict.Core/                 # ŽÁDNÁ závislost na UI — testovatelné
 │   ├── Model/                    # record třídy ~ shared/types.ts
 │   ├── Data/                     # SQLite, schéma, migrace v1–v9
 │   ├── Scoring/                  # port scoring.ts (čistá logika)
@@ -82,13 +82,13 @@ apps/desktop-net/                 # nový .NET projekt (vedle stávajícího Ele
 │   ├── Excel/                    # import
 │   ├── Pdf/                      # report layouty (QuestPDF)
 │   └── Backup/                   # export/import zálohy
-├── Casomira.Desktop/             # Avalonia app
+├── Verdict.Desktop/              # Avalonia app
 │   ├── ViewModels/
 │   ├── Views/                    # XAML obrazovky
 │   ├── Controls/                 # vlastní (segment fází, badge, medaile)
 │   ├── Themes/                   # ShadUI override + mac tokeny
 │   └── App.axaml
-└── Casomira.Tests/               # paritní + jednotkové testy
+└── Verdict.Tests/                # paritní + jednotkové testy
 ```
 
 Stávající Electron (`src/`) zůstává **nedotčený** a funkční, dokud .NET verze
@@ -160,7 +160,10 @@ Pořadí dle rizika (od jednoduchých k těžkým):
 ### Fáze 4 — PDF + Excel + Záloha (1–1,5 týdne)
 - Excel import (ClosedXML) — paritní test proti `fixtures/`.
 - **PDF reporty** (QuestPDF) — viz §7. Stejné názvy souborů (CLAUDE.md §12).
-- Záloha/obnova (`casomira-backup`) — **formát čitelný oběma appkami**.
+- Záloha/obnova — **formát čitelný oběma appkami**. Identifikátor formátu
+  uvnitř souborů zůstává `casomira-backup` (`BACKUP_FORMAT`), i když je produkt
+  přejmenován na **Verdict** — jinak by .NET verze nepřečetla starší zálohy.
+  (Volitelně přijímat i `verdict-backup` při zápisu, ale číst musí oba.)
 
 ### Fáze 5 — Stopky + zkratky (1 týden)
 - Stopky jako samostatné okno: mezerník = záznam, Backspace = zpět, perzistentní
@@ -231,6 +234,13 @@ medaile). **Názvy souborů zachovat identické** (`Q1_rošty.pdf`, …, diakrit
    záloha), nebo nejdřív holé MVP a pak zbytek? *(Doporučení: nejdřív Core+MVP
    obrazovky, stopky a záloha až po paritě jádra.)*
 5. **Souběh** — držet Electron a .NET paralelně do plné parity? *(Doporučení: ano.)*
+6. **Rebranding Casomira → Verdict** — v branchi `heroui-native` je zatím
+   **jen částečný** (jméno produktu nese pouze CI `package-check.yml`:
+   `Verdict-Setup-*.exe`, `Verdict-*-mac-universal.dmg`). `package.json`
+   (`"name": "casomira"`), CLAUDE.md, README i `BACKUP_FORMAT` pořád říkají
+   Casomira/Časomíra. → Vyjasnit: dotáhnout rebrand v Electronu zvlášť, nebo ho
+   provést rovnou v nové .NET verzi? *(Doporučení: .NET projekty pojmenovat
+   `Verdict.*`, ale datový formát `casomira-backup` zachovat kvůli kompatibilitě.)*
 
 ---
 
