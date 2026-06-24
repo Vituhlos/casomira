@@ -15,6 +15,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // ── Závod ─────────────────────────────────────────────────────────────────
 
+    public ObservableCollection<ZavodInfo> Zavody { get; } = [];
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Breadcrumb))]
     private ZavodInfo? _currentZavod;
@@ -144,10 +146,35 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _svc       = svc;
         _importSvc = importSvc;
-        NactiZavod();
+        NactiZavody();
+    }
+
+    /// <summary>Založí nový závod a přepne na něj. Volá View po potvrzení dialogu.</summary>
+    public void VytvoritZavod(NovyZavod vstup)
+    {
+        int id = _svc.VytvorZavod(vstup);
+        NactiZavody(id);
     }
 
     // ── partial OnChanged háky ────────────────────────────────────────────────
+
+    partial void OnCurrentZavodChanged(ZavodInfo? value)
+    {
+        _startListVm = null;
+        _rostVms.Clear();
+        _vysledkyVms.Clear();
+
+        if (value is null)
+        {
+            Kategorie.Clear();
+            SelectedKategorie = null;
+            FazeTabs.Clear();
+            SelectedFaze = null;
+            return;
+        }
+
+        NactiKategorie(value.Id);
+    }
 
     partial void OnSelectedKategorieChanged(KategorieRowViewModel? value)
     {
@@ -184,13 +211,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // ── Interní ───────────────────────────────────────────────────────────────
 
-    private void NactiZavod()
+    private void NactiZavody(int? vyberId = null)
     {
-        var zavody = _svc.GetZavody();
-        if (zavody.Count == 0) return;
+        Zavody.Clear();
+        foreach (var z in _svc.GetZavody())
+            Zavody.Add(z);
 
-        CurrentZavod = zavody[0];
-        NactiKategorie(CurrentZavod.Id);
+        CurrentZavod = vyberId is not null
+            ? Zavody.FirstOrDefault(z => z.Id == vyberId.Value) ?? Zavody.FirstOrDefault()
+            : Zavody.FirstOrDefault();
     }
 
     private void NactiKategorie(int zavodId)

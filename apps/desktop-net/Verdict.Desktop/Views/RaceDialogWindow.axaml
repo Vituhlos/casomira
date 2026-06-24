@@ -1,0 +1,99 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Verdict.Desktop.ViewModels"
+        x:Class="Verdict.Desktop.Views.RaceDialogWindow"
+        x:DataType="vm:RaceDialogViewModel"
+        Title="Nový závod"
+        Width="560" Height="640"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <DockPanel Margin="20">
+
+        <!-- Hlavička -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Nový závod"
+                   FontSize="17"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,16"/>
+
+        <!-- Patička s tlačítky -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,16,0,0">
+            <Button Content="Zrušit"
+                    Click="OnCancel"
+                    Classes="outline"/>
+            <Button Content="Založit závod"
+                    Click="OnConfirm"
+                    IsEnabled="{Binding MuzeUlozit}"
+                    Classes="primary"/>
+        </StackPanel>
+
+        <!-- Tělo -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14">
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Název závodu" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <TextBox Text="{Binding Nazev}" PlaceholderText="např. MČR Autokros — Přerov"/>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,12,*">
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="Datum (RRRR-MM-DD)" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                        <TextBox Text="{Binding Datum}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock Text="Místo (nepovinné)" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                        <TextBox Text="{Binding Misto}" PlaceholderText="např. Přerov"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Typ závodu" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <RadioButton Content="RAC Race" GroupName="Typ" IsChecked="{Binding JeRac}"/>
+                        <RadioButton Content="RX Cup"   GroupName="Typ" IsChecked="{Binding JeRx}"/>
+                    </StackPanel>
+                    <TextBlock Text="Typ určuje kostru fází i nabídku kategorií a nelze ho po založení změnit."
+                               FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Kategorie — klikni pro výběr" FontSize="12" FontWeight="SemiBold" Opacity="0.8"/>
+                    <ItemsControl ItemsSource="{Binding Kategorie}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:KategorieChipViewModel">
+                                <ToggleButton Content="{Binding Nazev}"
+                                              IsChecked="{Binding Vybrano}"
+                                              Margin="0,0,6,6"
+                                              FontSize="12"
+                                              Padding="10,5"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
+                        <TextBox Text="{Binding VlastniKategorie}"
+                                 PlaceholderText="přidat vlastní kategorii…"
+                                 MinWidth="260"/>
+                        <Button Content="Přidat"
+                                Command="{Binding PridatVlastniCommand}"
+                                Classes="outline"/>
+                    </StackPanel>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </DockPanel>
+
+</Window>

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
+        xmlns:model="using:Verdict.Core.Model"
         x:Class="Verdict.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Verdict"
@@ -65,10 +66,38 @@
                 Background="{DynamicResource SidebarColor}"
                 BorderBrush="{DynamicResource BorderColor}"
                 BorderThickness="0,0,1,0">
-            <Grid RowDefinitions="*,Auto">
+            <Grid RowDefinitions="Auto,*,Auto">
+
+                <!-- Výběr / založení závodu -->
+                <StackPanel Grid.Row="0"
+                            Spacing="6"
+                            Margin="12,12,12,8">
+                    <TextBlock Text="ZÁVOD"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SecondaryForegroundColor}"/>
+                    <ComboBox ItemsSource="{Binding Zavody}"
+                              SelectedItem="{Binding CurrentZavod}"
+                              HorizontalAlignment="Stretch"
+                              PlaceholderText="(žádný závod)"
+                              FontSize="13">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="model:ZavodInfo">
+                                <TextBlock Text="{Binding Nazev}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button x:Name="NovyZavodButton"
+                            Content="＋ Nový závod"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            FontSize="13"
+                            Click="OnNovyZavod"
+                            Classes="outline"/>
+                </StackPanel>
 
                 <!-- Seznam kategorií -->
-                <DockPanel Grid.Row="0">
+                <DockPanel Grid.Row="1">
 
                     <TextBlock DockPanel.Dock="Top"
                                Text="KATEGORIE"
@@ -109,7 +138,7 @@
                 </DockPanel>
 
                 <!-- Operátor + závod dole -->
-                <Border Grid.Row="1"
+                <Border Grid.Row="2"
                         BorderBrush="{DynamicResource BorderColor}"
                         BorderThickness="0,1,0,0"
                         Padding="12,10">

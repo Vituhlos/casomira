@@ -9,6 +9,17 @@ fáze složí do hlavního changelogu jako jedno vydání.
 Formát dle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), nejnovější
 fáze nahoře. Plán migrace: [`docs/dev/plan-avalonia-migrace.md`](../../docs/dev/plan-avalonia-migrace.md).
 
+## Založení závodu
+
+### Přidáno
+- **Dialog „Nový závod"** — název, datum, místo, typ RAC/RX a výběr kategorií
+  z nabídky dle typu (chips) + přidání vlastní. Doplňuje chybějící základ MVP;
+  appka už nejede jen na seed datech.
+- **Výběr a přepínání závodů** — v sidebaru přibyl seznam závodů; přepnutí
+  načte kategorie a fáze daného závodu.
+- Výchozí kategorie dle typu (`RaceDefaults`, port z `raceDefaults.ts`) —
+  RX Cup nemá Šotolinu, RAC ji nabízí jako volitelnou (CLAUDE.md §3).
+
 ## Fáze 6 — Semifinále, Finále a Celkové výsledky
 
 ### Přidáno
