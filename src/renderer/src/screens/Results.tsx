@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useAtomicReveal } from '../hooks/useAtomicReveal'
 import { createPortal } from 'react-dom'
 import type { KoloTyp, Stav, VysledekJizda, VysledekKolo, VysledekRadek } from '@shared/types'
 import { Chip, Table } from '@heroui/react'
@@ -8,6 +9,7 @@ import { Tooltip } from '../components/Tooltip'
 import { fmtTime, parseTimeLoose } from '../lib/time'
 import { jizdaNekompletni } from '../lib/stav'
 import { safeCall } from '../lib/api'
+import { consumePreload } from '../lib/preload'
 
 interface ResultsProps {
   kategorieId: number
@@ -70,6 +72,20 @@ interface MenuState {
   y: number
 }
 
+interface VysledekTableRow {
+  id: string
+  index: number
+  jizdaId: number
+  radek: VysledekRadek
+}
+
+interface VysledekJizdaTable {
+  id: number
+  label: string
+  nekompletni: boolean
+  rows: VysledekTableRow[]
+}
+
 export function Results({ kategorieId, typ, label, bezBodovani = false, extraControls }: ResultsProps): React.JSX.Element {
   const [kolo, setKolo] = useState<VysledekKolo | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -83,13 +99,14 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
   useEffect(() => {
     let live = true
     setLoadError(null)
+    const p = consumePreload<VysledekKolo>(`${kategorieId}:${typ}:vysledky`)
     safeCall(
-      window.api.getVysledky(kategorieId, typ).then((k) => { if (live) setKolo(k) }),
+      (p ?? window.api.getVysledky(kategorieId, typ)).then((k) => { if (live) setKolo(k) }),
       (msg) => { if (live) setLoadError(msg) }
     )
     const off = window.api.onDataChanged?.(() => { if (live) nacti() })
     return () => { live = false; off?.() }
-  }, [kategorieId, typ])
+  }, [kategorieId, typ, nacti])
 
   const nahradJizdu = (j: VysledekJizda): void => {
     setKolo((prev) =>
@@ -128,144 +145,180 @@ export function Results({ kategorieId, typ, label, bezBodovani = false, extraCon
     setMenu(null)
   }
 
+  const shown = useAtomicReveal(kolo !== null)
   const prazdne = (kolo?.jizdy ?? []).every((j) => j.vysledky.length === 0)
+  const colHeaders = bezBodovani ? COL_HEADERS_BEZ_BODOVANI : COL_HEADERS_STD
+  const vysledekTabulky = useMemo<VysledekJizdaTable[]>(() =>
+    (kolo?.jizdy ?? []).map((jz) => {
+      const nekompletni = jizdaNekompletni(jz.vysledky)
+      return {
+        id: jz.id,
+        label: `${jz.cislo}. JÍZDA`,
+        nekompletni,
+        rows: jz.vysledky.map((radek, index) => ({
+          id: `${jz.id}:${radek.jezdec_id}`,
+          index,
+          jizdaId: jz.id,
+          radek
+        }))
+      }
+    }), [kolo]
+  )
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
-        <div>
-          <h2 className="text-[22px] font-[680] tracking-tight">Výsledky — {label}</h2>
-          <p className="mt-0.5 text-[12.5px] text-muted">
-            Napiš čas (mm:ss.sss) nebo stav (dnf/dns/dq) · nebo klikni na odznak vpravo
-          </p>
+    <div className="race-table-screen heat-table-screen">
+      <div className="heat-table-shell">
+        <div className="heat-table-header flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-[22px] font-[680] tracking-tight">Výsledky — {label}</h2>
+            <p className="mt-0.5 text-[12.5px] text-muted">
+              Napiš čas (mm:ss.sss) nebo stav (dnf/dns/dq) · nebo klikni na odznak vpravo
+            </p>
+          </div>
+          {extraControls && <div className="flex items-center gap-2">{extraControls}</div>}
         </div>
-        {extraControls && <div className="flex items-center gap-2">{extraControls}</div>}
+
+        {loadError && (
+          <div className="heat-table-message text-[13px] text-danger">
+            Nepodařilo se načíst výsledky: {loadError}
+          </div>
+        )}
       </div>
 
-      {loadError && (
-        <div className="px-5 pb-3.5 text-[13px] text-danger">
-          Nepodařilo se načíst výsledky: {loadError}
-        </div>
-      )}
-
-      {prazdne && (
-        <div className="px-5 pb-5 text-[13px] text-muted">
-          Nejprve sestav rošty ({label}) — výsledky se zadávají jezdcům z roštu.
-        </div>
-      )}
-
-      {(kolo?.jizdy ?? []).map((jz) => {
-        const nekompletni = jizdaNekompletni(jz.vysledky)
-        const colHeaders = bezBodovani ? COL_HEADERS_BEZ_BODOVANI : COL_HEADERS_STD
-
-        return (
-          <div key={jz.id} className="mx-5 mb-4">
-            <div className="mb-2 text-[13px] font-[620]">
-              <span className="inline-flex items-center gap-2">
-                {jz.cislo}. JÍZDA
-                {nekompletni && (
-                  <span className="inline-flex h-5 items-center rounded-full border border-border bg-muted/10 px-2 text-[11px] font-[600] tracking-[0.02em] text-muted">
-                    nekompletní
-                  </span>
-                )}
-              </span>
+      <div className="heat-table-wrap">
+        <div className="heat-table-body-shell" style={{ position: 'relative' }}>
+          {kolo == null ? (
+            <div className="heat-empty-state text-sm text-muted">Načítám výsledky…</div>
+          ) : prazdne ? (
+            <div className="heat-empty-state text-sm text-muted">
+              {`Nejprve sestav rošty (${label}) — výsledky se zadávají jezdcům z roštu.`}
             </div>
-            <Table>
-              <Table.ScrollContainer>
-                <Table.Content aria-label={`${jz.cislo}. jízda — ${label}`}>
-                  <Table.Header className="sticky top-0 z-10">
-                    {colHeaders.map((h, idx) => (
-                      <Table.Column
-                        key={h}
-                        isRowHeader={idx === 0}
-                        className={idx >= 6 ? 'text-right' : ''}
-                      >
-                        {h}
-                      </Table.Column>
-                    ))}
-                  </Table.Header>
-                  <Table.Body
-                    renderEmptyState={() => (
-                      <div className="py-4 text-center text-sm text-muted">Prázdná jízda</div>
-                    )}
-                  >
-                    {jz.vysledky.map((r, i) => (
-                      <Table.Row
-                        key={r.jezdec_id}
-                        id={r.jezdec_id}
-                        className={maZasahReditele(r) ? 'bg-warning/[0.05]' : i % 2 ? 'bg-muted/[0.04]' : ''}
-                      >
-                        <Table.Cell className="tabular-nums font-[620]">
-                          <span style={{
-                            color: r.poradi && r.poradi <= 3
-                              ? 'var(--color-foreground)'
-                              : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
-                          }}>
-                            {r.poradi != null ? (
-                              <>
-                                <MedalDot rank={r.poradi} />
-                                {r.poradi}.
-                              </>
-                            ) : (
-                              <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 22%, transparent)' }}>—</span>
-                            )}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell className="tabular-nums font-[600]">{r.st_cislo}</Table.Cell>
-                        <Table.Cell className="font-[590]">{r.prijmeni}</Table.Cell>
-                        <Table.Cell className="text-muted">{r.jmeno}</Table.Cell>
-                        <Table.Cell className="text-muted">{r.znacka}</Table.Cell>
-                        <Table.Cell className="text-muted">{r.model}</Table.Cell>
-                        <Table.Cell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {jenCasovaPenalizace(r) ? (
-                              <span style={{
-                                fontSize: 10, fontWeight: 650,
-                                padding: '2px 6px', borderRadius: 99, flexShrink: 0,
-                                background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
-                                color: 'var(--color-primary)'
-                              }}>
-                                pen.
-                              </span>
-                            ) : (
-                              maZasahReditele(r) && <PenalizaceBadge tooltip={tooltipPenalizace(r)} />
-                            )}
-                            {r.stav === 'OK' ? (
-                              <TimeCell
-                                ms={r.namereny_cas_ms}
-                                penalizaceMs={r.penalizace_ms}
-                                tooltip={jenCasovaPenalizace(r) ? tooltipPenalizace(r) : undefined}
-                                onTime={(ms) => void setCas(jz.id, r.jezdec_id, ms)}
-                                onStav={(s) => void setStav(jz.id, r.jezdec_id, s)}
-                              />
-                            ) : (
-                              <StatusBadge
-                                stav={r.stav}
-                                cas={r.namereny_cas_ms}
-                                onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)}
-                              />
-                            )}
-                            <Caret onOpen={(e) => otevriMenu(e, jz.id, r.jezdec_id)} />
-                          </div>
-                        </Table.Cell>
-                        {!bezBodovani && (
-                          <Table.Cell className="text-right">
-                            <BodyCell
-                              body={r.body}
-                              overridden={r.body_rucni != null}
-                              onCommit={(val) => void setBody(jz.id, r.jezdec_id, val)}
-                            />
-                          </Table.Cell>
-                        )}
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table.Content>
-              </Table.ScrollContainer>
-            </Table>
-          </div>
-        )
-      })}
+          ) : (
+            <>
+              <div style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? undefined : 'none' }}>
+                <div className="heat-table-stack">
+              {vysledekTabulky.map((jizda) => (
+                <section key={jizda.id} className="heat-section">
+                  <div className="heat-section-heading">
+                    <h3 id={`vysledky-jizda-${jizda.id}`}>{jizda.label}</h3>
+                    <div className="heat-section-meta">
+                      {jizda.nekompletni && <span className="heat-section-status">nekompletní</span>}
+                      <span className="tabular-nums">{jizda.rows.length}</span>
+                    </div>
+                  </div>
+                  <Table className="heat-table-root">
+                    <Table.ScrollContainer className="heat-table-scroll">
+                      <Table.Content aria-labelledby={`vysledky-jizda-${jizda.id}`}>
+                        <Table.Header>
+                          {colHeaders.map((h, idx) => (
+                            <Table.Column
+                              key={h}
+                              isRowHeader={h === 'Příjmení'}
+                              className={idx >= 6 ? 'text-right' : ''}
+                            >
+                              {h}
+                            </Table.Column>
+                          ))}
+                        </Table.Header>
+                        <Table.Body
+                          renderEmptyState={() => (
+                            <div className="py-6 text-center text-sm text-muted">Prázdná jízda</div>
+                          )}
+                        >
+                          {jizda.rows.map((row) => {
+                            const r = row.radek
+                            return (
+                              <Table.Row
+                                key={row.id}
+                                id={row.id}
+                                className={maZasahReditele(r) ? 'bg-warning/[0.05]' : row.index % 2 ? 'bg-muted/[0.04]' : ''}
+                              >
+                                <Table.Cell className="tabular-nums font-[620]">
+                                  <span style={{
+                                    color: r.poradi && r.poradi <= 3
+                                      ? 'var(--color-foreground)'
+                                      : 'color-mix(in srgb, var(--color-foreground) 55%, transparent)'
+                                  }}>
+                                    {r.poradi != null ? (
+                                      <>
+                                        <MedalDot rank={r.poradi} />
+                                        {r.poradi}.
+                                      </>
+                                    ) : (
+                                      <span style={{ color: 'color-mix(in srgb, var(--color-foreground) 22%, transparent)' }}>—</span>
+                                    )}
+                                  </span>
+                                </Table.Cell>
+                                <Table.Cell className="tabular-nums font-[600]">{r.st_cislo}</Table.Cell>
+                                <Table.Cell className="font-[590]">{r.prijmeni}</Table.Cell>
+                                <Table.Cell className="text-muted">{r.jmeno}</Table.Cell>
+                                <Table.Cell className="text-muted">{r.znacka}</Table.Cell>
+                                <Table.Cell className="text-muted">{r.model}</Table.Cell>
+                                <Table.Cell className="text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {jenCasovaPenalizace(r) ? (
+                                      <span style={{
+                                        fontSize: 10, fontWeight: 650,
+                                        padding: '2px 6px', borderRadius: 99, flexShrink: 0,
+                                        background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)',
+                                        color: 'var(--color-primary)'
+                                      }}>
+                                        pen.
+                                      </span>
+                                    ) : (
+                                      maZasahReditele(r) && <PenalizaceBadge tooltip={tooltipPenalizace(r)} />
+                                    )}
+                                    {r.stav === 'OK' ? (
+                                      <TimeCell
+                                        ms={r.namereny_cas_ms}
+                                        penalizaceMs={r.penalizace_ms}
+                                        tooltip={jenCasovaPenalizace(r) ? tooltipPenalizace(r) : undefined}
+                                        onTime={(ms) => void setCas(row.jizdaId, r.jezdec_id, ms)}
+                                        onStav={(s) => void setStav(row.jizdaId, r.jezdec_id, s)}
+                                      />
+                                    ) : (
+                                      <StatusBadge
+                                        stav={r.stav}
+                                        cas={r.namereny_cas_ms}
+                                        onOpen={(e) => otevriMenu(e, row.jizdaId, r.jezdec_id)}
+                                      />
+                                    )}
+                                    <Caret onOpen={(e) => otevriMenu(e, row.jizdaId, r.jezdec_id)} />
+                                  </div>
+                                </Table.Cell>
+                                {!bezBodovani && (
+                                  <Table.Cell className="text-right">
+                                    <BodyCell
+                                      body={r.body}
+                                      overridden={r.body_rucni != null}
+                                      onCommit={(val) => void setBody(row.jizdaId, r.jezdec_id, val)}
+                                    />
+                                  </Table.Cell>
+                                )}
+                              </Table.Row>
+                            )
+                          })}
+                        </Table.Body>
+                      </Table.Content>
+                    </Table.ScrollContainer>
+                  </Table>
+                </section>
+              ))}
+                </div>
+              </div>
+              {!shown && (
+                <div
+                  className="heat-empty-state text-sm text-muted"
+                  style={{ position: 'absolute', inset: 0 }}
+                  aria-hidden
+                >
+                  Načítám výsledky…
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {menu &&
         createPortal(

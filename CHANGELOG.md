@@ -47,6 +47,27 @@ Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
 - **Zápis měření do výsledků už nenabízí další jízdu bannerem** — po úspěšném
   zápisu se zobrazí jen krátký HeroUI toast `Zapsáno do Výsledků`; další jízda
   se po zápisu automaticky neotevírá.
+- **Nastavení aplikace je nově samostatná stránka** — místo dlouhého modalu se
+  otevírá v hlavním floating panelu s vlastní navigací sekcí. Sidebar se závodem
+  zůstává viditelný a návrat zpět vede na původní závodní obrazovku.
+- **Sidebar hlavního okna používá stejné kategoriové pilulky jako Stopky** —
+  výběr kategorie je nově HeroUI `Tabs` s klouzavým indikátorem, stejným
+  radiusem, paddingem a hover stavem.
+- **Tlačítka hlavního okna mají stejné zaoblení jako ve Stopkách** — HeroUI
+  `Button` používá společný `--verdict-control-radius` a `ButtonGroup` si přitom
+  zachovává rovné vnitřní hrany.
+- **Přepínače fází a podfází jsou kompaktnější** — HeroUI `Tabs` už se v hlavním
+  okně neroztahují přes celou šířku panelu; drží šířku podle obsahu, stejný radius
+  jako ostatní ovládací prvky a scrollují jen při nedostatku místa.
+- **Startovní listina je kompaktní centrovaný blok** — nadpis, akce i HeroUI
+  `Table` sdílí stejnou obsahovou šířku, takže editační seznam jezdců nepůsobí
+  zbytečně nataženě na širokém pracovním panelu.
+- **Rošty jsou znovu rozdělené po jízdách** — každá jízda se vykresluje jako
+  samostatná centrovaná HeroUI `Table`, takže rošt nepůsobí jako jedna dlouhá
+  roztažená tabulka a z řádků zmizel opakovaný sloupec „Jízda“.
+- **Rošty a výsledky mají kompaktnější tabulky po jízdách** — řádky jsou nižší,
+  scrollbar je odsazený od rohů tabulek a výsledky už nejsou jedna spojená
+  tabulka se sloupcem „Jízda“, ale samostatné HeroUI `Table` pro každou jízdu.
 
 ### Opraveno
 - **Stopky se už při zápisu času neseknou** — tabulka naměřených časů byla
@@ -63,6 +84,12 @@ Všechny podstatné změny v aplikaci **Verdict**. Formát vychází z
 - **Hlavičky tabulek ve Stopkách drží při scrollování** — v naměřených časech i
   v náhledu roštu zůstávají hlavičky viditelné, tabulky si při scrollu zachovají
   kulaté rohy a pod sticky hlavičkou neprosvítají řádky.
+- **Horní přepínače fází už na úzkém okně neukazují systémový scrollbar** —
+  HeroUI `Tabs` zůstávají ve správné compound struktuře, ale scrolluje přímo
+  tab list se skrytým nativním scrollbarem, jemným levým/pravým fade okrajem a
+  doscrollováním částečně viditelného tabu při kliknutí nebo focusu.
+- **Řádky bez přejímky ve Startovní listině už nemají bílý blok na konci** —
+  ztlumený stav se vykresluje přes celý řádek včetně akčního sloupce.
 - **Přepínače jízd ve Stopkách se po automatickém výběru nerozjíždějí** —
   aktivní pilulka zůstává na správné jízdě a při jediné jízdě se pod segmentem
   nezobrazuje zbytečný scrollbar.

@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { Button, Label, ListBox } from '@heroui/react'
+import { Button, Tabs } from '@heroui/react'
 import type { Kategorie, UpdateInfo } from '@shared/types'
 import { APP_NAME, APP_VERSION_LABEL } from '../lib/version'
 import logoDarkUrl from '../assets/brand/verdict-lockup-dark.svg?url'
@@ -29,7 +29,7 @@ export const ShellSidebar = memo(function ShellSidebar({
   }, [])
 
   return (
-    <aside className="flex w-sidebar shrink-0 flex-col h-full border-r border-border bg-surface">
+    <aside className="app-floating-panel race-sidebar-panel flex h-full w-sidebar shrink-0 flex-col">
       <div className="h-toolbar shrink-0 flex items-center px-4">
         <button
           type="button"
@@ -54,7 +54,7 @@ export const ShellSidebar = memo(function ShellSidebar({
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start"
+          className="sidebar-back-button w-full justify-start"
           onPress={onZpet}
         >
           ← Závody
@@ -66,25 +66,29 @@ export const ShellSidebar = memo(function ShellSidebar({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2.5">
-        <ListBox
+        <Tabs
+          orientation="vertical"
+          className="sidebar-tabs w-full"
           aria-label="Kategorie závodu"
-          selectionMode="single"
-          selectedKeys={activeCat != null ? new Set([String(activeCat)]) : new Set()}
-          onSelectionChange={(keys) => {
-            const key = Array.from(keys)[0]
+          selectedKey={activeCat != null ? String(activeCat) : ''}
+          onSelectionChange={(key) => {
             if (key != null) onCat(Number(key))
           }}
-          className="w-full"
         >
-          {kategorie.map((c) => (
-            <ListBox.Item key={c.id} id={String(c.id)} textValue={c.nazev}>
-              <Label className="flex-1">{c.nazev}</Label>
-              {c.pocet > 0 && (
-                <span className="text-xs text-muted tabular-nums">{c.pocet}</span>
-              )}
-            </ListBox.Item>
-          ))}
-        </ListBox>
+          <Tabs.ListContainer>
+            <Tabs.List aria-label="Kategorie závodu">
+              {kategorie.map((c) => (
+                <Tabs.Tab key={c.id} id={String(c.id)}>
+                  <span className="sidebar-tab-label">{c.nazev}</span>
+                  {c.pocet > 0 && (
+                    <span className="sidebar-tab-count tabular-nums">{c.pocet}</span>
+                  )}
+                  <Tabs.Indicator />
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs.ListContainer>
+        </Tabs>
       </div>
 
       {updateInfo && (

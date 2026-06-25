@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { KoloTyp, QAgregatRadek } from '@shared/types'
+import { consumePreload } from '../lib/preload'
+import { useAtomicReveal } from '../hooks/useAtomicReveal'
 import { Chip, Table } from '@heroui/react'
+import { MedalDot } from '../components/MedalDot'
 import { Tooltip } from '../components/Tooltip'
 import { fmtTime } from '../lib/time'
 
@@ -11,10 +14,12 @@ interface QVysledkyProps {
 }
 
 export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JSX.Element {
-  const [radky, setRadky] = useState<QAgregatRadek[]>([])
+  const [radky, setRadky] = useState<QAgregatRadek[] | null>(null)
+  const shown = useAtomicReveal(radky !== null)
 
   const nacti = useCallback(async (): Promise<void> => {
-    setRadky(await window.api.getQAgregat(kategorieId, typ))
+    const p = consumePreload<QAgregatRadek[]>(`${kategorieId}:${typ}:agregat`)
+    setRadky(await (p ?? window.api.getQAgregat(kategorieId, typ)))
   }, [kategorieId, typ])
 
   useEffect(() => {
@@ -23,12 +28,12 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
     return off
   }, [nacti])
 
-  const setBody = async (jezdecId: number, body: number | null): Promise<void> => {
+  const setBody = useCallback(async (jezdecId: number, body: number | null): Promise<void> => {
     setRadky(await window.api.setQAgregatBodyOverride(kategorieId, typ, jezdecId, body))
-  }
+  }, [kategorieId, typ])
 
   return (
-    <div>
+    <div className="race-table-screen">
       <div className="px-5 pb-3 pt-4">
         <h2 className="text-[22px] font-[680] tracking-tight">Výsledky po {label}</h2>
         <p className="mt-0.5 text-[12.5px] text-muted">
@@ -36,9 +41,16 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
         </p>
       </div>
 
-      <div className="mx-5 mb-5">
-        <Table>
-          <Table.ScrollContainer>
+      {radky == null ? (
+        <div className="heat-empty-state text-sm text-muted">Načítám výsledky po {label}…</div>
+      ) : (
+        <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+          <div
+            className="race-table-wrap"
+            style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? undefined : 'none', height: '100%' }}
+          >
+            <Table className="race-table-root">
+          <Table.ScrollContainer className="race-table-scroll">
             <Table.Content aria-label={`Výsledky po ${label}`}>
               <Table.Header className="sticky top-0 z-10">
                 <Table.Column isRowHeader>Pořadí</Table.Column>
@@ -123,23 +135,19 @@ export function QVysledky({ kategorieId, typ, label }: QVysledkyProps): React.JS
             </Table.Content>
           </Table.ScrollContainer>
         </Table>
-      </div>
+          </div>
+          {!shown && (
+            <div
+              className="heat-empty-state text-sm text-muted"
+              style={{ position: 'absolute', inset: 0 }}
+              aria-hidden
+            >
+              Načítám výsledky po {label}…
+            </div>
+          )}
+        </div>
+      )}
     </div>
-  )
-}
-
-function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
-  const color =
-    rank === 1 ? 'var(--color-medal-gold)' :
-    rank === 2 ? 'var(--color-medal-silver)' :
-    rank === 3 ? 'var(--color-medal-bronze)' : null
-  if (!color) return null
-  return (
-    <span style={{
-      display: 'inline-block', width: 7, height: 7,
-      borderRadius: 99, background: color,
-      marginRight: 8, verticalAlign: 'middle'
-    }} />
   )
 }
 

@@ -1,6 +1,6 @@
 # Časomíra — design system (UI)
 
-> **Účel:** Jednotný popis vzhledu pro návrháře, [Stitch](https://stitch.withgoogle.com/) a implementaci v `src/renderer/src/styles/mac.css`.  
+> **Účel:** Jednotný popis vzhledu pro návrháře, [Stitch](https://stitch.withgoogle.com/) a implementaci v `src/renderer/src/styles/main.css` + `src/renderer/src/styles/theme/verdict.css`.
 > **Platí pro:** Windows i macOS — jeden vzhled v duchu Apple HIG (ne dvě platformy).  
 > **Cíl redesignu:** evoluce směrem k **macOS 26 (Tahoe, Liquid Glass)** — viz [dev/prompt-stitch-macos26.md](./dev/prompt-stitch-macos26.md).
 
@@ -35,23 +35,25 @@ Desktopová **offline** appka pro časoměřiče rallycross/autocross: tabulky, 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ [traffic lights]  Časomíra                    (okno)    │
-├──────────┬──────────────────────────────────────────────┤
-│ Sidebar  │ Toolbar: breadcrumb          [Stopky][PDF]  │
-│ kategorie│ Segment fází (horizontální scroll)          │
-│ + počty  ├──────────────────────────────────────────────┤
-│          │ Inset tabulka / obsah fáze                    │
-│ operátor │                                               │
-│ + datum  │                                               │
-└──────────┴──────────────────────────────────────────────┘
+│ Mica / vibrancy pozadí okna                              │
+│ ┌──────────┐ ┌─────────────────────────────────────────┐ │
+│ │ Sidebar  │ │ Floating navigace: breadcrumb + akce    │ │
+│ │ kategorie│ │ Segment fází (horizontální scroll)      │ │
+│ │ + počty  │ └─────────────────────────────────────────┘ │
+│ │ operátor │ ┌─────────────────────────────────────────┐ │
+│ │ + datum  │ │ Pracovní panel: HeroUI Table / obsah    │ │
+│ └──────────┘ └─────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
 
 | Oblast | Chování |
 |--------|---------|
-| **Sidebar** (~252px) | Seznam kategorií; vpravo počet jezdců; ikona u řádku; **aktivní = modrá pilulka, bílý text**; dole operátor + datum. Materiál: vibrancy / blur (light: `rgba(245,245,247,0.66)`). |
-| **Toolbar** (~52px) | Vlevo breadcrumb `Kategorie → Fáze`. Vpravo: **Stopky** (sekundární, obrys), **Uložit PDF** (primární, plná modrá). |
-| **Segment fází** | Q1, Q2, Celkově po Q2, Q3, SF, Finále, Celkově… — **vždy horizontální scroll**, žádné ořezání labelů (např. „Celkově“). |
-| **Obsah** | **Inset grouped table** — zaoblený kontejner, zebra, jemná linka pod hlavičkou. |
+| **Okno** | Na macOS / Windows 11 používá nativní vibrancy / Mica. Materiál je vidět hlavně v mezerách mezi panely, ne pod textem tabulek. |
+| **Sidebar** (~252px) | Samostatný floating panel; seznam kategorií jako vertikální HeroUI `Tabs` s klouzavou pilulkou, vpravo počet jezdců; dole operátor + datum. |
+| **Horní navigace** | Samostatný floating panel: breadcrumb + akce nahoře, segment fází pod tím. |
+| **Segment fází** | Q1, Q2, Celkově po Q2, Q3, SF, Finále, Celkově… — **vždy horizontální scroll**, žádné ořezání labelů. |
+| **Obsah** | Samostatný pracovní panel. Datově široké tabulky využívají dostupnou šířku; editační Startovní listina je kompaktní centrovaný obsahový sloupec. Scrolluje `Table.ScrollContainer`, ne celá stránka. |
+| **Nastavení** | Otevírá se z ozubeného kola jako utilitní stránka v pracovním panelu, ne jako modal ani položka sidebaru. Sidebar zůstává vidět, horní navigace ukáže `Nastavení` a akci `Zpět na závod`. |
 
 ---
 
@@ -140,12 +142,27 @@ Malý **medailový puntík** (zlatá / stříbrná / bronzová) u čísla pozice
 - **Primární:** plná modrá, bílý text (Uložit PDF).
 - **Sekundární:** obrys, neutrální výplň (Stopky).
 - Jemný inset stín u tlačítek (`--shadow-btn`).
+- HeroUI `Button` v hlavním okně i Stopkách používá společný radius
+  `--verdict-control-radius` = 9 px; vnitřní hrany `ButtonGroup` zůstávají rovné.
 
 ### Segmentový přepínač
 
 - Track: jemně utlumený (`--seg-track`).
 - Vybraný segment: bílý / světle šedý pill se stínem (`--seg-sel`, `--seg-sel-shadow`).
-- Příliš mnoho segmentů → **scroll**, ne zmenšovat text pod čitelnost.
+- Segmenty fází a podfází jsou **kompaktní podle obsahu**, ne natažené přes celou
+  šířku pracovního panelu.
+- Příliš mnoho segmentů → **horizontální scroll**, ne zmenšovat text pod čitelnost.
+- Scrolluje přímo HeroUI tab list; nativní horizontální scrollbar je skrytý, místo
+  něj se podle reálného overflow objeví jemný levý/pravý fade. Kliknutí nebo
+  focus na částečně viditelný segment jej doscrolluje do viditelné oblasti.
+- Vnitřní pilulka používá `--verdict-control-radius`; track má jen malý přídavek
+  kvůli paddingu.
+
+### Sidebarové kategorie
+
+- Hlavní okno i Stopky používají HeroUI `Tabs` ve vertikální orientaci.
+- Vybraný stav je klouzavá jemně šedá pilulka, ne samostatný listbox highlight.
+- Rozměry drží stejnou geometrii: radius 9 px, padding 8 px / 11 px, krátký hover bez dekorativního pohybu.
 
 ### Tabulka (inset)
 
@@ -153,6 +170,27 @@ Malý **medailový puntík** (zlatá / stříbrná / bronzová) u čísla pozice
 - Hover řádek: `--hover`.
 - Hlavička: medium weight, spodní hairline.
 - Inline editace buněk (Enter) — viz produkční UX.
+- Startovní listina používá HeroUI `Table` v centrovaném obsahovém sloupci:
+  `--verdict-start-list-width` = 1120 px, s vnitřním scroll minimem
+  `--verdict-start-list-min-width` = 860 px. Nadpis a akce drží stejnou šířku
+  jako tabulka.
+- Rošty používají samostatnou HeroUI `Table` pro každou jízdu, aby byly jízdy
+  vizuálně oddělené a nebylo nutné opakovat sloupec „Jízda“ v každém řádku.
+  Celá obrazovka je centrovaná na `--verdict-roster-width` = 980 px, vnitřní
+  minimum jednotlivých tabulek je `--verdict-roster-table-min-width` = 760 px.
+- Výsledky jízd používají stejný pattern: jedna samostatná HeroUI `Table` pro
+  každou jízdu, centrovaná na `--verdict-results-width` = 1120 px s vnitřním
+  minimem `--verdict-results-table-min-width` = 960 px.
+- Rošty i výsledky mají kompaktní „jízdní“ density: hlavička 34 px, řádek 36 px.
+  Vertikální scroll patří full-width scroll plášti pracovního panelu, ne úzkému
+  sloupci s tabulkami; centrovaný je až vnitřní sloupec tabulek.
+
+### Nastavení
+
+- Není modal: je to samostatná utilitní stránka uvnitř hlavního floating shellu.
+- Vlevo má vnitřní navigaci sekcí, vpravo detail vybrané sekce.
+- Na užším okně se vnitřní navigace změní na horizontální scroll.
+- Krátké potvrzovací nebo specializované úlohy (Sportity, závodní tisk, obnova) mohou dál používat modal nad stránkou nastavení.
 
 ### Okno
 
@@ -179,7 +217,8 @@ Navrhovat **materiály**, ne nové layouty:
 | Soubor | Co |
 |--------|-----|
 | `docs/design.md` | Tento dokument |
-| `src/renderer/src/styles/mac.css` | CSS tokeny (implementace) |
+| `src/renderer/src/styles/main.css` | Shell, floating panely, globální CSS |
+| `src/renderer/src/styles/theme/verdict.css` | App-specific tokeny nad HeroUI |
 | `reference/Casomira-macOS/` | Klikací prototyp + `mac.css` originál |
 | `CLAUDE.md` §2c | Schválená pravidla vzhledu (produkt) |
 | `docs/dev/prompt-stitch-macos26.md` | Prompt pro Stitch |

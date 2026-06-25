@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Surface } from '@heroui/react'
+import { useCallback, useEffect, useMemo, useState, useDeferredValue } from 'react'
 import type { BackupRestorePreview } from '@shared/backup'
 import { isBackupPreview } from '@shared/backup'
 import type {
@@ -38,6 +37,7 @@ import { HotkeyHelp } from './components/HotkeyHelp'
 import { PrinterPickerModal } from './components/PrinterPickerModal'
 import { isMac, HK_GENERATE_ROST } from './lib/hotkeys'
 import { safeCall } from './lib/api'
+import { startPreload } from './lib/preload'
 
 // Fáze, které mají vnitřní přepínač Rošt/Výsledky (zkratky R / V a ⌘/Ctrl+G).
 const SUB_PHASES = new Set(['q1', 'q2', 'q3', 'sf', 'final'])
@@ -47,16 +47,6 @@ function czDate(iso: string): string {
   if (parts.length !== 3) return iso
   const [y, m, d] = parts
   return `${d}. ${m}. ${y}`
-}
-
-// Maximální (čtecí) šířka obsahu podle fáze. Stejná pro pohled Rošt i Výsledky,
-// aby se obsah při přepnutí nehýbal do stran (vystředěný sloupec).
-function contentMaxWidth(phase: string): number {
-  if (phase === 'start') return 880
-  if (phase === 'class_q2') return 652
-  if (phase === 'class_q3') return 724
-  if (phase === 'overall') return 660
-  return 1020 // Q1–Q3, semifinále, finále
 }
 
 // Počet kopií pro daný list dle závodního presetu (výchozí 1).
@@ -119,7 +109,7 @@ export function App(): React.JSX.Element {
   const [smazat, setSmazat] = useState<Jezdec | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [toastSlozka, setToastSlozka] = useState<string | null>(null)
-  const [nastaveniOtevreno, setNastaveniOtevreno] = useState(false)
+  const [utilityView, setUtilityView] = useState<'settings' | null>(null)
   const [upravaLogOtevreno, setUpravaLogOtevreno] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [printerPicker, setPrinterPicker] = useState<{
@@ -172,6 +162,7 @@ export function App(): React.JSX.Element {
   // Zpět na seznam závodů (obnoví počty na kartách).
   const zpetNaSeznam = useCallback((): void => {
     void reloadZavody()
+    setUtilityView(null)
     setView('list')
   }, [reloadZavody])
 
@@ -206,6 +197,38 @@ export function App(): React.JSX.Element {
     setSubView('rost')
   }, [phase, activeCat])
 
+  // Preload: spustíme IPC co nejdřív (hned po phase/activeCat změně),
+  // zatímco useDeferredValue stále renderuje nový screen v pozadí.
+  // Tím získáme ~50-100ms náskok — data jsou hotová dřív než se komponenta namountuje.
+  useEffect(() => {
+    if (activeCat == null) return
+    const cat = activeCat
+    switch (phase) {
+      case 'q1':
+      case 'q2':
+      case 'q3': {
+        const typ = phase.toUpperCase() as 'Q1' | 'Q2' | 'Q3'
+        startPreload(`${cat}:${typ}:rost`, () => window.api.getRosty(cat, typ))
+        startPreload(`${cat}:${typ}:vysledky`, () => window.api.getVysledky(cat, typ))
+        startPreload(`${cat}:${typ}:agregat`, () => window.api.getQAgregat(cat, typ))
+        break
+      }
+      case 'sf':
+      case 'final':
+        startPreload(`${cat}:zaverStav`, () => window.api.getZaverStav(cat))
+        break
+      case 'class_q2':
+        startPreload(`${cat}:klasifikace:Q1,Q2`, () => window.api.getKlasifikace(cat, ['Q1', 'Q2']))
+        break
+      case 'class_q3':
+        startPreload(`${cat}:klasifikace:Q1,Q2,Q3`, () => window.api.getKlasifikace(cat, ['Q1', 'Q2', 'Q3']))
+        break
+      case 'overall':
+        startPreload(`${cat}:celkove`, () => window.api.getCelkove(cat))
+        break
+    }
+  }, [phase, activeCat])
+
   // Krátká hláška, která sama zmizí.
   useEffect(() => {
     if (!toast) return
@@ -218,7 +241,7 @@ export function App(): React.JSX.Element {
 
   // Inline editace: uloží přes DB. Vrací true/false — při kolizi (duplicitní
   // startovní číslo nebo los) se neuloží, oznámí se a buňka se označí.
-  const onEdit = async (
+  const onEdit = useCallback(async (
     id: number,
     pole: JezdecPole,
     hodnota: string | number | null
@@ -237,7 +260,7 @@ export function App(): React.JSX.Element {
       )
       return false
     }
-  }
+  }, [oznam])
 
   const onAdd = async (): Promise<void> => {
     if (activeCat == null) return
@@ -337,14 +360,17 @@ export function App(): React.JSX.Element {
   //   SOTOLINA: místo SF/Finále jede Finále B → Finále A (CLAUDE.md §3c).
   const aktivniKategorie = kategorie.find((c) => c.id === activeCat) ?? null
   const catLabel = aktivniKategorie?.nazev ?? ''
-  const phases = phasesForCategory(zavod?.typ ?? 'RAC')
+  const phases = useMemo(() => phasesForCategory(zavod?.typ ?? 'RAC'), [zavod?.typ])
   const phaseLabel = phases.find((p) => p.id === phase)?.label ?? ''
-  const contentMaxW = contentMaxWidth(phase)
 
   // Dynamický titulek okna — operátor vidí kontext i v taskbaru.
   useEffect(() => {
     if (view === 'list') {
       document.title = 'Verdict'
+      return
+    }
+    if (utilityView === 'settings') {
+      document.title = catLabel ? `Verdict — ${catLabel} · Nastavení` : 'Verdict — Nastavení'
       return
     }
     const subLabel = SUB_PHASES.has(phase)
@@ -353,7 +379,7 @@ export function App(): React.JSX.Element {
     document.title = catLabel
       ? `Verdict — ${catLabel} · ${phaseLabel}${subLabel}`
       : 'Verdict'
-  }, [view, catLabel, phase, phaseLabel, subView])
+  }, [view, utilityView, catLabel, phase, phaseLabel, subView])
 
   // Když se fáze ocitne mimo seznam povolených (přepnutí RAC→RX nebo otevření
   // RX závodu s uloženou „class_q2"), spadni zpět na startovní listinu.
@@ -361,11 +387,12 @@ export function App(): React.JSX.Element {
     if (!phases.some((p) => p.id === phase)) setPhase('start')
   }, [phases, phase])
 
-  const onTabPhase = (id: string): void => {
+  const deferredPhase = useDeferredValue(phase)
+  const onTabPhase = useCallback((id: string): void => {
     if (id === phase) return
     setPhase(id)
     setSubView('rost')
-  }
+  }, [phase])
 
   // Export aktuálního listu. saveAs=false → automaticky do struktury složek.
   const exportujAktualni = async (saveAs: boolean): Promise<void> => {
@@ -438,19 +465,19 @@ export function App(): React.JSX.Element {
     editZavod !== null ||
     smazatZavod !== null ||
     restorePreview !== null ||
-    nastaveniOtevreno ||
     upravaLogOtevreno ||
     rootProblem !== null ||
     importPreview !== null ||
     smazat !== null ||
     helpOpen
+  const raceHotkeysBlocked = anyModalOpen || utilityView !== null
 
   const gotoPhaseIdx = (i: number): void => {
     if (i >= 0 && i < phases.length && phases[i].id !== phase) onTabPhase(phases[i].id)
   }
 
   useHotkeys({
-    enabled: view === 'race' && !anyModalOpen,
+    enabled: view === 'race' && !raceHotkeysBlocked,
     isMac,
     onPrevPhase: () => gotoPhaseIdx(phaseIdx - 1),
     onNextPhase: () => gotoPhaseIdx(phaseIdx + 1),
@@ -470,8 +497,8 @@ export function App(): React.JSX.Element {
 
   // Obsah podle vybrané fáze. Rošty/Výsledky/Klasifikace si data tahají samy
   // z databáze podle kategorie a kola.
-  const renderPhase = (): React.JSX.Element => {
-    if (phase === 'start') {
+  const renderPhase = (activePhase: string): React.JSX.Element => {
+    if (activePhase === 'start') {
       return (
         <StartList
           jezdci={jezdci}
@@ -483,9 +510,10 @@ export function App(): React.JSX.Element {
         />
       )
     }
-    if (activeCat == null) return <Placeholder label={phaseLabel} />
+    const activePhaseLabel = phases.find((p) => p.id === activePhase)?.label ?? ''
+    if (activeCat == null) return <Placeholder label={activePhaseLabel} />
 
-    switch (phase) {
+    switch (activePhase) {
       case 'q1':
         return <QFaze kategorieId={activeCat} typ="Q1" label="Q1" sub={subView} onSub={setSubView} />
       case 'q2':
@@ -517,30 +545,28 @@ export function App(): React.JSX.Element {
           />
         )
       default:
-        return <Placeholder label={phaseLabel} />
+        return <Placeholder label={activePhaseLabel} />
     }
   }
 
   return (
-    <div className="flex h-full bg-background p-2">
-      <Surface
-        variant="default"
-        className="relative mx-auto flex h-full w-full max-w-[1440px] flex-col overflow-hidden rounded-xl border border-border"
-      >
+    <div className="app-shell">
       {view === 'list' ? (
-        <RaceList
-          zavody={zavody}
-          onOpen={(id) => void otevriZavod(id)}
-          onNew={() => setNovyOtevreno(true)}
-          onEdit={(z) => setEditZavod(z)}
-          onDelete={setSmazatZavod}
-          onBackup={(z) => void onZalohovatZavod(z)}
-          onRestore={() => void onObnovitZeZalohy()}
-          theme={theme}
-          onToggleTheme={toggle}
-        />
+        <div className="race-list-view">
+          <RaceList
+            zavody={zavody}
+            onOpen={(id) => void otevriZavod(id)}
+            onNew={() => setNovyOtevreno(true)}
+            onEdit={(z) => setEditZavod(z)}
+            onDelete={setSmazatZavod}
+            onBackup={(z) => void onZalohovatZavod(z)}
+            onRestore={() => void onObnovitZeZalohy()}
+            theme={theme}
+            onToggleTheme={toggle}
+          />
+        </div>
       ) : (
-        <div className="flex h-full">
+        <div className="race-shell">
           <ShellSidebar
             kategorie={kategorie}
             activeCat={activeCat}
@@ -549,31 +575,72 @@ export function App(): React.JSX.Element {
             operator="Časoměřič"
             datum={zavod ? czDate(zavod.datum) : ''}
           />
-          <main className="flex flex-1 min-w-0 flex-col bg-background">
-            <ShellToolbar
-              catLabel={catLabel}
-              phaseLabel={phaseLabel}
-              theme={theme}
-              onToggleTheme={toggle}
-              onPdf={() => void onPdf()}
-              onPdfSaveAs={() => void onPdfSaveAs()}
-              onOpenPdfFolder={() => void onOpenPdfFolder()}
-              onPrint={(shiftKey) => void onPrint(shiftKey)}
-              onStopky={() => void window.api.openStopky()}
-              onSettings={() => setNastaveniOtevreno(true)}
-            />
-            <PhaseSegment
-              phases={phases}
-              selectedId={phase}
-              onSelect={onTabPhase}
-            />
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div
-                style={{ maxWidth: contentMaxW, width: '100%', margin: '0 auto' }}
-              >
-                {renderPhase()}
-              </div>
-            </div>
+          <main className="race-main">
+            <section className="app-floating-panel race-nav-panel no-print">
+              <ShellToolbar
+                catLabel={catLabel}
+                phaseLabel={utilityView === 'settings' ? 'Nastavení' : phaseLabel}
+                settingsActive={utilityView === 'settings'}
+                theme={theme}
+                onToggleTheme={toggle}
+                onPdf={() => void onPdf()}
+                onPdfSaveAs={() => void onPdfSaveAs()}
+                onOpenPdfFolder={() => void onOpenPdfFolder()}
+                onPrint={(shiftKey) => void onPrint(shiftKey)}
+                onStopky={() => void window.api.openStopky()}
+                onSettings={() => setUtilityView('settings')}
+                onCloseSettings={() => setUtilityView(null)}
+              />
+              {utilityView !== 'settings' && (
+                <PhaseSegment
+                  phases={phases}
+                  selectedId={phase}
+                  onSelect={onTabPhase}
+                />
+              )}
+            </section>
+            <section className="app-floating-panel race-content-panel">
+              {utilityView === 'settings' ? (
+                <Settings
+                  kategorie={kategorie}
+                  onToast={oznam}
+                  onEditZavod={
+                    zavod
+                      ? () => {
+                          setUtilityView(null)
+                          setEditZavod(zavod)
+                        }
+                      : undefined
+                  }
+                  onBackupZavod={
+                    zavod ? () => void onZalohovatZavod(zavod) : undefined
+                  }
+                  onBackupAll={() => void onZalohovatVse()}
+                  onRestore={() => {
+                    setUtilityView(null)
+                    void onObnovitZeZalohy()
+                  }}
+                  onHotkeys={() => {
+                    setUtilityView(null)
+                    setHelpOpen(true)
+                  }}
+                  onUpravaLog={
+                    activeCat != null
+                      ? () => {
+                          setUtilityView(null)
+                          setUpravaLogOtevreno(true)
+                        }
+                      : undefined
+                  }
+                  zavodId={zavod?.id}
+                  zavod={zavod ?? undefined}
+                />
+              ) : (
+                <div key={deferredPhase} className="phase-screen-enter">
+                  {renderPhase(deferredPhase)}
+                </div>
+              )}
+            </section>
           </main>
         </div>
       )}
@@ -634,44 +701,6 @@ export function App(): React.JSX.Element {
           tiskarny={printerPicker.tiskarny}
           onPrint={(deviceName) => void doTiskni(deviceName)}
           onClose={() => setPrinterPicker(null)}
-        />
-      )}
-
-      {nastaveniOtevreno && (
-        <Settings
-          kategorie={kategorie}
-          onClose={() => setNastaveniOtevreno(false)}
-          onToast={oznam}
-          onEditZavod={
-            zavod
-              ? () => {
-                  setNastaveniOtevreno(false)
-                  setEditZavod(zavod)
-                }
-              : undefined
-          }
-          onBackupZavod={
-            zavod ? () => void onZalohovatZavod(zavod) : undefined
-          }
-          onBackupAll={() => void onZalohovatVse()}
-          onRestore={() => {
-            setNastaveniOtevreno(false)
-            void onObnovitZeZalohy()
-          }}
-          onHotkeys={() => {
-            setNastaveniOtevreno(false)
-            setHelpOpen(true)
-          }}
-          onUpravaLog={
-            activeCat != null
-              ? () => {
-                  setNastaveniOtevreno(false)
-                  setUpravaLogOtevreno(true)
-                }
-              : undefined
-          }
-          zavodId={zavod?.id}
-          zavod={zavod ?? undefined}
         />
       )}
 
@@ -807,7 +836,6 @@ export function App(): React.JSX.Element {
           )}
         </div>
       )}
-      </Surface>
     </div>
   )
 }

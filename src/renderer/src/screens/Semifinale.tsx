@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ZaverStav } from '@shared/types'
+import { consumePreload } from '../lib/preload'
 import { Button } from '@heroui/react'
 import { SubTabs } from '../components/SubTabs'
 import { Results } from './Results'
@@ -19,16 +20,14 @@ export function Semifinale({
   const [stav, setStav] = useState<ZaverStav | null>(null)
 
   const nactiStav = useCallback(async (): Promise<void> => {
-    setStav(await window.api.getZaverStav(kategorieId))
+    const p = consumePreload<ZaverStav>(`${kategorieId}:zaverStav`)
+    setStav(await (p ?? window.api.getZaverStav(kategorieId)))
   }, [kategorieId])
 
   useEffect(() => {
     void nactiStav()
-  }, [nactiStav])
-
-  useEffect(() => {
     const off = window.api.onDataChanged?.(() => void nactiStav())
-    return off
+    return () => off?.()
   }, [nactiStav])
 
   const setVelikost = async (v: number): Promise<void> => {
@@ -45,7 +44,7 @@ export function Semifinale({
   // Semifinále se nekoná → samostatná informační obrazovka (bez přepínače).
   if (!stav.sfSeKona) {
     return (
-      <div>
+      <div className="race-table-screen">
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
           <div>
             <h2 className="text-[22px] font-[680] tracking-tight">Semifinále</h2>
@@ -55,7 +54,7 @@ export function Semifinale({
           </div>
           <div className="flex items-center gap-2">{toggle}</div>
         </div>
-        <div className="px-5 pb-5">
+        <div className="race-scroll-area px-5 pb-5">
           <div
             className="rounded-lg px-4 py-3 text-[13px] leading-relaxed"
             style={{
@@ -73,7 +72,7 @@ export function Semifinale({
   }
 
   return (
-    <div>
+    <div className="race-tabbed-screen">
       <SubTabs
         tabs={[
           { id: 'rost', label: 'Rošt' },
@@ -82,23 +81,25 @@ export function Semifinale({
         active={sub}
         onTab={onSub}
       />
-      {sub === 'rost' ? (
-        <RostGrid
-          kategorieId={kategorieId}
-          typ="SF"
-          label="Semifinále"
-          navrhFn={() => window.api.navrhSF(kategorieId)}
-          extraControls={toggle}
-          headSub={`${stav.kvalifikovani} kvalifikovaných · liché pořadí z Q3 → 1. jízda, sudé → 2.`}
-          generateLabel={stav.sfHotovo ? 'Přegenerovat SF' : 'Vygenerovat SF'}
-          previewTitle="Nasazení semifinále"
-          previewText="Liché pořadí z Klasifikace po Q3 → 1. jízda, sudé → 2. jízda. Po nasazení můžeš jezdce ručně upravit."
-          jizdaTitle={(c) => `${c}. SF JÍZDA`}
-          onChanged={() => void nactiStav()}
-        />
-      ) : (
-        <Results kategorieId={kategorieId} typ="SF" label="Semifinále" extraControls={toggle} />
-      )}
+      <div className="min-h-0 flex-1">
+        {sub === 'rost' ? (
+          <RostGrid
+            kategorieId={kategorieId}
+            typ="SF"
+            label="Semifinále"
+            navrhFn={() => window.api.navrhSF(kategorieId)}
+            extraControls={toggle}
+            headSub={`${stav.kvalifikovani} kvalifikovaných · liché pořadí z Q3 → 1. jízda, sudé → 2.`}
+            generateLabel={stav.sfHotovo ? 'Přegenerovat SF' : 'Vygenerovat SF'}
+            previewTitle="Nasazení semifinále"
+            previewText="Liché pořadí z Klasifikace po Q3 → 1. jízda, sudé → 2. jízda. Po nasazení můžeš jezdce ručně upravit."
+            jizdaTitle={(c) => `${c}. SF JÍZDA`}
+            onChanged={() => void nactiStav()}
+          />
+        ) : (
+          <Results kategorieId={kategorieId} typ="SF" label="Semifinále" extraControls={toggle} />
+        )}
+      </div>
     </div>
   )
 }

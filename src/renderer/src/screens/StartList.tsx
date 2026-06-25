@@ -61,100 +61,102 @@ export function StartList({
       : `${jezdci.length} přihlášených · řazeno dle losu`
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
-        <div>
-          <h2 className="text-[22px] font-[680] tracking-tight">Startovní listina</h2>
-          <p className="mt-0.5 text-[12.5px] text-muted">{subText}</p>
+    <div className="race-table-screen start-list-screen">
+      <div className="start-list-shell">
+        <div className="start-list-header flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-[22px] font-[680] tracking-tight">Startovní listina</h2>
+            <p className="mt-0.5 text-[12.5px] text-muted">{subText}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onPress={onImport}>
+              <ArrowDownToSquare width={14} height={14} />
+              Importovat z Excelu
+            </Button>
+            <Button size="sm" onPress={onAdd}>
+              <Plus width={13} height={13} />
+              Přidat jezdce
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onPress={onImport}>
-            <ArrowDownToSquare width={14} height={14} />
-            Importovat z Excelu
-          </Button>
-          <Button size="sm" onPress={onAdd}>
-            <Plus width={13} height={13} />
-            Přidat jezdce
-          </Button>
-        </div>
-      </div>
 
-      <div className="mx-5 mb-5">
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Startovní listina">
-              <Table.Header columns={ALL_COLS}>
-                {(c) => (
-                  <Table.Column
-                    id={c.key}
-                    isRowHeader={c.key === 'prijmeni'}
-                    aria-label={c.key === 'akce' ? 'akce' : undefined}
-                    style={{ width: c.width }}
-                  >
-                    {c.header}
-                  </Table.Column>
-                )}
-              </Table.Header>
-              <Table.Body
-                renderEmptyState={() => (
-                  <div className="flex h-20 items-center justify-center text-sm text-muted">
-                    Zatím žádní jezdci — naimportuj je z Excelu nebo přidej ručně.
-                  </div>
-                )}
-              >
-                {sorted.map((d, i) => {
-                  const cekaNaPrejimku = d.los === null
-                  return (
-                    <Table.Row
-                      key={d.id}
-                      id={d.id}
-                      className={`group ${zebra && i % 2 ? 'bg-muted/[0.04]' : ''}`}
+        <div className="start-list-table-wrap">
+          <Table className="race-table-root start-list-table-root">
+            <Table.ScrollContainer className="race-table-scroll start-list-table-scroll">
+              <Table.Content aria-label="Startovní listina">
+                <Table.Header columns={ALL_COLS}>
+                  {(c) => (
+                    <Table.Column
+                      id={c.key}
+                      isRowHeader={c.key === 'prijmeni'}
+                      aria-label={c.key === 'akce' ? 'akce' : undefined}
+                      style={{ width: c.width }}
                     >
-                      {COLS.map((c) => (
-                        <Table.Cell
-                          key={c.key}
-                          className="h-[38px] px-3.5 py-0"
-                          style={{ opacity: cekaNaPrejimku ? 0.55 : 1 }}
-                        >
-                          {c.key === 'prijmeni' && cekaNaPrejimku ? (
-                            <div className="flex items-center gap-1.5">
-                              <EditableCell
-                                value={d[c.key]}
-                                num={c.num}
-                                weight={c.weight}
-                                onCommit={(raw) => commit(d.id, c, raw)}
-                              />
-                              <Chip size="sm" variant="soft">Bez přejímky</Chip>
+                      {c.header}
+                    </Table.Column>
+                  )}
+                </Table.Header>
+                <Table.Body
+                  renderEmptyState={() => (
+                    <div className="flex h-20 items-center justify-center text-sm text-muted">
+                      Zatím žádní jezdci — naimportuj je z Excelu nebo přidej ručně.
+                    </div>
+                  )}
+                >
+                  {sorted.map((d, i) => {
+                    const cekaNaPrejimku = d.los === null
+                    return (
+                      <Table.Row
+                        key={d.id}
+                        id={d.id}
+                        className={`group ${zebra && i % 2 ? 'bg-muted/[0.04]' : ''} ${cekaNaPrejimku ? 'start-list-row-pending' : ''}`}
+                      >
+                        {COLS.map((c) => (
+                          <Table.Cell key={c.key} className="h-[38px] px-3.5 py-0">
+                            <div
+                              className={`start-list-cell-inner ${cekaNaPrejimku ? 'start-list-cell-inner--pending' : ''}`}
+                            >
+                              {c.key === 'prijmeni' && cekaNaPrejimku ? (
+                                <div className="flex w-full min-w-0 items-center gap-1.5">
+                                  <EditableCell
+                                    value={d[c.key]}
+                                    num={c.num}
+                                    weight={c.weight}
+                                    onCommit={(raw) => commit(d.id, c, raw)}
+                                  />
+                                  <Chip size="sm" variant="soft">Bez přejímky</Chip>
+                                </div>
+                              ) : (
+                                <EditableCell
+                                  value={d[c.key]}
+                                  num={c.num}
+                                  weight={c.weight}
+                                  onCommit={(raw) => commit(d.id, c, raw)}
+                                />
+                              )}
                             </div>
-                          ) : (
-                            <EditableCell
-                              value={d[c.key]}
-                              num={c.num}
-                              weight={c.weight}
-                              onCommit={(raw) => commit(d.id, c, raw)}
-                            />
-                          )}
+                          </Table.Cell>
+                        ))}
+                        <Table.Cell className="h-[38px] px-1.5 py-0 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            isIconOnly
+                            aria-label="Smazat jezdce"
+                            onPress={() => onDelete(d)}
+                            className="opacity-0 group-hover:opacity-100"
+                          >
+                            <TrashBin width={15} height={15} />
+                          </Button>
                         </Table.Cell>
-                      ))}
-                      <Table.Cell className="h-[38px] px-1.5 py-0 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          isIconOnly
-                          aria-label="Smazat jezdce"
-                          onPress={() => onDelete(d)}
-                          className="opacity-0 group-hover:opacity-100"
-                        >
-                          <TrashBin width={15} height={15} />
-                        </Button>
-                      </Table.Cell>
-                    </Table.Row>
-                  )
-                })}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
+                      </Table.Row>
+                    )
+                  })}
+                </Table.Body>
+              </Table.Content>
+            </Table.ScrollContainer>
+          </Table>
+        </div>
       </div>
     </div>
   )

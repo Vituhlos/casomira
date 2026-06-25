@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { CelkoveRadek } from '@shared/types'
+import { consumePreload } from '../lib/preload'
+import { useAtomicReveal } from '../hooks/useAtomicReveal'
 import { Button, Table } from '@heroui/react'
 import { ArrowUpArrowDown } from '@gravity-ui/icons'
+import { MedalDot } from '../components/MedalDot'
 
 interface SloupecDef {
   hlavicka: string
@@ -22,10 +25,12 @@ export function Overall({
 }: {
   kategorieId: number
 }): React.JSX.Element {
-  const [radky, setRadky] = useState<CelkoveRadek[]>([])
+  const [radky, setRadky] = useState<CelkoveRadek[] | null>(null)
+  const shown = useAtomicReveal(radky !== null)
 
   const nacti = useCallback(async (): Promise<void> => {
-    setRadky(await window.api.getCelkove(kategorieId))
+    const p = consumePreload<CelkoveRadek[]>(`${kategorieId}:celkove`)
+    setRadky(await (p ?? window.api.getCelkove(kategorieId)))
   }, [kategorieId])
 
   useEffect(() => {
@@ -38,7 +43,7 @@ export function Overall({
   const sub = 'Pořadí řídí finále (vítěz finále = 1.) · body jen z kvalifikace, SF/F je nepřičítají'
 
   return (
-    <div>
+    <div className="race-table-screen">
       <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
         <div>
           <h2 className="text-[22px] font-[680] tracking-tight">Celkové výsledky</h2>
@@ -52,11 +57,18 @@ export function Overall({
         </div>
       </div>
 
-      <div className="mx-5 mb-5">
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Celkové výsledky">
-              <Table.Header className="sticky top-0 z-10">
+      {radky == null ? (
+        <div className="heat-empty-state text-sm text-muted">Načítám celkové výsledky…</div>
+      ) : (
+        <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+          <div
+            className="race-table-wrap"
+            style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? undefined : 'none', height: '100%' }}
+          >
+            <Table className="race-table-root">
+              <Table.ScrollContainer className="race-table-scroll">
+                <Table.Content aria-label="Celkové výsledky">
+                  <Table.Header className="sticky top-0 z-10">
                 <Table.Column isRowHeader>Pořadí</Table.Column>
                 <Table.Column>St. č.</Table.Column>
                 <Table.Column>Jezdec</Table.Column>
@@ -115,22 +127,19 @@ export function Overall({
             </Table.Content>
           </Table.ScrollContainer>
         </Table>
-      </div>
+          </div>
+          {!shown && (
+            <div
+              className="heat-empty-state text-sm text-muted"
+              style={{ position: 'absolute', inset: 0 }}
+              aria-hidden
+            >
+              Načítám celkové výsledky…
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-function MedalDot({ rank }: { rank: number }): React.JSX.Element | null {
-  const color =
-    rank === 1 ? 'var(--color-medal-gold)' :
-    rank === 2 ? 'var(--color-medal-silver)' :
-    rank === 3 ? 'var(--color-medal-bronze)' : null
-  if (!color) return null
-  return (
-    <span style={{
-      display: 'inline-block', width: 7, height: 7,
-      borderRadius: 99, background: color,
-      marginRight: 8, verticalAlign: 'middle'
-    }} />
-  )
-}

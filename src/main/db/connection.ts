@@ -38,6 +38,9 @@ export function getDb(): DatabaseSync {
   db.exec('PRAGMA synchronous = NORMAL')    // WAL + NORMAL: bezpečné a rychlejší (bez fsync per commit)
   db.exec('PRAGMA busy_timeout = 3000')     // čekej 3 s na zámek místo okamžité chyby
   db.exec('PRAGMA foreign_keys = ON')       // hlídat vazby mezi tabulkami
+  db.exec('PRAGMA cache_size = -8000')      // 8 MB page cache v RAM
+  db.exec('PRAGMA mmap_size = 67108864')    // 64 MB memory-mapped I/O — čtení bez syscallů
+  db.exec('PRAGMA temp_store = MEMORY')     // dočasné tabulky v RAM místo na disku
   return db
 }
 

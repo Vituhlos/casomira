@@ -11,8 +11,9 @@ import { DevKit } from './screens/DevKit'
 // location.hash = 'kit'; location.reload()).
 const hash = window.location.hash.replace('#', '')
 
-// Okno Stopek má průhledné pozadí (Windows 11 Mica) — označíme <html>, ať CSS
-// zprůhlední celý řetězec až k panelům. Hlavní okno zůstává neprůhledné.
+// Okno Stopek má vlastní průhledný shell (Windows 11 Mica). Hlavní okno se
+// zprůhlední přes html[data-native-vibrancy='true'], které nastavuje App.tsx
+// podle schopností konkrétní platformy.
 if (hash === 'stopky') document.documentElement.classList.add('stopky-window')
 
 createRoot(document.getElementById('root')!).render(

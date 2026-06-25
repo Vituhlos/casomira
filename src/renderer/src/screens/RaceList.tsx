@@ -36,8 +36,8 @@ export function RaceList({
   onToggleTheme
 }: RaceListProps): React.JSX.Element {
   return (
-    <div className="flex h-full flex-col bg-background">
-      <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-6 border-b border-border bg-surface px-6 py-3">
+    <div className="flex h-full flex-col gap-3 p-3">
+      <header className="app-floating-panel z-10 flex shrink-0 items-center justify-between gap-6 px-5 py-3">
         <div className="h-8">
           <img
             src={logoLightUrl}
@@ -72,7 +72,7 @@ export function RaceList({
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="app-floating-panel flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[940px] px-7 pb-16 pt-8">
           <div className="mb-8 flex flex-col gap-1">
             <Typography type="h1">Správa závodů</Typography>

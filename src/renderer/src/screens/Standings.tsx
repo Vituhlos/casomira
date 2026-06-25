@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { KlasifikaceRadek, KoloTyp } from '@shared/types'
+import { consumePreload } from '../lib/preload'
+import { useAtomicReveal } from '../hooks/useAtomicReveal'
 import { Button, Table } from '@heroui/react'
 import { ArrowUpArrowDown } from '@gravity-ui/icons'
 import { MedalDot } from '../components/MedalDot'
@@ -17,11 +19,13 @@ export function Standings({
   title,
   ukazLos = false
 }: StandingsProps): React.JSX.Element {
-  const [radky, setRadky] = useState<KlasifikaceRadek[]>([])
+  const [radky, setRadky] = useState<KlasifikaceRadek[] | null>(null)
+  const shown = useAtomicReveal(radky !== null)
   const klic = koloTypy.join(',')
 
   const nacti = useCallback(async (): Promise<void> => {
-    setRadky(await window.api.getKlasifikace(kategorieId, koloTypy))
+    const p = consumePreload<KlasifikaceRadek[]>(`${kategorieId}:klasifikace:${klic}`)
+    setRadky(await (p ?? window.api.getKlasifikace(kategorieId, koloTypy)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kategorieId, klic])
 
@@ -39,7 +43,7 @@ export function Standings({
     : 'Součet bodů ze všech jízd · řazeno sestupně'
 
   return (
-    <div>
+    <div className="race-table-screen">
       <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-3 pt-4">
         <div>
           <h2 className="text-[22px] font-[680] tracking-tight">{title}</h2>
@@ -53,11 +57,18 @@ export function Standings({
         </div>
       </div>
 
-      <div className="mx-5 mb-5">
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content aria-label={title}>
-              <Table.Header className="sticky top-0 z-10">
+      {radky == null ? (
+        <div className="heat-empty-state text-sm text-muted">Načítám {title}…</div>
+      ) : (
+        <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+          <div
+            className="race-table-wrap"
+            style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? undefined : 'none', height: '100%' }}
+          >
+            <Table className="race-table-root">
+              <Table.ScrollContainer className="race-table-scroll">
+                <Table.Content aria-label={title}>
+                  <Table.Header className="sticky top-0 z-10">
                 <Table.Column isRowHeader>Pořadí</Table.Column>
                 <Table.Column>St. č.</Table.Column>
                 <Table.Column>Jezdec</Table.Column>
@@ -114,7 +125,18 @@ export function Standings({
             </Table.Content>
           </Table.ScrollContainer>
         </Table>
-      </div>
+          </div>
+          {!shown && (
+            <div
+              className="heat-empty-state text-sm text-muted"
+              style={{ position: 'absolute', inset: 0 }}
+              aria-hidden
+            >
+              Načítám {title}…
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

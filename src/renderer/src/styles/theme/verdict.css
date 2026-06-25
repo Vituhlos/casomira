@@ -6,6 +6,15 @@
   --medal-gold: oklch(74.6% 0.1412 82.7);
   --medal-silver: oklch(70.36% 0.0105 252.84);
   --medal-bronze: oklch(64.08% 0.1094 59.25);
+  --verdict-control-radius: 9px;
+  --verdict-start-list-width: 1120px;
+  --verdict-start-list-min-width: 860px;
+  --verdict-roster-width: 980px;
+  --verdict-roster-table-min-width: 760px;
+  --verdict-results-width: 1120px;
+  --verdict-results-table-min-width: 960px;
+  --verdict-heat-row-height: 36px;
+  --verdict-heat-header-height: 34px;
 }
 
 /* Zpřístupnění jako Tailwind utility (bg-medal-gold, text-medal-silver, …). */

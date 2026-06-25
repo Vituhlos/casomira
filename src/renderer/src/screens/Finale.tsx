@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ZaverStav } from '@shared/types'
+import { consumePreload } from '../lib/preload'
 import { SubTabs } from '../components/SubTabs'
 import { Results } from './Results'
 import { RostGrid } from './RostGrid'
@@ -17,16 +18,14 @@ export function Finale({
   const [stav, setStav] = useState<ZaverStav | null>(null)
 
   const nactiStav = useCallback(async (): Promise<void> => {
-    setStav(await window.api.getZaverStav(kategorieId))
+    const p = consumePreload<ZaverStav>(`${kategorieId}:zaverStav`)
+    setStav(await (p ?? window.api.getZaverStav(kategorieId)))
   }, [kategorieId])
 
   useEffect(() => {
     void nactiStav()
-  }, [nactiStav])
-
-  useEffect(() => {
     const off = window.api.onDataChanged?.(() => void nactiStav())
-    return off
+    return () => off?.()
   }, [nactiStav])
 
   const setVelikost = async (v: number): Promise<void> => {
@@ -44,7 +43,7 @@ export function Finale({
   )
 
   return (
-    <div>
+    <div className="race-tabbed-screen">
       <SubTabs
         tabs={[
           { id: 'rost', label: 'Rošt' },
@@ -53,24 +52,26 @@ export function Finale({
         active={sub}
         onTab={onSub}
       />
-      {sub === 'rost' ? (
-        <RostGrid
-          kategorieId={kategorieId}
-          typ="F"
-          label="Finále"
-          navrhFn={() => window.api.navrhFinale(kategorieId)}
-          extraControls={toggle}
-          headSub={`${stav.finaleVelikost} jezdců · nasazení ${zdroj} (1. = pole position)`}
-          generateLabel={stav.finaleHotovo ? 'Přegenerovat finále' : 'Vygenerovat finále'}
-          previewTitle="Nasazení finále"
-          previewText="Pořadí na startu finále (1. = pole position). Po nasazení můžeš ručně upravit."
-          jizdaTitle={(c, total) => (total <= 1 ? 'STARTOVNÍ ROŠT' : `${c}. JÍZDA`)}
-          onChanged={() => void nactiStav()}
-          finaleVelikost={stav.finaleVelikost}
-        />
-      ) : (
-        <Results kategorieId={kategorieId} typ="F" label="Finále" extraControls={toggle} />
-      )}
+      <div className="min-h-0 flex-1">
+        {sub === 'rost' ? (
+          <RostGrid
+            kategorieId={kategorieId}
+            typ="F"
+            label="Finále"
+            navrhFn={() => window.api.navrhFinale(kategorieId)}
+            extraControls={toggle}
+            headSub={`${stav.finaleVelikost} jezdců · nasazení ${zdroj} (1. = pole position)`}
+            generateLabel={stav.finaleHotovo ? 'Přegenerovat finále' : 'Vygenerovat finále'}
+            previewTitle="Nasazení finále"
+            previewText="Pořadí na startu finále (1. = pole position). Po nasazení můžeš ručně upravit."
+            jizdaTitle={(c, total) => (total <= 1 ? 'STARTOVNÍ ROŠT' : `${c}. JÍZDA`)}
+            onChanged={() => void nactiStav()}
+            finaleVelikost={stav.finaleVelikost}
+          />
+        ) : (
+          <Results kategorieId={kategorieId} typ="F" label="Finále" extraControls={toggle} />
+        )}
+      </div>
     </div>
   )
 }

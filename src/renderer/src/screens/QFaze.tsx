@@ -35,20 +35,22 @@ export function QFaze({
       ]
 
   return (
-    <div>
+    <div className="race-tabbed-screen">
       <SubTabs tabs={tabs} active={sub} onTab={onSub} />
-      {sub === 'rost' && <Grids kategorieId={kategorieId} typ={typ} label={label} />}
-      {sub === 'res' && (
-        <Results
-          kategorieId={kategorieId}
-          typ={typ}
-          label={label}
-          bezBodovani={jeKvalifikacniQ}
-        />
-      )}
-      {sub === 'res_agg' && jeKvalifikacniQ && (
-        <QVysledky kategorieId={kategorieId} typ={typ} label={label} />
-      )}
+      <div className="min-h-0 flex-1">
+        {sub === 'rost' && <Grids kategorieId={kategorieId} typ={typ} label={label} />}
+        {sub === 'res' && (
+          <Results
+            kategorieId={kategorieId}
+            typ={typ}
+            label={label}
+            bezBodovani={jeKvalifikacniQ}
+          />
+        )}
+        {sub === 'res_agg' && jeKvalifikacniQ && (
+          <QVysledky kategorieId={kategorieId} typ={typ} label={label} />
+        )}
+      </div>
     </div>
   )
 }
