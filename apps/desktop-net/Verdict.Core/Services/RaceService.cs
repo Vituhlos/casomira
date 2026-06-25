@@ -12,19 +12,43 @@ public sealed class RaceService : IRaceService
     public RaceService(DbContext db) => _db = db;
 
     // ── privátní DTO pro Dapper (enums jako string) ───────────────────────────
+    // POZN.: musí to být třídy s parametrickým konstruktorem, NE positional records.
+    // SQLite vrací INTEGER jako Int64; Dapper umí zúžit Int64→Int32 jen u property
+    // setterů, NE u parametrů konstruktoru (record) → jinak pád při materializaci.
 
-    private sealed record ZavodRow(
-        int Id, string Nazev, string Datum, string Misto, string Typ,
-        int PocetKategorii, int PocetJezdcu);
+    private sealed class ZavodRow
+    {
+        public int Id { get; set; }
+        public string Nazev { get; set; } = "";
+        public string Datum { get; set; } = "";
+        public string Misto { get; set; } = "";
+        public string Typ { get; set; } = "";
+        public int PocetKategorii { get; set; }
+        public int PocetJezdcu { get; set; }
+    }
 
-    private sealed record KategorieRow(
-        int Id, int ZavodId, string Nazev, string Ruleset,
-        int Pocet, int FinaleVelikost);
+    private sealed class KategorieRow
+    {
+        public int Id { get; set; }
+        public int ZavodId { get; set; }
+        public string Nazev { get; set; } = "";
+        public string Ruleset { get; set; } = "";
+        public int Pocet { get; set; }
+        public int FinaleVelikost { get; set; }
+    }
 
-    private sealed record JezdecRow(
-        int Id, int KategorieId, int? StCislo,
-        string Prijmeni, string Jmeno, string Znacka, string Model,
-        int? RokNarozeni, int? Los);
+    private sealed class JezdecRow
+    {
+        public int Id { get; set; }
+        public int KategorieId { get; set; }
+        public int? StCislo { get; set; }
+        public string Prijmeni { get; set; } = "";
+        public string Jmeno { get; set; } = "";
+        public string Znacka { get; set; } = "";
+        public string Model { get; set; } = "";
+        public int? RokNarozeni { get; set; }
+        public int? Los { get; set; }
+    }
 
     // ── Závody ────────────────────────────────────────────────────────────────
 
@@ -1014,7 +1038,11 @@ public sealed class RaceService : IRaceService
             WHERE m.jizda_id = @JizdaId
             ORDER BY m.poradi_kliku
             """;
-        return _db.Connection.Query<MereniRadek>(sql, new { JizdaId = jizdaId }).ToList();
+        return _db.Connection.Query<MereniRadekRow>(sql, new { JizdaId = jizdaId })
+            .Select(r => new MereniRadek(
+                r.Id, r.JizdaId, r.PoradiKliku, r.CasMs, r.JezdecId,
+                r.StCislo, r.Prijmeni, r.Jmeno, r.Znacka, r.Model))
+            .ToList();
     }
 
     public MereniRadek PridejMereni(int jizdaId, int casMs)
@@ -1058,7 +1086,7 @@ public sealed class RaceService : IRaceService
         }
 
         var jizdaId = con.QuerySingle<int>("SELECT jizda_id FROM mereni WHERE id = @Id", new { Id = id });
-        var jezdec = con.QueryFirstOrDefault<Jezdec>(
+        var jezdecRow = con.QueryFirstOrDefault<JezdecRow>(
             """
             SELECT j.id AS Id, j.kategorie_id AS KategorieId, j.st_cislo AS StCislo,
                    j.prijmeni AS Prijmeni, j.jmeno AS Jmeno,
@@ -1072,8 +1100,12 @@ public sealed class RaceService : IRaceService
             """,
             new { JizdaId = jizdaId, StCislo = stCislo });
 
-        if (jezdec is null)
+        if (jezdecRow is null)
             return new MereniSetCisloResult(false, null);
+        var jezdec = new Jezdec(
+            jezdecRow.Id, jezdecRow.KategorieId, jezdecRow.StCislo,
+            jezdecRow.Prijmeni, jezdecRow.Jmeno, jezdecRow.Znacka, jezdecRow.Model,
+            jezdecRow.RokNarozeni, jezdecRow.Los);
 
         var duplicate = con.QueryFirstOrDefault<int?>(
             "SELECT 1 FROM mereni WHERE jizda_id = @JizdaId AND jezdec_id = @JezdecId AND id <> @Id",
@@ -1124,9 +1156,11 @@ public sealed class RaceService : IRaceService
 
     public MereniTimerStav? GetTimerStav(int jizdaId)
     {
-        return _db.Connection.QueryFirstOrDefault<MereniTimerStav>(
+        var row = _db.Connection.QueryFirstOrDefault<MereniTimerStavRow>(
             "SELECT jizda_id AS JizdaId, running AS Running, base_ms AS BaseMs, start_epoch_ms AS StartEpochMs FROM mereni_timer WHERE jizda_id = @Id",
             new { Id = jizdaId });
+        return row is null ? null
+            : new MereniTimerStav(row.JizdaId, row.Running, row.BaseMs, row.StartEpochMs);
     }
 
     public void UlozTimerStav(int jizdaId, int zavodId, bool running, int baseMs, long? startEpochMs)
@@ -1150,26 +1184,89 @@ public sealed class RaceService : IRaceService
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    private sealed record RostPoziceRow(
-        int JizdaId, int Pozice,
-        int JezdecId, int KategorieId, int? StCislo,
-        string Prijmeni, string Jmeno, string Znacka, string Model,
-        int? RokNarozeni, int? Los);
+    private sealed class RostPoziceRow
+    {
+        public int JizdaId { get; set; }
+        public int Pozice { get; set; }
+        public int JezdecId { get; set; }
+        public int KategorieId { get; set; }
+        public int? StCislo { get; set; }
+        public string Prijmeni { get; set; } = "";
+        public string Jmeno { get; set; } = "";
+        public string Znacka { get; set; } = "";
+        public string Model { get; set; } = "";
+        public int? RokNarozeni { get; set; }
+        public int? Los { get; set; }
+    }
 
-    private sealed record VysledekRowDb(
-        int VysledekId, int JizdaId, int JezdecId,
-        int? StCislo, string Prijmeni, string Jmeno, string Znacka, string Model,
-        int? MerCasMs, int PenalizaceMs, string Stav,
-        int? Poradi, int? Body, int? BodyRucni, int? RucniPoradi);
+    private sealed class VysledekRowDb
+    {
+        public int VysledekId { get; set; }
+        public int JizdaId { get; set; }
+        public int JezdecId { get; set; }
+        public int? StCislo { get; set; }
+        public string Prijmeni { get; set; } = "";
+        public string Jmeno { get; set; } = "";
+        public string Znacka { get; set; } = "";
+        public string Model { get; set; } = "";
+        public int? MerCasMs { get; set; }
+        public int PenalizaceMs { get; set; }
+        public string Stav { get; set; } = "";
+        public int? Poradi { get; set; }
+        public int? Body { get; set; }
+        public int? BodyRucni { get; set; }
+        public int? RucniPoradi { get; set; }
+    }
 
-    private sealed record VysledekPrepocitejRow(
-        int JezdecId, int? CasMs, int PenalizaceMs, string Stav, int? RucniPoradi);
+    private sealed class VysledekPrepocitejRow
+    {
+        public int JezdecId { get; set; }
+        public int? CasMs { get; set; }
+        public int PenalizaceMs { get; set; }
+        public string Stav { get; set; } = "";
+        public int? RucniPoradi { get; set; }
+    }
 
-    private sealed record MereniJizdaRow(
-        int JizdaId, int KategorieId, string KatNazev, string KoloTyp,
-        int JizdaCislo, int PocetKliku, int MaVysledkyN, int ObsazenoRostem);
+    private sealed class MereniJizdaRow
+    {
+        public int JizdaId { get; set; }
+        public int KategorieId { get; set; }
+        public string KatNazev { get; set; } = "";
+        public string KoloTyp { get; set; } = "";
+        public int JizdaCislo { get; set; }
+        public int PocetKliku { get; set; }
+        public int MaVysledkyN { get; set; }
+        public int ObsazenoRostem { get; set; }
+    }
 
-    private sealed record MereniZapisRow(int CasMs, int JezdecId);
+    private sealed class MereniZapisRow
+    {
+        public int CasMs { get; set; }
+        public int JezdecId { get; set; }
+    }
+
+    // Row třídy pro veřejné modely materializované přímo Dapperem (viz výše).
+    private sealed class MereniRadekRow
+    {
+        public int Id { get; set; }
+        public int JizdaId { get; set; }
+        public int PoradiKliku { get; set; }
+        public int CasMs { get; set; }
+        public int? JezdecId { get; set; }
+        public int? StCislo { get; set; }
+        public string? Prijmeni { get; set; }
+        public string? Jmeno { get; set; }
+        public string? Znacka { get; set; }
+        public string? Model { get; set; }
+    }
+
+    private sealed class MereniTimerStavRow
+    {
+        public int JizdaId { get; set; }
+        public bool Running { get; set; }
+        public int BaseMs { get; set; }
+        public long? StartEpochMs { get; set; }
+    }
 
     private static ZavodInfo Map(ZavodRow r) => new(
         r.Id, r.Nazev, r.Datum, r.Misto,

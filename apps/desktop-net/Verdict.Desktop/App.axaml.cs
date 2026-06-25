@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
+using Verdict.Core.Backup;
 using Verdict.Core.Data;
 using Verdict.Core.Services;
 using Verdict.Desktop.ViewModels;
@@ -47,6 +48,7 @@ public partial class App : Application
         sc.AddSingleton<DbContext>();
         sc.AddSingleton<IRaceService, RaceService>();
         sc.AddSingleton<ImportService>();
+        sc.AddSingleton<BackupService>();
         sc.AddTransient<MainWindowViewModel>();
         return sc.BuildServiceProvider();
     }

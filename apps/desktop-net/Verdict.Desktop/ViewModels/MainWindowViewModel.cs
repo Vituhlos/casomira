@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Verdict.Core.Backup;
 using Verdict.Core.Model;
 using Verdict.Core.Services;
 
@@ -12,6 +13,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IRaceService _svc;
     private readonly ImportService _importSvc;
+    private readonly BackupService _backupSvc;
 
     public event EventHandler<StopkyViewModel>? StopkyOtevrit;
 
@@ -144,11 +146,34 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // ── Konstruktor ───────────────────────────────────────────────────────────
 
-    public MainWindowViewModel(IRaceService svc, ImportService importSvc)
+    public MainWindowViewModel(IRaceService svc, ImportService importSvc, BackupService backupSvc)
     {
         _svc       = svc;
         _importSvc = importSvc;
+        _backupSvc = backupSvc;
         NactiZavody();
+    }
+
+    // ── Záloha / obnova ───────────────────────────────────────────────────────
+
+    /// <summary>Připraví zálohu celé databáze (JSON) + návrh názvu souboru. Volá View.</summary>
+    public (string Json, string NavrhJmena) PripravZalohu()
+    {
+        var data = _backupSvc.ExportDatabaze();
+        string json = BackupSerializer.Serialize(data);
+        string jmeno = BackupNazev.NavrhProVse(data.ExportedAt);
+        return (json, jmeno);
+    }
+
+    /// <summary>Obnoví závody ze zálohy (vloží jako nové) a obnoví seznam. Volá View.</summary>
+    /// <returns>Hláška o výsledku pro uživatele.</returns>
+    public string ObnovZeZalohy(string json)
+    {
+        var vysledek = _backupSvc.ObnovZTextu(json);
+        NactiZavody(vysledek.ZavodIds.Count > 0 ? vysledek.ZavodIds[^1] : null);
+        int n = vysledek.ZavodIds.Count;
+        string zavodySlovo = n == 1 ? "závod" : n is >= 2 and <= 4 ? "závody" : "závodů";
+        return $"Obnoveno {n} {zavodySlovo}. Poslední: {vysledek.PosledniNazev}";
     }
 
     /// <summary>Založí nový závod a přepne na něj. Volá View po potvrzení dialogu.</summary>

@@ -27,15 +27,21 @@ internal static class Migrations
 
         if (version < 3)
         {
-            Step(db, 3, () => db.Execute(
-                "ALTER TABLE vysledek ADD COLUMN body_rucni INTEGER"));
+            Step(db, 3, () =>
+            {
+                if (!HasColumn(db, "vysledek", "body_rucni"))
+                    db.Execute("ALTER TABLE vysledek ADD COLUMN body_rucni INTEGER");
+            });
             version = 3;
         }
 
         if (version < 4)
         {
-            Step(db, 4, () => db.Execute(
-                "ALTER TABLE kategorie ADD COLUMN finale_velikost INTEGER NOT NULL DEFAULT 8"));
+            Step(db, 4, () =>
+            {
+                if (!HasColumn(db, "kategorie", "finale_velikost"))
+                    db.Execute("ALTER TABLE kategorie ADD COLUMN finale_velikost INTEGER NOT NULL DEFAULT 8");
+            });
             version = 4;
         }
 
@@ -256,10 +262,21 @@ internal static class Migrations
 
     private static void Step(SqliteConnection db, int targetVersion, Action fn)
     {
-        using var tx = db.BeginTransaction();
-        fn();
-        db.Execute($"PRAGMA user_version = {targetVersion}", transaction: tx);
-        tx.Commit();
+        // Raw SQL transakce (ne db.BeginTransaction()): kroky migrace volají db.Execute
+        // bez předané transakce, a Microsoft.Data.Sqlite by u provider-trackované
+        // transakce vyžadoval cmd.Transaction na každém příkazu → pád na čerstvé DB.
+        db.Execute("BEGIN");
+        try
+        {
+            fn();
+            db.Execute($"PRAGMA user_version = {targetVersion}");
+            db.Execute("COMMIT");
+        }
+        catch
+        {
+            db.Execute("ROLLBACK");
+            throw;
+        }
     }
 }
 

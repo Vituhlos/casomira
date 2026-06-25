@@ -1,5 +1,30 @@
 # Changelog — migrace na .NET / Avalonia
 
+## Záloha/obnova + opravy datové vrstvy
+
+### Přidáno
+- **Záloha a obnova** — tlačítka „Záloha" a „Obnova" v toolbaru. Záloha uloží
+  celou databázi (všechny závody + žebříček/pravidla/nastavení) do JSON souboru;
+  obnova načte závody ze zálohy a **přidá je** (existující data se nemažou).
+  Formát `verdict-backup` v1 je byte-kompatibilní s původní Electron verzí
+  (čte i starší `casomira-backup`).
+- `BackupService` (export/import přes Dapper), `BackupSerializer` (validace +
+  serializace) a testy: validace formátu/verze + round-trip export→import přes
+  reálnou SQLite databázi.
+
+### Opraveno
+- **Kritická chyba: aplikace spadla při startu na čerstvé databázi.** Krok migrace
+  (`Migrations.Step`) volal příkazy bez předané transakce, zatímco na connection
+  běžela provider-trackovaná transakce — Microsoft.Data.Sqlite to odmítl. Nahrazeno
+  raw SQL transakcí (`BEGIN`/`COMMIT`/`ROLLBACK`).
+- **Kritická chyba: migrace v3/v4 padaly na „duplicate column".** Baseline schéma
+  už obsahuje `body_rucni` i `finale_velikost`, ale kroky je přidávaly znovu.
+  Doplněn `HasColumn` guard (jako u kroku v8).
+- **Kritická chyba: žádný databázový dotaz se nematerializoval.** Privátní DTO byly
+  `record` s `int` parametry konstruktoru; SQLite vrací INTEGER jako `Int64` a Dapper
+  zúžení `Int64→Int32` u parametrů konstruktoru nedělá (jen u property setterů) —
+  každý `Query<T>` házel výjimku. DTO převedeny na třídy s `get/set` properties.
+
 ## Stopky
 
 ### Přidáno

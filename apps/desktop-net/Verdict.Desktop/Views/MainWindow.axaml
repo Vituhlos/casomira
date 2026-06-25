@@ -190,6 +190,16 @@
                                 Command="{Binding OtevritStopkyCommand}"
                                 FontSize="13"
                                 Classes="outline"/>
+                        <Button Content="Záloha"
+                                ToolTip.Tip="Uložit zálohu celé databáze do JSON souboru"
+                                Click="OnZaloha"
+                                FontSize="13"
+                                Classes="outline"/>
+                        <Button Content="Obnova"
+                                ToolTip.Tip="Načíst závody ze zálohy (přidá je, existující data nemaže)"
+                                Click="OnObnova"
+                                FontSize="13"
+                                Classes="outline"/>
                         <Button Content="Uložit PDF"
                                 Command="{Binding UlozitPdfCommand}"
                                 FontSize="13"
