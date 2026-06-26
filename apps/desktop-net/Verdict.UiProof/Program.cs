@@ -20,6 +20,10 @@ internal static class Program
         if (args.Length >= 2 && args[0] == "--render")
             return RenderToPng(args);
 
+        // Zive okno: "dotnet run" = Startovni listina; "dotnet run -- hub" = Sprava zavodu
+        if (args.Length >= 1 && args[0].Equals("hub", StringComparison.OrdinalIgnoreCase))
+            App.StartScene = "hub";
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;
     }
