@@ -15,8 +15,12 @@ public partial class VysledekRadekViewModel : ViewModelBase
 
     // Paste-box / inline editace
     [ObservableProperty] private string _casText  = "";
-    [ObservableProperty] private string _stavText = "OK";
-    [ObservableProperty] private int?   _poradi;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(JeDnf), nameof(JeDns), nameof(JeDq), nameof(JeOk))]
+    private string _stavText = "OK";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(JeZlato), nameof(JeStribro), nameof(JeBronz))]
+    private int?   _poradi;
     [ObservableProperty] private int?   _body;
 
     // Ředitelské úpravy — surová DB data
@@ -27,6 +31,15 @@ public partial class VysledekRadekViewModel : ViewModelBase
     public bool   MaUpravu       => PenalizaceMs != 0 || RucniPoradi is not null;
     public string PenalizaceText => PenalizaceMs == 0 ? "" : $"{(PenalizaceMs > 0 ? "+" : "")}{PenalizaceMs / 1000.0:G} s";
     public string PoradiText     => RucniPoradi is not null ? $"✱{Poradi}" : Poradi?.ToString() ?? "";
+
+    // Badge helpers pro XAML
+    public bool JeDnf    => Stav == Stav.DNF;
+    public bool JeDns    => Stav == Stav.DNS;
+    public bool JeDq     => Stav == Stav.DQ;
+    public bool JeOk     => Stav == Stav.OK;
+    public bool JeZlato   => Poradi == 1;
+    public bool JeStribro => Poradi == 2;
+    public bool JeBronz   => Poradi == 3;
 
     // Pro paste-box cestu (beze změny logiky)
     public int?  CasMs => CasParser.Parse(CasText);

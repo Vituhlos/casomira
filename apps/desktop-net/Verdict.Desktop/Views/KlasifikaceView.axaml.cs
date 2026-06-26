@@ -16,26 +16,11 @@ public partial class KlasifikaceView : UserControl
     {
         if (DataContext is not KlasifikaceViewModel vm) return;
 
-        Grid.Columns.Clear();
+        // Odstraníme jen dynamicky přidané sloupce (statické jsou v XAML = první 4)
+        while (Grid.Columns.Count > 4)
+            Grid.Columns.RemoveAt(Grid.Columns.Count - 1);
 
-        Grid.Columns.Add(new DataGridTextColumn
-        {
-            Header = "Poř.", Binding = new Binding(nameof(KlasifikaceRadekViewModel.Poradi)), Width = new DataGridLength(55)
-        });
-        Grid.Columns.Add(new DataGridTextColumn
-        {
-            Header = "St.č.", Binding = new Binding(nameof(KlasifikaceRadekViewModel.StCislo)), Width = new DataGridLength(65)
-        });
-        Grid.Columns.Add(new DataGridTextColumn
-        {
-            Header = "Příjmení", Binding = new Binding(nameof(KlasifikaceRadekViewModel.Prijmeni)), Width = new DataGridLength(180)
-        });
-        Grid.Columns.Add(new DataGridTextColumn
-        {
-            Header = "Jméno", Binding = new Binding(nameof(KlasifikaceRadekViewModel.Jmeno)), Width = new DataGridLength(140)
-        });
-
-        // Sloupec bodů za každé započítané kolo (Q1, Q2, případně Q3).
+        // Body za každé kolo (Q1, Q2, případně Q3)
         foreach (var typ in vm.KoloTypy)
         {
             string klic = typ.ToString();
@@ -49,7 +34,9 @@ public partial class KlasifikaceView : UserControl
 
         Grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Celkem", Binding = new Binding(nameof(KlasifikaceRadekViewModel.Celkem)), Width = new DataGridLength(80)
+            Header  = "Celkem",
+            Binding = new Binding(nameof(KlasifikaceRadekViewModel.Celkem)),
+            Width   = new DataGridLength(80)
         });
     }
 }

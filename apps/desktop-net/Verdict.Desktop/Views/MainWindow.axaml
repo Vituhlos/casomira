@@ -1,81 +1,256 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Verdict.Desktop.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
-        xmlns:model="using:Verdict.Core.Model"
-        x:Class="Verdict.Desktop.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Title="Verdict"
-        MinWidth="900" MinHeight="600"
-        Width="1200" Height="750">
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:vm="using:Verdict.Desktop.ViewModels"
+              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+              xmlns:model="using:Verdict.Core.Model"
+              xmlns:lucide="clr-namespace:Lucide.Avalonia;assembly=Lucide.Avalonia"
+              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
+              x:Class="Verdict.Desktop.Views.MainWindow"
+              x:DataType="vm:MainWindowViewModel"
+               Title="{Binding Breadcrumb}"
+              UseLayoutRounding="True"
+              MinWidth="900" MinHeight="600"
+              Width="1200" Height="750"
+              Classes="verdict-window">
 
     <Window.Styles>
-        <!-- Phase tab bar: přizpůsobení ListBoxItem tak aby vypadal jako segmentový přepínač -->
-        <Style Selector="ListBox.phaseTabs ListBoxItem">
-            <Setter Property="Padding" Value="14,6"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="FontSize" Value="12"/>
+
+        <!-- ── Sidebar ListBox ──────────────────────────────────────────────── -->
+        <Style Selector="ListBox.sidebar">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundColor}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
         </Style>
-        <Style Selector="ListBox.phaseTabs ListBoxItem:selected">
-            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        <Style Selector="ListBox.phaseTabs ListBoxItem:pointerover">
-            <Setter Property="Background" Value="{DynamicResource BorderColor}"/>
+        <Style Selector="ListBox.sidebar ListBoxItem">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
         </Style>
-        <Style Selector="ListBox.phaseTabs ListBoxItem:selected:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
-            <Setter Property="Foreground" Value="White"/>
+        <Style Selector="ListBox.sidebar ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource SelectionColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
         </Style>
-        <!-- Sidebar: ListBox bez výchozího rámečku a paddingu -->
-        <Style Selector="ListBox.sidebar">
+        <Style Selector="ListBox.sidebar ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource GhostHoverColor}"/>
+        </Style>
+        <Style Selector="ListBox.sidebar ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectionHoverColor}"/>
+        </Style>
+
+        <!-- ── Phase tab bar ─────────────────────────────────────────────────── -->
+        <Style Selector="ListBox.phaseTabs">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
         </Style>
-        <Style Selector="ListBox.sidebar ListBoxItem">
-            <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="Margin" Value="4,1"/>
-            <Setter Property="CornerRadius" Value="6"/>
+        <Style Selector="ListBox.phaseTabs ListBoxItem">
+            <Setter Property="Padding" Value="14,5"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+            <Setter Property="CornerRadius" Value="7"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinHeight" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedColor}"/>
         </Style>
-        <Style Selector="ListBox.sidebar ListBoxItem:selected">
-            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
-            <Setter Property="Foreground" Value="White"/>
+        <Style Selector="ListBox.phaseTabs ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource SurfaceColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
         </Style>
-        <Style Selector="ListBox.sidebar ListBoxItem:pointerover">
-            <Setter Property="Background" Value="{DynamicResource BorderColor}"/>
+        <Style Selector="ListBox.phaseTabs ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource GhostHoverColor}"/>
         </Style>
-        <Style Selector="ListBox.sidebar ListBoxItem:selected:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
+        <Style Selector="ListBox.phaseTabs ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceColor}"/>
         </Style>
+
     </Window.Styles>
 
-    <!-- Root: sidebar vlevo + hlavní oblast vpravo -->
-    <Grid ColumnDefinitions="240,*">
+    <Border Classes="verdict-window-shell">
+    <Grid>
 
-        <!-- ══ SIDEBAR ══════════════════════════════════════════════════════ -->
+        <!-- ══ SPRÁVA ZÁVODŮ ═══════════════════════════════════════════════════ -->
+        <Grid IsVisible="{Binding JeSpravaZavodu}"
+              RowDefinitions="Auto,*"
+              RowSpacing="12">
+            <Border Grid.Row="0"
+                    Classes="verdict-topbar verdict-race-hub-topbar"
+                    Padding="20,8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Image Grid.Column="0"
+                           Source="/Assets/verdict-mainlogo-light.png"
+                           Width="178"
+                           Height="40"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                           HorizontalAlignment="Left"/>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                        <Button Classes="ghost"
+                                ToolTip.Tip="Obnovit závody ze zálohy"
+                                Click="OnObnova">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <lucide:LucideIcon Kind="Upload" Size="16"/>
+                                <TextBlock Text="Obnovit..."/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Classes="ghost"
+                                ToolTip.Tip="Přepnout světlý/tmavý motiv"
+                                Command="{Binding PrepnoutTemaCommand}">
+                            <lucide:LucideIcon Kind="Moon" Size="17"/>
+                        </Button>
+
+                        <Button Classes="primary"
+                                Click="OnNovyZavod">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <lucide:LucideIcon Kind="Flag" Size="17"/>
+                                <TextBlock Text="Nový závod"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Classes="verdict-surface verdict-race-hub-surface">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <Grid ColumnDefinitions="160,*">
+                        <StackPanel Grid.Column="1"
+                                    Margin="16,32,40,40"
+                                    Spacing="32">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Správa závodů"
+                                           Classes="verdict-race-hub-title"/>
+                                <TextBlock Text="autokros · rallycross"
+                                           Classes="verdict-race-hub-subtitle"/>
+                            </StackPanel>
+
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                    <ItemsControl ItemsSource="{Binding RaceCards}"
+                                                  IsVisible="{Binding MaZavody}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="16"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:RaceCardViewModel">
+                                                <Button Classes="verdict-race-card"
+                                                        Click="OnOtevritZavod">
+                                                    <Border Padding="18">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+                                                        <Border Grid.Row="0"
+                                                                Classes="verdict-race-type-chip"
+                                                                HorizontalAlignment="Left">
+                                                            <TextBlock Text="{Binding TypText}"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Row="1"
+                                                                   Text="{Binding Nazev}"
+                                                                   Classes="verdict-race-card-title"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Margin="0,18,0,0"/>
+                                                        <TextBlock Grid.Row="2"
+                                                                   Text="{Binding DatumAMisto}"
+                                                                   Classes="verdict-race-card-meta"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Margin="0,8,0,0"/>
+                                                        <Border Grid.Row="4"
+                                                                Background="{DynamicResource VerdictBorderSubtleBrush}"
+                                                                Height="1"/>
+                                                        <StackPanel Grid.Row="5"
+                                                                    Classes="verdict-race-card-stats"
+                                                                    Orientation="Horizontal"
+                                                                    Spacing="12"
+                                                                    Margin="0,10,0,0">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <lucide:LucideIcon Kind="Table2" Size="13"/>
+                                                                <TextBlock Text="{Binding KategorieText}"/>
+                                                            </StackPanel>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <lucide:LucideIcon Kind="Users" Size="13"/>
+                                                                <TextBlock Text="{Binding JezdciText}"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    </Border>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel IsVisible="{Binding NemaZavody}"
+                                                Width="284"
+                                                Height="184"
+                                                Spacing="6"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="Zatím žádný závod"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="Založ první závod a připrav jeho kategorie."
+                                                   TextWrapping="Wrap"
+                                                   Classes="verdict-race-card-meta"/>
+                                    </StackPanel>
+
+                                    <Button Classes="verdict-add-race-card"
+                                            Click="OnNovyZavod">
+                                        <Border Classes="verdict-add-race-card-frame">
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="8"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center">
+                                                <lucide:LucideIcon Kind="Plus" Size="18"/>
+                                                <TextBlock Text="Nový závod"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ══ DETAIL ZÁVODU ═══════════════════════════════════════════════════ -->
+        <Grid IsVisible="{Binding JeZavodOtevren}"
+              ColumnDefinitions="252,*"
+              ColumnSpacing="12">
+
+        <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
         <Border Grid.Column="0"
-                Background="{DynamicResource SidebarColor}"
-                BorderBrush="{DynamicResource BorderColor}"
-                BorderThickness="0,0,1,0">
+                Classes="verdict-sidebar">
             <Grid RowDefinitions="Auto,*,Auto">
 
-                <!-- Výběr / založení závodu -->
-                <StackPanel Grid.Row="0"
-                            Spacing="6"
-                            Margin="12,12,12,8">
+                <!-- Výběr závodu -->
+                <StackPanel Grid.Row="0" Spacing="8" Margin="14,14,14,12">
+                    <Image Source="/Assets/verdict-mainlogo-light.png"
+                           Width="178"
+                           Height="40"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                           HorizontalAlignment="Left"
+                           Margin="2,0,0,4"/>
+                    <Button Classes="ghost verdict-back-to-races"
+                            Command="{Binding ZpetNaZavodyCommand}"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <lucide:LucideIcon Kind="ArrowLeft" Size="15"/>
+                            <TextBlock Text="Závody"/>
+                        </StackPanel>
+                    </Button>
                     <TextBlock Text="ZÁVOD"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SecondaryForegroundColor}"/>
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedColor}"
+                               Margin="2,0"/>
                     <ComboBox ItemsSource="{Binding Zavody}"
                               SelectedItem="{Binding CurrentZavod}"
                               HorizontalAlignment="Stretch"
@@ -98,23 +273,20 @@
 
                 <!-- Seznam kategorií -->
                 <DockPanel Grid.Row="1">
-
                     <TextBlock DockPanel.Dock="Top"
                                Text="KATEGORIE"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SecondaryForegroundColor}"
-                               Margin="12,12,12,4"/>
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedColor}"
+                               Margin="14,0,12,4"/>
 
-                    <!-- Prázdný stav -->
                     <TextBlock DockPanel.Dock="Top"
                                Text="(žádný závod)"
                                FontSize="13"
-                               Foreground="{DynamicResource SecondaryForegroundColor}"
-                               Margin="12,4"
+                               Foreground="{DynamicResource MutedColor}"
+                               Margin="14,4"
                                IsVisible="{Binding !Kategorie.Count}"/>
 
-                    <ScrollViewer>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ListBox Classes="sidebar"
                                  ItemsSource="{Binding Kategorie}"
                                  SelectedItem="{Binding SelectedKategorie}">
@@ -126,10 +298,10 @@
                                                    VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding PocetText}"
-                                                   FontSize="11"
-                                                   Opacity="0.7"
+                                                   FontSize="12"
+                                                   Opacity="0.5"
                                                    VerticalAlignment="Center"
-                                                   Margin="6,0,0,0"/>
+                                                   Margin="8,0,2,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -137,111 +309,111 @@
                     </ScrollViewer>
                 </DockPanel>
 
-                <!-- Operátor + závod dole -->
+                <!-- Footer -->
                 <Border Grid.Row="2"
                         BorderBrush="{DynamicResource BorderColor}"
                         BorderThickness="0,1,0,0"
-                        Padding="12,10">
+                        Padding="14,10">
                     <StackPanel Spacing="2">
-                        <TextBlock Text="{Binding CurrentZavod.Nazev, FallbackValue='— závod nevybrán —'}"
-                                   FontSize="12"
-                                   FontWeight="Medium"
+                        <TextBlock Text="{Binding CurrentZavod.Nazev, FallbackValue='Časoměřič'}"
+                                   FontSize="12" FontWeight="Medium"
                                    Foreground="{DynamicResource ForegroundColor}"
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding CurrentZavod.Datum, FallbackValue=''}"
                                    FontSize="11"
-                                   Foreground="{DynamicResource SecondaryForegroundColor}"/>
+                                   Foreground="{DynamicResource MutedColor}"/>
                     </StackPanel>
                 </Border>
+
             </Grid>
         </Border>
 
-        <!-- ══ HLAVNÍ OBLAST ═════════════════════════════════════════════════ -->
-        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+        <!-- ══ HLAVNÍ OBLAST ═════════════════════════════════════════════════════ -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="12">
 
-            <!-- TOOLBAR -->
+            <!-- TOOLBAR + PHASE TAB BAR -->
             <Border Grid.Row="0"
-                    Background="{DynamicResource SurfaceColor}"
-                    BorderBrush="{DynamicResource BorderColor}"
-                    BorderThickness="0,0,0,1"
-                    Padding="16,10">
-                <Grid ColumnDefinitions="*,Auto">
+                    Classes="verdict-topbar"
+                    Padding="12"
+                    IsVisible="{Binding FazeTabs.Count}">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Breadcrumb}"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource SecondaryForegroundColor}"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
 
-                    <!-- Breadcrumb vlevo -->
-                    <TextBlock Grid.Column="0"
-                               Text="{Binding Breadcrumb}"
-                               FontSize="13"
-                               FontWeight="Medium"
-                               Foreground="{DynamicResource SecondaryForegroundColor}"
-                               VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    VerticalAlignment="Center">
+                            <Button Content="⏾"
+                                    ToolTip.Tip="Přepnout světlý/tmavý motiv"
+                                    Command="{Binding PrepnoutTemaCommand}"
+                                    FontSize="14" Padding="8,4"
+                                    Classes="ghost"/>
 
-                    <!-- Tlačítka vpravo -->
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Spacing="6">
-                        <Button Content="🌓"
-                                ToolTip.Tip="Přepnout světlý/tmavý motiv"
-                                Command="{Binding PrepnoutTemaCommand}"
-                                FontSize="14"
-                                Padding="8,4"
-                                Classes="outline"/>
-                        <Button Content="Stopky"
-                                Command="{Binding OtevritStopkyCommand}"
-                                FontSize="13"
-                                Classes="outline"/>
-                        <Button Content="Záloha"
-                                ToolTip.Tip="Uložit zálohu celé databáze do JSON souboru"
-                                Click="OnZaloha"
-                                FontSize="13"
-                                Classes="outline"/>
-                        <Button Content="Obnova"
-                                ToolTip.Tip="Načíst závody ze zálohy (přidá je, existující data nemaže)"
-                                Click="OnObnova"
-                                FontSize="13"
-                                Classes="outline"/>
-                        <Button Content="Uložit PDF"
-                                Command="{Binding UlozitPdfCommand}"
-                                FontSize="13"
-                                Classes="primary"/>
-                    </StackPanel>
+                            <Button Content="Záloha"
+                                    ToolTip.Tip="Uložit zálohu databáze do JSON"
+                                    Click="OnZaloha"
+                                    FontSize="12" Padding="10,5"
+                                    Classes="ghost"/>
+
+                            <Button Content="Obnova"
+                                    ToolTip.Tip="Načíst závody ze zálohy"
+                                    Click="OnObnova"
+                                    FontSize="12" Padding="10,5"
+                                    Classes="ghost"/>
+
+                            <Button Content="Stopky"
+                                    Command="{Binding OtevritStopkyCommand}"
+                                    FontSize="13" Padding="12,6"
+                                    Classes="outline"/>
+
+                            <Button Content="Uložit PDF"
+                                    Command="{Binding UlozitPdfCommand}"
+                                    FontSize="13" Padding="14,6"
+                                    Classes="primary"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="1"
+                            Background="{DynamicResource TabBarColor}"
+                            CornerRadius="12"
+                            Padding="4">
+                        <ListBox Classes="phaseTabs"
+                                 ItemsSource="{Binding FazeTabs}"
+                                 SelectedItem="{Binding SelectedFaze}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                 Background="Transparent"
+                                 BorderThickness="0">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="2"/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FazeTabViewModel">
+                                    <TextBlock Text="{Binding Label}"
+                                               VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
                 </Grid>
             </Border>
 
-            <!-- SEGMENTOVÝ PŘEPÍNAČ FÁZ
-                 Vodorovný scroll — žádné ořezávání (viz CLAUDE.md §2c). -->
-            <Border Grid.Row="1"
-                    Background="{DynamicResource SurfaceColor}"
-                    BorderBrush="{DynamicResource BorderColor}"
-                    BorderThickness="0,0,0,1"
-                    Padding="12,6"
-                    IsVisible="{Binding FazeTabs.Count}">
-                <ListBox Classes="phaseTabs"
-                         ItemsSource="{Binding FazeTabs}"
-                         SelectedItem="{Binding SelectedFaze}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                         Background="Transparent"
-                         BorderThickness="0">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" Spacing="2"/>
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:FazeTabViewModel">
-                            <TextBlock Text="{Binding Label}"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Border>
-
-            <!-- OBSAH — ViewLocator překládá CurrentContent VM na správnou View -->
-            <Border Grid.Row="2"
-                    Background="{DynamicResource BackgroundColor}">
+            <!-- OBSAH -->
+            <Border Grid.Row="1" Classes="verdict-surface">
                 <ContentControl Content="{Binding CurrentContent}"/>
             </Border>
         </Grid>
+
+        </Grid>
     </Grid>
+    </Border>
 
 </Window>

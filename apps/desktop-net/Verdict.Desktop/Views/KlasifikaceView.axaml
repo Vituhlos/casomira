@@ -11,7 +11,7 @@
                    Text="Klasifikace je zatím prázdná — nejdřív zadej výsledky kvalifikačních kol."
                    Margin="16,16,16,8"
                    FontSize="13"
-                   Opacity="0.7"
+                   Foreground="{DynamicResource SecondaryForegroundColor}"
                    IsVisible="{Binding JePrazdne}"/>
 
         <DataGrid x:Name="Grid"
@@ -19,7 +19,49 @@
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"
-                  CanUserResizeColumns="True"/>
+                  CanUserResizeColumns="True">
+
+            <DataGrid.Columns>
+
+                <!-- Pořadí s medailovou tečkou -->
+                <DataGridTemplateColumn Header="Poř." Width="65" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:KlasifikaceRadekViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        VerticalAlignment="Center" Margin="10,0">
+                                <Panel Width="8" Height="8" VerticalAlignment="Center">
+                                    <Ellipse Fill="{DynamicResource MedalGoldBrush}"
+                                             IsVisible="{Binding JeZlato}"/>
+                                    <Ellipse Fill="{DynamicResource MedalSilverBrush}"
+                                             IsVisible="{Binding JeStribro}"/>
+                                    <Ellipse Fill="{DynamicResource MedalBronzeBrush}"
+                                             IsVisible="{Binding JeBronz}"/>
+                                </Panel>
+                                <TextBlock Text="{Binding Poradi}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="St.č." Binding="{Binding StCislo}" Width="65" IsReadOnly="True"/>
+
+                <!-- Příjmení bold -->
+                <DataGridTemplateColumn Header="Příjmení" Width="180" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:KlasifikaceRadekViewModel">
+                            <TextBlock Text="{Binding Prijmeni}" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" Margin="12,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="Jméno"  Binding="{Binding Jmeno}"  Width="140" IsReadOnly="True"/>
+
+                <!-- Dynamické sloupce per-kolo a Celkem přidá code-behind -->
+
+            </DataGrid.Columns>
+
+        </DataGrid>
 
     </DockPanel>
 

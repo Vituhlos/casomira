@@ -1,0 +1,200 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="AccentColor">#007AFF</Color>
+            <Color x:Key="PrimaryColor">#0A84FF</Color>
+            <Color x:Key="PrimaryColor75">#BF0A84FF</Color>
+            <Color x:Key="PrimaryColor50">#800A84FF</Color>
+            <Color x:Key="PrimaryColor10">#1A0A84FF</Color>
+            <Color x:Key="PrimaryForegroundColor">#FFFFFF</Color>
+
+            <Color x:Key="ForegroundColor">#1D1D1F</Color>
+            <Color x:Key="ForegroundLeadColor">#6E6E73</Color>
+            <Color x:Key="SecondaryForegroundColor">#6E6E73</Color>
+            <Color x:Key="MutedColor">#7A7D86</Color>
+
+            <Color x:Key="BackgroundColor">#F5F5F7</Color>
+            <Color x:Key="WindowBackgroundColor">#19201E</Color>
+            <Color x:Key="SurfaceColor">#FFFFFF</Color>
+            <Color x:Key="SurfaceMutedColor">#EFEFF2</Color>
+            <Color x:Key="SurfaceRaisedColor">#FFFFFF</Color>
+            <Color x:Key="SidebarColor">#F8F8FA</Color>
+            <Color x:Key="SidebarBackgroundColor">#F7F7F9</Color>
+            <Color x:Key="TabBarColor">#EBEBED</Color>
+            <Color x:Key="GhostColor">#ECECEF</Color>
+            <Color x:Key="GhostHoverColor">#E2E2E7</Color>
+            <Color x:Key="GhostHoverColor50">#80E2E2E7</Color>
+            <Color x:Key="SelectionColor">#E5E5EA</Color>
+            <Color x:Key="SelectionHoverColor">#DCDCE1</Color>
+
+            <Color x:Key="BorderColor">#DADAE0</Color>
+            <Color x:Key="BorderColor60">#99DADAE0</Color>
+            <Color x:Key="BorderColor30">#4DDADAE0</Color>
+            <Color x:Key="OutlineColor">#C8C8D0</Color>
+
+            <Color x:Key="SecondaryColor">#F0F0F3</Color>
+            <Color x:Key="SecondaryColor75">#BFF0F0F3</Color>
+            <Color x:Key="SecondaryColor50">#80F0F0F3</Color>
+            <Color x:Key="SecondaryColor10">#1AF0F0F3</Color>
+            <Color x:Key="DestructiveColor">#FF3B30</Color>
+            <Color x:Key="DestructiveColor75">#BFFF3B30</Color>
+            <Color x:Key="DestructiveColor50">#80FF3B30</Color>
+            <Color x:Key="DestructiveColor10">#1AFF3B30</Color>
+            <Color x:Key="DestructiveForegroundColor">#FFFFFF</Color>
+
+            <Color x:Key="InfoColor">#0A84FF</Color>
+            <Color x:Key="InfoColor60">#990A84FF</Color>
+            <Color x:Key="InfoColor20">#330A84FF</Color>
+            <Color x:Key="InfoColor10">#1A0A84FF</Color>
+            <Color x:Key="InfoColor5">#0D0A84FF</Color>
+            <Color x:Key="SuccessColor">#30D158</Color>
+            <Color x:Key="SuccessColor60">#9930D158</Color>
+            <Color x:Key="SuccessColor20">#3330D158</Color>
+            <Color x:Key="SuccessColor10">#1A30D158</Color>
+            <Color x:Key="SuccessColor5">#0D30D158</Color>
+            <Color x:Key="WarningColor">#FF9500</Color>
+            <Color x:Key="WarningColor60">#99FF9500</Color>
+            <Color x:Key="WarningColor20">#33FF9500</Color>
+            <Color x:Key="WarningColor10">#1AFF9500</Color>
+            <Color x:Key="WarningColor5">#0DFF9500</Color>
+            <Color x:Key="ErrorColor">#FF3B30</Color>
+            <Color x:Key="ErrorColor60">#99FF3B30</Color>
+            <Color x:Key="ErrorColor20">#33FF3B30</Color>
+            <Color x:Key="ErrorColor10">#1AFF3B30</Color>
+            <Color x:Key="ErrorColor5">#0DFF3B30</Color>
+
+            <Color x:Key="BusyAreaOverlayColor">#99000000</Color>
+            <Color x:Key="CardBackgroundColor">#FFFFFF</Color>
+            <Color x:Key="DialogOverlayColor">#99000000</Color>
+            <Color x:Key="DialogBackgroundColor">#FFFFFF</Color>
+            <Color x:Key="TitleBarBackgroundColor">#00FFFFFF</Color>
+            <Color x:Key="PopupBackgroundColor">#FFFFFF</Color>
+            <Color x:Key="WindowButtonHoverColor">#12000000</Color>
+            <Color x:Key="SwitchBackgroundColor">#DADAE0</Color>
+            <Color x:Key="SwitchForegroundColor">#FFFFFF</Color>
+            <Color x:Key="AcrylicWindowBackgroundColor">#D819201E</Color>
+
+            <Color x:Key="DnfColor">#FF9500</Color>
+            <Color x:Key="DnsColor">#8E8E93</Color>
+            <Color x:Key="DqColor">#FF3B30</Color>
+            <Color x:Key="MedalGoldColor">#C9A227</Color>
+            <Color x:Key="MedalSilverColor">#9EA3A8</Color>
+            <Color x:Key="MedalBronzeColor">#A0522D</Color>
+
+            <SolidColorBrush x:Key="VerdictHostFallbackBrush" Color="#D819201E"/>
+            <SolidColorBrush x:Key="VerdictSurfaceBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="VerdictSurfaceMutedBrush" Color="#EFEFF2"/>
+            <SolidColorBrush x:Key="VerdictBorderSubtleBrush" Color="#DADAE0"/>
+            <SolidColorBrush x:Key="VerdictShadowBrush" Color="#24000000"/>
+            <SolidColorBrush x:Key="ZebraBrush" Color="#07000000"/>
+            <SolidColorBrush x:Key="MedalGoldBrush" Color="#C9A227"/>
+            <SolidColorBrush x:Key="MedalSilverBrush" Color="#9EA3A8"/>
+            <SolidColorBrush x:Key="MedalBronzeBrush" Color="#A0522D"/>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <Color x:Key="AccentColor">#0A84FF</Color>
+            <Color x:Key="PrimaryColor">#0A84FF</Color>
+            <Color x:Key="PrimaryColor75">#BF0A84FF</Color>
+            <Color x:Key="PrimaryColor50">#800A84FF</Color>
+            <Color x:Key="PrimaryColor10">#260A84FF</Color>
+            <Color x:Key="PrimaryForegroundColor">#FFFFFF</Color>
+
+            <Color x:Key="ForegroundColor">#F5F5F7</Color>
+            <Color x:Key="ForegroundLeadColor">#B8B8BE</Color>
+            <Color x:Key="SecondaryForegroundColor">#A4A4AA</Color>
+            <Color x:Key="MutedColor">#A4A4AA</Color>
+
+            <Color x:Key="BackgroundColor">#202124</Color>
+            <Color x:Key="WindowBackgroundColor">#17191C</Color>
+            <Color x:Key="SurfaceColor">#2A2B2F</Color>
+            <Color x:Key="SurfaceMutedColor">#33343A</Color>
+            <Color x:Key="SurfaceRaisedColor">#303137</Color>
+            <Color x:Key="SidebarColor">#24262A</Color>
+            <Color x:Key="SidebarBackgroundColor">#25262A</Color>
+            <Color x:Key="TabBarColor">#33343A</Color>
+            <Color x:Key="GhostColor">#34353A</Color>
+            <Color x:Key="GhostHoverColor">#414248</Color>
+            <Color x:Key="GhostHoverColor50">#80414248</Color>
+            <Color x:Key="SelectionColor">#36373D</Color>
+            <Color x:Key="SelectionHoverColor">#42434A</Color>
+
+            <Color x:Key="BorderColor">#45464D</Color>
+            <Color x:Key="BorderColor60">#9945464D</Color>
+            <Color x:Key="BorderColor30">#4D45464D</Color>
+            <Color x:Key="OutlineColor">#5B5D66</Color>
+
+            <Color x:Key="SecondaryColor">#34353A</Color>
+            <Color x:Key="SecondaryColor75">#BF34353A</Color>
+            <Color x:Key="SecondaryColor50">#8034353A</Color>
+            <Color x:Key="SecondaryColor10">#1A34353A</Color>
+            <Color x:Key="DestructiveColor">#FF453A</Color>
+            <Color x:Key="DestructiveColor75">#BFFF453A</Color>
+            <Color x:Key="DestructiveColor50">#80FF453A</Color>
+            <Color x:Key="DestructiveColor10">#1AFF453A</Color>
+            <Color x:Key="DestructiveForegroundColor">#FFFFFF</Color>
+
+            <Color x:Key="InfoColor">#0A84FF</Color>
+            <Color x:Key="InfoColor60">#990A84FF</Color>
+            <Color x:Key="InfoColor20">#330A84FF</Color>
+            <Color x:Key="InfoColor10">#1A0A84FF</Color>
+            <Color x:Key="InfoColor5">#0D0A84FF</Color>
+            <Color x:Key="SuccessColor">#32D74B</Color>
+            <Color x:Key="SuccessColor60">#9932D74B</Color>
+            <Color x:Key="SuccessColor20">#3332D74B</Color>
+            <Color x:Key="SuccessColor10">#1A32D74B</Color>
+            <Color x:Key="SuccessColor5">#0D32D74B</Color>
+            <Color x:Key="WarningColor">#FF9F0A</Color>
+            <Color x:Key="WarningColor60">#99FF9F0A</Color>
+            <Color x:Key="WarningColor20">#33FF9F0A</Color>
+            <Color x:Key="WarningColor10">#1AFF9F0A</Color>
+            <Color x:Key="WarningColor5">#0DFF9F0A</Color>
+            <Color x:Key="ErrorColor">#FF453A</Color>
+            <Color x:Key="ErrorColor60">#99FF453A</Color>
+            <Color x:Key="ErrorColor20">#33FF453A</Color>
+            <Color x:Key="ErrorColor10">#1AFF453A</Color>
+            <Color x:Key="ErrorColor5">#0DFF453A</Color>
+
+            <Color x:Key="BusyAreaOverlayColor">#AA000000</Color>
+            <Color x:Key="CardBackgroundColor">#2A2B2F</Color>
+            <Color x:Key="DialogOverlayColor">#AA000000</Color>
+            <Color x:Key="DialogBackgroundColor">#303137</Color>
+            <Color x:Key="TitleBarBackgroundColor">#00000000</Color>
+            <Color x:Key="PopupBackgroundColor">#303137</Color>
+            <Color x:Key="WindowButtonHoverColor">#1AFFFFFF</Color>
+            <Color x:Key="SwitchBackgroundColor">#45464D</Color>
+            <Color x:Key="SwitchForegroundColor">#F5F5F7</Color>
+            <Color x:Key="AcrylicWindowBackgroundColor">#E817191C</Color>
+
+            <Color x:Key="DnfColor">#FF9F0A</Color>
+            <Color x:Key="DnsColor">#636366</Color>
+            <Color x:Key="DqColor">#FF453A</Color>
+            <Color x:Key="MedalGoldColor">#F5C842</Color>
+            <Color x:Key="MedalSilverColor">#B0B5BB</Color>
+            <Color x:Key="MedalBronzeColor">#CD7F32</Color>
+
+            <SolidColorBrush x:Key="VerdictHostFallbackBrush" Color="#17191C"/>
+            <SolidColorBrush x:Key="VerdictSurfaceBrush" Color="#2A2B2F"/>
+            <SolidColorBrush x:Key="VerdictSurfaceMutedBrush" Color="#33343A"/>
+            <SolidColorBrush x:Key="VerdictBorderSubtleBrush" Color="#45464D"/>
+            <SolidColorBrush x:Key="VerdictShadowBrush" Color="#66000000"/>
+            <SolidColorBrush x:Key="ZebraBrush" Color="#0AFFFFFF"/>
+            <SolidColorBrush x:Key="MedalGoldBrush" Color="#F5C842"/>
+            <SolidColorBrush x:Key="MedalSilverBrush" Color="#B0B5BB"/>
+            <SolidColorBrush x:Key="MedalBronzeBrush" Color="#CD7F32"/>
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+    <CornerRadius x:Key="VerdictRadiusControl">9</CornerRadius>
+    <CornerRadius x:Key="VerdictRadiusPill">10</CornerRadius>
+    <CornerRadius x:Key="VerdictRadiusSurface">16</CornerRadius>
+    <CornerRadius x:Key="VerdictRadiusOverlay">22</CornerRadius>
+
+    <Thickness x:Key="VerdictWindowInset">12</Thickness>
+    <Thickness x:Key="VerdictSurfacePadding">18</Thickness>
+
+</ResourceDictionary>

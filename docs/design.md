@@ -1,189 +1,313 @@
-# Časomíra — design system (UI)
+# Verdict — design system
 
-> **Účel:** Jednotný popis vzhledu pro návrháře, [Stitch](https://stitch.withgoogle.com/) a implementaci v `src/renderer/src/styles/mac.css`.  
-> **Platí pro:** Windows i macOS — jeden vzhled v duchu Apple HIG (ne dvě platformy).  
-> **Cíl redesignu:** evoluce směrem k **macOS 26 (Tahoe, Liquid Glass)** — viz [dev/prompt-stitch-macos26.md](./dev/prompt-stitch-macos26.md).
+> **Stav:** aktualizováno 2026-06-25 po rozhodnutí nepřenášet vzhled přes
+> ShadUI. Tento dokument je aktuální vizuální zdroj pravdy pro Avalonia UI
+> migraci. Starší zmínky o Časomíře, Stitch, macOS 26/Liquid Glass a `mac.css`
+> ber jako historický kontext, ne jako zadání.
 
 ---
 
 ## Produkt v jedné větě
 
-Desktopová **offline** appka pro časoměřiče rallycross/autocross: tabulky, rošty, časy, body, PDF. Jeden operátor, žádné účty, žádný marketing web.
+Verdict je offline desktopová aplikace pro časoměřiče autokrosu a rallycrossu:
+rychlá, čitelná, klidná pracovní plocha pro startovky, rošty, měření, výsledky
+a PDF výstupy na jednom počítači.
 
----
+## Design north star
 
-## Co nedělat (anti-pattern)
+Verdict má v Avalonia verzi působit jako původní Electron/HeroUI aplikace:
+webově čistá, světlá, měkká a precizní, ale usazená v nativním Windows okně s
+Mica/Acrylic host materiálem.
 
-**Zkušenost ze Stitch (neopakovat):**
+Nesmí působit jako obecné tmavé desktopové demo ani jako syrový DataGrid nástroj.
 
-- Spodní **dashboard karty** (nejrychlejší kolo, průměr, aktivní vozy) — appka to nemá.
-- Badge **LIVE SYNCHRONIZACE** — offline app, žádný live sync.
-- **Nastavení / Odhlásit** v sidebaru — není přihlášení; nastavení je jinde, dole jen operátor + datum.
-- **Přepínač slunce/moon** v toolbaru — téma je v app nastavení, ne v hlavní liště každé obrazovky.
-- Light a dark **různé layouty** (např. light = jízdy 1/2, dark = jedna tabulka) — obě témata musí mít **stejnou strukturu**.
-- Sidebar jako plná **neprůhledná** karta místo **Liquid Glass** blur.
-- Chybějící **traffic lights** a macOS **segmented control** pod toolbarem.
-- Fialové / modré **AI gradienty**, neon, přebujelé stíny, „bubliny“
-- Emoji v nadpisech, stock ilustrace, hero sekce
-- Karty místo tabulek, skrývání sloupců, hamburger menu, Material FAB
-- Anglické popisky v UI (vše **česky** s diakritikou)
-- Čistá černá v dark mode (použít **grafit**)
+## Scéna
 
----
+Časoměřič sedí během závodního dne u notebooku s Windows, často v rušném depu
+nebo časoměřičské budce. Potřebuje rychle poznat aktivní kategorii, zapsat časy,
+zkontrolovat rošty a bez přemýšlení vytisknout/PDF exportovat správný list.
+UI má být klidné, čitelné a odpouštějící, ne efektní.
 
-## Layout (neměnit bez důvodu)
+## Register
+
+**Product.** Žádná marketingová hero estetika, žádné dekorativní gradienty,
+žádná ilustrativní prázdná místa. Vizuální kvalita vzniká z materiálu okna,
+vrstev, spacingu, typografie a konzistentních stavů.
+
+## Vizuální principy
+
+- **Host okno:** Mica/Acrylic-like systémový backdrop, ne ploché černé pozadí.
+- **Pracovní plochy:** světlé floating surfaces položené na host materiálu.
+- **Tvar:** velké, klidné radiusy; panely působí jako měkké ostrovy.
+- **Barva:** neutrální světlé plochy + jeden modrý primary accent.
+- **Hustota:** informačně hustší než marketing UI, ale s dostatkem vzduchu.
+- **Tabulky:** měkké listy, ne tvrdý desktop grid.
+- **Stavy:** hover, pressed, selected, focus, disabled, loading, empty a error
+  musí být explicitní.
+- **Jazyk:** UI je česky, krátké akční popisky, bez výplňových textů.
+
+## Nedotknutelné vzory z Electron appky
+
+Tyto vzory držet jako vizuální smlouvu:
+
+1. **Správa závodů**
+   - Velká světlá plocha uvnitř Mica host okna.
+   - Horní brand strip s logem vlevo a akcemi vpravo.
+   - Race card a add card jako nízké, měkké surfaces.
+   - Je to výchozí obrazovka po spuštění: karta otevře závod, akce "Závody"
+     v shellu se sem vrací.
+
+2. **Hlavní shell závodu**
+   - Levý sidebar se světlým panelem, velkým logem, kategoriemi a footerem.
+   - Obsah v samostatném světlém panelu vedle sidebaru.
+   - Horní toolbar: breadcrumb vlevo, akce vpravo.
+   - Pod toolbarem phase tabs v měkkém tracku.
+
+3. **Startovní listina**
+   - Nadpis + metainfo vlevo, akce vpravo.
+   - Tabulka jako rounded sheet: jemná šedá hlavička, bílé řádky, hairlines.
+   - Žádné agresivní gridlines, žádné tmavé řádky.
+
+4. **Rošty**
+   - Subtabs jako samostatný pill segment.
+   - Jízdy oddělené nadpisem a měkkou tabulkou.
+   - Empty pozice zobrazené jako tiché pomlčky, ne error.
+
+5. **Stopky**
+   - Samostatný high-priority layout.
+   - Obří čas a velké primary tlačítko `ZAZNAMENAT`.
+   - Vedlejší akce jsou menší a vizuálně slabší.
+   - Pravý panel `Rošt jízdy` je čitelný, ale nepřebíjí čas.
+
+6. **Dialogy a floating surfaces**
+   - Dim overlay.
+   - Bílý modal s velkým radiusem a stínem.
+   - Silný modrý focus ring na aktivním poli.
+   - Akce vpravo dole, primary modře, cancel neutrálně.
+
+7. **Dropdowny**
+   - Floating white surface s radiusem a stínem.
+   - Nepoužívat klasicky tvrdé desktop context menu, pokud workflow chce
+     produktový dropdown.
+
+## Tokeny
+
+Tokeny pojmenovávat semanticky. Avalonia resources mají používat stejný slovník,
+i když syntaxe bude `Color`, `SolidColorBrush`, `Thickness`, `CornerRadius`.
+Aktuální implementační vstup pro Avalonia spike je
+`apps/desktop-net/Verdict.Desktop/Styles/VerdictTokens.axaml`; komponentové a
+shell styly jsou v
+`apps/desktop-net/Verdict.Desktop/Styles/VerdictControls.axaml`.
+
+### Barvy
+
+| Token | Role |
+|---|---|
+| `Color.HostFallback` | fallback za Mica/Acrylic, když systémový materiál není dostupný |
+| `Color.Surface` | hlavní bílé panely |
+| `Color.SurfaceMuted` | tlumené tracky, table headery, secondary controls |
+| `Color.SurfaceRaised` | modaly, dropdowny, popovery |
+| `Color.RowHover` | hover řádku v tabulce/listu |
+| `Color.RowSelected` | aktivní sidebar položka nebo selected row |
+| `Color.BorderSubtle` | hairlines, separátory |
+| `Color.TextPrimary` | hlavní text |
+| `Color.TextSecondary` | popisy, metadata |
+| `Color.TextMuted` | méně důležité hodnoty |
+| `Color.ActionPrimary` | modrá akce |
+| `Color.ActionPrimaryHover` | hover primary akce |
+| `Color.ActionDanger` | destruktivní akce |
+| `Color.StateSuccess` | hotovo/úspěch |
+| `Color.StateWarning` | varování, DNF |
+| `Color.StateDanger` | chyba, DQ |
+
+Výchozí accent držet blízko Windows/HeroUI modré: `#0A84FF` / `#007AFF` podle
+kontrastu v daném tématu. Nepoužívat fialovo-modré gradienty jako identitu.
+
+### Radius
+
+| Token | Role |
+|---|---|
+| `Radius.Control` | běžné buttony, inputy |
+| `Radius.Pill` | chips, phase tabs, segmented controls |
+| `Radius.Surface` | hlavní panely |
+| `Radius.Overlay` | modaly, dropdowny |
+
+Orientačně: controls 8-10 px, surfaces 16-20 px, overlay 20-24 px. Hodnoty po
+spiku zafixovat podle reálného renderu.
+
+### Spacing
+
+Používat 4px rytmus: `4, 8, 12, 16, 20, 24, 32, 40, 48`.
+
+| Token | Role |
+|---|---|
+| `Space.WindowInset` | odsazení obsahu od okraje okna |
+| `Space.PanelGap` | mezera mezi sidebarem a obsahem |
+| `Space.SurfacePadding` | vnitřní padding panelu |
+| `Space.ToolbarHeight` | výška toolbaru |
+| `Space.RowHeight` | běžná výška tabulkového řádku |
+| `Space.TimerRowHeight` | řádky ve stopkách |
+
+### Typografie
+
+- Font: system stack; Windows primárně Segoe UI Variable, fallback Inter.
+- Velký brand wordmark může používat asset, ne živý text, pokud to zaručí přesnost.
+- Běžné UI texty: 13-14 px.
+- Nadpis panelu: 20-24 px, semibold/bold.
+- Stopky: výrazný display čas, tabular figures.
+- Čísla v tabulkách a časy: tabular nums.
+
+## Komponentové vzory
+
+### AppWindow
+
+Avalonia okno má řešit:
+
+- systémový backdrop: Mica/Acrylic podle platformy a podpory,
+- fallback pozadí,
+- vlastní/titlebar-friendly chrome,
+- obsah jako floating surfaces,
+- žádné plné černé pozadí pod aplikací.
+
+### Shell
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [traffic lights]  Časomíra                    (okno)    │
-├──────────┬──────────────────────────────────────────────┤
-│ Sidebar  │ Toolbar: breadcrumb          [Stopky][PDF]  │
-│ kategorie│ Segment fází (horizontální scroll)          │
-│ + počty  ├──────────────────────────────────────────────┤
-│          │ Inset tabulka / obsah fáze                    │
-│ operátor │                                               │
-│ + datum  │                                               │
-└──────────┴──────────────────────────────────────────────┘
+Window backdrop
+├─ Sidebar surface
+└─ Main column
+   ├─ Topbar surface
+   │  ├─ Breadcrumb
+   │  ├─ Window actions / utilities
+   │  └─ Phase tabs
+   └─ Content surface
 ```
 
-| Oblast | Chování |
-|--------|---------|
-| **Sidebar** (~252px) | Seznam kategorií; vpravo počet jezdců; ikona u řádku; **aktivní = modrá pilulka, bílý text**; dole operátor + datum. Materiál: vibrancy / blur (light: `rgba(245,245,247,0.66)`). |
-| **Toolbar** (~52px) | Vlevo breadcrumb `Kategorie → Fáze`. Vpravo: **Stopky** (sekundární, obrys), **Uložit PDF** (primární, plná modrá). |
-| **Segment fází** | Q1, Q2, Celkově po Q2, Q3, SF, Finále, Celkově… — **vždy horizontální scroll**, žádné ořezání labelů (např. „Celkově“). |
-| **Obsah** | **Inset grouped table** — zaoblený kontejner, zebra, jemná linka pod hlavičkou. |
+Sidebar a main content jsou sourozenci, ne karta uvnitř karty.
+
+### Sidebar
+
+- Šířka okolo 252 px.
+- Logo nahoře, zpět na závody pod ním.
+- Kategorie jako jednoduchý list.
+- Aktivní kategorie = šedý rounded pill, text výraznější.
+- Počet jezdců vpravo jako tlumená hodnota.
+- Footer s aktuálním závodem/operátorem oddělený hairline.
+
+### Topbar a phase tabs
+
+- Breadcrumb vlevo.
+- Utility ikony a akce vpravo.
+- `Stopky`, `Tisknout`, `Uložit PDF` jako stabilní command cluster.
+- Phase tabs jsou horizontálně scrollovatelné; labely se neořezávají.
+- Aktivní tab = bílý pill na tlumeném tracku.
+
+### Buttons
+
+Varianty:
+
+- `Primary`: modrá plocha, bílý text.
+- `Secondary`: světlá/tlumená plocha, tmavý text.
+- `Ghost`: minimální plocha pro ikony a nízké akce.
+- `Danger`: jemně červená plocha nebo červený text podle závažnosti.
+
+Každý button musí mít hover, pressed, focus-visible, disabled a loading stav.
+
+### Tables
+
+Preferovaný vzhled:
+
+- rounded container,
+- šedá header oblast,
+- bílé řádky,
+- jemné horizontální linky,
+- žádné svislé těžké gridlines,
+- hover velmi jemný,
+- selected stav viditelný, ale ne agresivní,
+- scroll bar nenápadný, ale použitelný.
+
+Avalonia `DataGrid` je povolený jen pokud je kompletně přestylovaný do tohoto
+vzoru. Jinak použít vlastní list/table layout pro klíčové obrazovky.
+
+### Timer
+
+Stopky jsou speciální surface, ne běžná tabulková stránka:
+
+- display čas je primární vizuální bod,
+- `ZAZNAMENAT` je největší akce,
+- mezerník/backspace workflow musí zůstat klávesnicí ovladatelné,
+- vedlejší akce nesmí soutěžit s měřením.
+
+### Dialogs
+
+- Dim overlay.
+- Overlay surface `Color.SurfaceRaised`.
+- Radius `Radius.Overlay`.
+- Focus trap a Esc/cancel chování.
+- Form controls mají label, error text a focus ring.
+
+### Floating panes
+
+Ursa/Semi floating panel vzor je žádoucí, pokud:
+
+- vypadá jako Verdict surface,
+- používá Verdict tokeny,
+- nepřenáší cizí demo estetiku,
+- má jasné keyboard/focus chování.
+
+## Avalonia/Ursa směr
+
+Ursa/Semi je kandidát pro chování a komponentovou mechaniku: dialogy, floating
+panes, inputy, selecty, overlaye a případně některé utility controls.
+
+Verdict vzhled se ale nemá přebírat z Ursa demo. Nad Ursa/Semi musí vzniknout
+tenká `Verdict.UI` vrstva:
+
+- `VerdictAppWindow`
+- `VerdictShell`
+- `VerdictSidebar`
+- `VerdictTopbar`
+- `VerdictPhaseTabs`
+- `VerdictButton`
+- `VerdictTable`
+- `VerdictDialog`
+- `VerdictFloatingPane`
+
+Aplikační obrazovky nemají náhodně míchat ShadUI, Ursa, Fluent a ruční styly.
+
+## ShadUI status
+
+ShadUI není součást produkčního desktopového UI. `Verdict.Desktop` používá
+nativní Avalonia `Window`, Fluent základ a tenkou `Verdict` vrstvu. Případný
+vendored ShadUI submodul je technický pozůstatek a může se odstranit v
+samostatném repository cleanup kroku, protože aplikace na něj už neodkazuje.
+
+## Akceptační kritéria pro první UI spike
+
+První spike je pouze `Startovní listina` v Avalonia/Ursa směru. Úspěch znamená:
+
+- Mica/Acrylic host feeling je patrný.
+- Sidebar a topbar působí jako Electron reference.
+- Tabulka nevypadá jako tvrdý desktop DataGrid.
+- Primary/secondary/ghost tlačítka sedí na původní appku.
+- Phase tabs mají správný pill/track feeling.
+- Stav při různých velikostech okna neřeže texty.
+- Vedle Electron screenshotu je jasné, že jde o stejnou aplikaci.
+
+Druhý spike je `Stopky`, protože ověřuje ergonomii nejrizikovějšího workflow.
+
+## Co nedělat
+
+- Nepřebírat tmavé Ursa demo jako základní skin.
+- Nemíchat více UI kitů bez wrapper vrstvy.
+- Nezačínat univerzální komponentovou knihovnou odspodu.
+- Neportovat HeroUI komponentu po komponentě.
+- Nevyrábět tmavý shell jen proto, že Avalonia demo tak vypadá.
+- Nepřepisovat pravidla závodu během UI spike.
+- Neschovávat důležité akce do menu jen kvůli čistotě.
+- Nepoužívat raw hex hodnoty v obrazovkách; patří do tokenů.
 
 ---
 
-## Obrazovky (screenshoty v repu)
-
-| Obrazovka | Soubor |
-|-----------|--------|
-| Správce závodů | `reference/Casomira-macOS/screenshots/01-spravce-zavodu.png` |
-| Startovní listina | `02-startovni-listina.png` |
-| Rošty Q1 | `03-rosty-q1.png` |
-| Výsledky Q1 | `04-vysledky-q1.png` |
-| Klasifikace | `05-klasifikace.png` |
-| Celkově | `06-celkove.png` |
-| Stopky | `07-stopky.png` |
-| Výsledky (tmavý) | `08-vysledky-tmavy.png` |
-| Celkově (tmavý) | `09-celkove-tmavy.png` |
-
----
-
-## Barvy a tokeny (aktuální implementace)
-
-Zdroj pravdy v kódu: `src/renderer/src/styles/mac.css`. Téma: `html[data-theme="light|dark"]`.
-
-### Globální
-
-| Token | Hodnota |
-|-------|---------|
-| Accent (light) | `#007AFF` |
-| Accent (dark) | `#0A84FF` |
-| Radius okna | `12px` |
-| Radius karty / tabulky | `10px` |
-| Radius control | `7px` |
-| Pill | `980px` |
-
-### Světlý režim
-
-| Účel | Hodnota |
-|------|---------|
-| Pozadí obsahu | `#F4F4F6` (`--content-bg`) |
-| Karta / tabulka | `#FFFFFF` |
-| Zebra řádek | `#F7F7F9` |
-| Text primární | ~`rgba(0,0,0,0.85)` |
-| Text sekundární | ~`rgba(0,0,0,0.5)` |
-| Hairline | ~`rgba(0,0,0,0.10)` |
-
-### Tmavý režim (grafit)
-
-| Účel | Hodnota |
-|------|---------|
-| Okno | `#1E1E1E` |
-| Pozadí obsahu | `#1A1A1A` |
-| Karta / tabulka | `#2C2C2E` |
-| Zebra | `#313133` |
-| Sidebar solid | `#29292B` |
-| Text primární | ~`rgba(255,255,255,0.88)` |
-
-### Stavy závodu / badge
-
-| Stav | Barva | Tvar |
-|------|-------|------|
-| **DNF** | oranžová | pill |
-| **DNS** | šedá | pill |
-| **DQ** | červená | pill |
-
-### Pořadí 1.–3.
-
-Malý **medailový puntík** (zlatá / stříbrná / bronzová) u čísla pozice — ne velké ikony trofejí.
-
----
-
-## Typografie
-
-| | |
-|-|-|
-| Font stack | `-apple-system`, SF Pro Text/Display, `system-ui`; Windows: Segoe UI Variable / Inter fallback |
-| Velikost těla | **13px** (případně 14px u hlaviček tabulky) |
-| Čísla v tabulkách | **tabular-nums** (`.tnum`), časy a body **vpravo** |
-| Formát času | `mm:ss.sss` |
-
----
-
-## Komponenty
-
-### Tlačítka
-
-- **Primární:** plná modrá, bílý text (Uložit PDF).
-- **Sekundární:** obrys, neutrální výplň (Stopky).
-- Jemný inset stín u tlačítek (`--shadow-btn`).
-
-### Segmentový přepínač
-
-- Track: jemně utlumený (`--seg-track`).
-- Vybraný segment: bílý / světle šedý pill se stínem (`--seg-sel`, `--seg-sel-shadow`).
-- Příliš mnoho segmentů → **scroll**, ne zmenšovat text pod čitelnost.
-
-### Tabulka (inset)
-
-- Kontejner s `--card`, stín `--shadow-card`.
-- Hover řádek: `--hover`.
-- Hlavička: medium weight, spodní hairline.
-- Inline editace buněk (Enter) — viz produkční UX.
-
-### Okno
-
-- „Plováoucí“ okno nad `--desktop` gradientem.
-- Stín okna: `--shadow-win` (silnější než u karty).
-- macOS traffic lights v chrome (dekorativní i na Windows pro jednotný vzhled).
-
----
-
-## Směr macOS 26 (pro Stitch / budoucí úpravy)
-
-Navrhovat **materiály**, ne nové layouty:
-
-- **Liquid Glass:** silnější blur na sidebaru a toolbaru, tenčí separátory.
-- **Hloubka:** z blur a vrstev, ne z velkých drop-shadow.
-- **Radii:** mírně větší u oken a grouped tabulek (v souladu s Tahoe).
-- **Segment control:** frosted track, čitelný scroll affordance.
-- Zachovat accent blue a české labely.
-
----
-
-## Reference v repozitáři
-
-| Soubor | Co |
-|--------|-----|
-| `docs/design.md` | Tento dokument |
-| `src/renderer/src/styles/mac.css` | CSS tokeny (implementace) |
-| `reference/Casomira-macOS/` | Klikací prototyp + `mac.css` originál |
-| `CLAUDE.md` §2c | Schválená pravidla vzhledu (produkt) |
-| `docs/dev/prompt-stitch-macos26.md` | Prompt pro Stitch |
-
----
-
-*Při změně vzhledu aktualizuj tento soubor a `mac.css` společně.*
+Při změně vzhledu aktualizuj tento soubor a odpovídající Avalonia resource
+dictionaries (`VerdictTokens.axaml`, `VerdictControls.axaml`, případně jejich
+budoucí rozdělené soubory) společně.

@@ -20,9 +20,17 @@ public partial class MainWindowViewModel : ViewModelBase
     // ── Závod ─────────────────────────────────────────────────────────────────
 
     public ObservableCollection<ZavodInfo> Zavody { get; } = [];
+    public ObservableCollection<RaceCardViewModel> RaceCards { get; } = [];
+
+    public bool JeSpravaZavodu => CurrentZavod is null;
+    public bool JeZavodOtevren => CurrentZavod is not null;
+    public bool MaZavody => RaceCards.Count > 0;
+    public bool NemaZavody => !MaZavody;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Breadcrumb))]
+    [NotifyPropertyChangedFor(nameof(JeSpravaZavodu))]
+    [NotifyPropertyChangedFor(nameof(JeZavodOtevren))]
     private ZavodInfo? _currentZavod;
 
     // ── Kategorie (sidebar) ───────────────────────────────────────────────────
@@ -170,7 +178,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string ObnovZeZalohy(string json)
     {
         var vysledek = _backupSvc.ObnovZTextu(json);
-        NactiZavody(vysledek.ZavodIds.Count > 0 ? vysledek.ZavodIds[^1] : null);
+        NactiZavody();
         int n = vysledek.ZavodIds.Count;
         string zavodySlovo = n == 1 ? "závod" : n is >= 2 and <= 4 ? "závody" : "závodů";
         return $"Obnoveno {n} {zavodySlovo}. Poslední: {vysledek.PosledniNazev}";
@@ -182,6 +190,8 @@ public partial class MainWindowViewModel : ViewModelBase
         int id = _svc.VytvorZavod(vstup);
         NactiZavody(id);
     }
+
+    public void OtevritZavod(ZavodInfo zavod) => CurrentZavod = zavod;
 
     // ── partial OnChanged háky ────────────────────────────────────────────────
 
@@ -240,17 +250,27 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void UlozitPdf() { }
 
+    [RelayCommand]
+    private void ZpetNaZavody() => CurrentZavod = null;
+
     // ── Interní ───────────────────────────────────────────────────────────────
 
     private void NactiZavody(int? vyberId = null)
     {
         Zavody.Clear();
+        RaceCards.Clear();
         foreach (var z in _svc.GetZavody())
+        {
             Zavody.Add(z);
+            RaceCards.Add(new RaceCardViewModel(z));
+        }
 
         CurrentZavod = vyberId is not null
             ? Zavody.FirstOrDefault(z => z.Id == vyberId.Value) ?? Zavody.FirstOrDefault()
-            : Zavody.FirstOrDefault();
+            : null;
+
+        OnPropertyChanged(nameof(MaZavody));
+        OnPropertyChanged(nameof(NemaZavody));
     }
 
     private void NactiKategorie(int zavodId)

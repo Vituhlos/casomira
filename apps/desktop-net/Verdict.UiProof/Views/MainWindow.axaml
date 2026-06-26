@@ -1,0 +1,335 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:Verdict.UiProof.Views"
+        x:Class="Verdict.UiProof.Views.MainWindow"
+        x:DataType="views:MainWindow"
+        Title="Verdict — N1600 · Startovní listina"
+        Width="1280" Height="780"
+        MinWidth="980" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        TransparencyLevelHint="Mica"
+        Background="{DynamicResource VerdictHostFallbackBrush}">
+
+    <Window.Resources>
+        <!-- Brushes odvozené z Verdict tokenů (Color → Brush) -->
+        <SolidColorBrush x:Key="FgBrush" Color="{DynamicResource ForegroundColor}"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="{DynamicResource MutedColor}"/>
+        <SolidColorBrush x:Key="SecFgBrush" Color="{DynamicResource SecondaryForegroundColor}"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="{DynamicResource SurfaceColor}"/>
+        <SolidColorBrush x:Key="SidebarBrush" Color="{DynamicResource SidebarBackgroundColor}"/>
+        <SolidColorBrush x:Key="TabBarBrush" Color="{DynamicResource TabBarColor}"/>
+        <SolidColorBrush x:Key="BorderBrush2" Color="{DynamicResource BorderColor}"/>
+        <SolidColorBrush x:Key="SelectionBrush" Color="{DynamicResource SelectionColor}"/>
+        <SolidColorBrush x:Key="GhostHoverBrush" Color="{DynamicResource GhostHoverColor}"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="{DynamicResource PrimaryColor}"/>
+        <SolidColorBrush x:Key="PrimaryFgBrush" Color="{DynamicResource PrimaryForegroundColor}"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}"/>
+        <SolidColorBrush x:Key="BadgeBgBrush" Color="#14FFFFFF"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <!-- ── Tlačítka ──────────────────────────────────────────── -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryFgBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0977E8"/>
+        </Style>
+
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="13,6"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush2}"/>
+        </Style>
+        <Style Selector="Button.outline:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource GhostHoverBrush}"/>
+        </Style>
+
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource SecFgBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource GhostHoverBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+        </Style>
+
+        <!-- ── Sidebar kategorie ─────────────────────────────────── -->
+        <Style Selector="ListBox.sidebar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
+        </Style>
+        <Style Selector="ListBox.sidebar ListBoxItem">
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.sidebar ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource GhostHoverBrush}"/>
+        </Style>
+        <Style Selector="ListBox.sidebar ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource SelectionBrush}"/>
+        </Style>
+
+        <!-- ── Phase tabs ────────────────────────────────────────── -->
+        <Style Selector="ListBox.tabs">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.tabs ListBoxItem">
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+        </Style>
+        <Style Selector="ListBox.tabs ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#12FFFFFF"/>
+        </Style>
+        <Style Selector="ListBox.tabs ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="12" ColumnDefinitions="252,12,*">
+
+        <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+        <Border Grid.Column="0"
+                Background="{StaticResource SidebarBrush}"
+                CornerRadius="16"
+                BorderThickness="1"
+                BorderBrush="{StaticResource BorderBrush2}">
+            <Grid RowDefinitions="Auto,*,Auto">
+
+                <StackPanel Grid.Row="0" Spacing="6" Margin="14,16,14,10">
+                    <Image Source="/Assets/verdict-mainlogo-light.png"
+                           Width="150" Height="34"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Left"/>
+                    <Button Classes="ghost"
+                            HorizontalAlignment="Left"
+                            Padding="8,5"
+                            Margin="0,6,0,0"
+                            Content="←  Závody"/>
+                </StackPanel>
+
+                <DockPanel Grid.Row="1">
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="KATEGORIE"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource MutedBrush}"
+                               Margin="16,4,12,6"/>
+                    <ScrollViewer>
+                        <ListBox Classes="sidebar"
+                                 ItemsSource="{Binding Kategorie}"
+                                 SelectedIndex="2">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="views:Kategorie">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Nazev}"
+                                                   VerticalAlignment="Center"/>
+                                        <Border Grid.Column="1"
+                                                Background="{StaticResource BadgeBgBrush}"
+                                                CornerRadius="10"
+                                                Padding="7,1"
+                                                MinWidth="24">
+                                            <TextBlock Text="{Binding Pocet}"
+                                                       FontSize="12"
+                                                       Foreground="{StaticResource MutedBrush}"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+                </DockPanel>
+
+                <Border Grid.Row="2"
+                        BorderBrush="{StaticResource BorderBrush2}"
+                        BorderThickness="0,1,0,0"
+                        Padding="16,12">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Časoměřič"
+                                   FontSize="12" FontWeight="Medium"
+                                   Foreground="{StaticResource FgBrush}"/>
+                        <TextBlock Text="30. 5. 2026"
+                                   FontSize="11"
+                                   Foreground="{StaticResource MutedBrush}"/>
+                        <TextBlock Text="Verdict v0.9.13-beta"
+                                   FontSize="10.5"
+                                   Opacity="0.55"
+                                   Foreground="{StaticResource MutedBrush}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ══ HLAVNÍ OBLAST ════════════════════════════════════════ -->
+        <Grid Grid.Column="2" RowDefinitions="Auto,12,*">
+
+            <!-- TOPBAR -->
+            <Border Grid.Row="0"
+                    Background="{StaticResource SidebarBrush}"
+                    CornerRadius="16"
+                    BorderThickness="1"
+                    BorderBrush="{StaticResource BorderBrush2}"
+                    Padding="14,12">
+                <Grid RowDefinitions="Auto,10,Auto">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center">
+                            <Run Text="N1600" Foreground="{StaticResource FgBrush}" FontWeight="SemiBold"/>
+                            <Run Text="  ›  Startovní listina" Foreground="{StaticResource SecFgBrush}"/>
+                        </TextBlock>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                            <Button Classes="ghost" Content="☽" Padding="9,5"/>
+                            <Button Classes="ghost" Content="⚙" Padding="9,5"/>
+                            <Button Classes="outline" Content="Stopky"/>
+                            <Button Classes="ghost" Content="Tisknout"/>
+                            <Button Classes="primary" Content="Uložit PDF  ▾"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Background="{StaticResource TabBarBrush}"
+                            CornerRadius="11"
+                            Padding="4">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled">
+                            <ListBox Classes="tabs" SelectedIndex="0">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="2"/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBoxItem Content="Startovní listina"/>
+                                <ListBoxItem Content="Q1"/>
+                                <ListBoxItem Content="Q2"/>
+                                <ListBoxItem Content="Klasifikace po Q2"/>
+                                <ListBoxItem Content="Q3"/>
+                                <ListBoxItem Content="Klasifikace po Q3"/>
+                                <ListBoxItem Content="Semifinále"/>
+                                <ListBoxItem Content="Finále"/>
+                                <ListBoxItem Content="Celkově"/>
+                            </ListBox>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- CONTENT SURFACE -->
+            <Border Grid.Row="2"
+                    Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="16"
+                    BorderThickness="1"
+                    BorderBrush="{StaticResource BorderBrush2}"
+                    ClipToBounds="True">
+                <DockPanel Margin="0">
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="22,20,22,14">
+                        <StackPanel Grid.Column="0" Spacing="3">
+                            <TextBlock Text="Startovní listina"
+                                       FontSize="22" FontWeight="Bold"
+                                       Foreground="{StaticResource FgBrush}"/>
+                            <TextBlock Text="19 přihlášených · 4 čeká na přejímku · řazeno dle losu"
+                                       FontSize="12"
+                                       Foreground="{StaticResource SecFgBrush}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    VerticalAlignment="Center">
+                            <Button Classes="outline" Content="Importovat z Excelu"/>
+                            <Button Classes="primary" Content="＋ Přidat jezdce"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Table header -->
+                    <Grid DockPanel.Dock="Top"
+                          ColumnDefinitions="70,84,*,150,150,180"
+                          Margin="22,0,22,0"
+                          Height="34">
+                        <TextBlock Grid.Column="0" Text="LOS" Classes="th"/>
+                        <TextBlock Grid.Column="1" Text="ST. Č." Classes="th"/>
+                        <TextBlock Grid.Column="2" Text="PŘÍJMENÍ" Classes="th"/>
+                        <TextBlock Grid.Column="3" Text="JMÉNO" Classes="th"/>
+                        <TextBlock Grid.Column="4" Text="ZNAČKA" Classes="th"/>
+                        <TextBlock Grid.Column="5" Text="MODEL" Classes="th"/>
+                        <Grid.Styles>
+                            <Style Selector="TextBlock.th">
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </Grid.Styles>
+                    </Grid>
+                    <Border DockPanel.Dock="Top" Height="1"
+                            Background="{StaticResource BorderBrush2}"
+                            Margin="22,0"/>
+
+                    <!-- Rows -->
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Jezdci}" Margin="10,0,10,10">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="views:Rider">
+                                    <Border Background="{Binding RowBackground}"
+                                            CornerRadius="7"
+                                            Padding="12,0"
+                                            Height="44">
+                                        <Grid ColumnDefinitions="60,84,*,150,150,180">
+                                            <TextBlock Grid.Column="0" Text="{Binding Los}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource SecFgBrush}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Cislo}"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource FgBrush}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Prijmeni}"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource FgBrush}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding Jmeno}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource SecFgBrush}"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding Znacka}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource SecFgBrush}"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding Model}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource SecFgBrush}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

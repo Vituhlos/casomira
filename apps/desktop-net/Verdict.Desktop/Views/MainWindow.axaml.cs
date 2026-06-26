@@ -43,6 +43,13 @@ public partial class MainWindow : Window
             vm.VytvoritZavod(vstup);
     }
 
+    private void OnOtevritZavod(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: RaceCardViewModel card }
+            && DataContext is MainWindowViewModel vm)
+            vm.OtevritZavod(card.Zavod);
+    }
+
     private static readonly FilePickerFileType JsonTyp = new("Záloha Verdictu (*.json)")
     {
         Patterns = ["*.json"],

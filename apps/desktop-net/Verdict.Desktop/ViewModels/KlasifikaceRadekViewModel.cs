@@ -12,6 +12,11 @@ public class KlasifikaceRadekViewModel : ViewModelBase
     public string Jmeno     { get; }
     public int    Celkem    { get; }
 
+    // Medal helpers
+    public bool JeZlato   => Poradi == 1;
+    public bool JeStribro => Poradi == 2;
+    public bool JeBronz   => Poradi == 3;
+
     /// <summary>Body za dané kolo (Q1/Q2/Q3) pro binding sloupců; prázdné když jezdec v kole nejel.</summary>
     public string this[string koloTyp] =>
         _perKolo.TryGetValue(koloTyp, out int b) ? b.ToString() : "";

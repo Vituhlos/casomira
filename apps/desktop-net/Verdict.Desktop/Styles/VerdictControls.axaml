@@ -1,0 +1,291 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:lucide="clr-namespace:Lucide.Avalonia;assembly=Lucide.Avalonia">
+
+    <Style Selector="Window.verdict-window">
+        <Setter Property="Background" Value="{DynamicResource VerdictHostFallbackBrush}"/>
+        <Setter Property="TransparencyLevelHint" Value="Mica,AcrylicBlur,Blur,None"/>
+        <Setter Property="ExtendClientAreaToDecorationsHint" Value="True"/>
+    </Style>
+
+    <Style Selector="Border.verdict-window-shell">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="12,42,12,12"/>
+    </Style>
+
+    <Style Selector="Border.verdict-surface">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor30}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusSurface}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="BoxShadow" Value="0 14 36 0 #18000000"/>
+    </Style>
+
+    <Style Selector="Border.verdict-topbar">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor30}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusSurface}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="BoxShadow" Value="0 10 24 0 #10000000"/>
+    </Style>
+
+    <Style Selector="Border.verdict-sidebar">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor30}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusSurface}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="BoxShadow" Value="0 14 36 0 #16000000"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-brand">
+        <Setter Property="FontSize" Value="34"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-section-title">
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-caption">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource MutedColor}"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-race-hub-title">
+        <Setter Property="FontSize" Value="34"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-race-hub-subtitle">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundColor}"/>
+    </Style>
+
+    <Style Selector="Button.verdict-back-to-races">
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <Style Selector="Button.verdict-race-card">
+        <Setter Property="Width" Value="284"/>
+        <Setter Property="Height" Value="184"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor30}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusOverlay}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+
+    <Style Selector="Button.verdict-race-card:pointerover">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+    </Style>
+
+    <Style Selector="Button.verdict-race-card:pressed">
+        <Setter Property="Opacity" Value="0.96"/>
+    </Style>
+
+    <Style Selector="Border.verdict-race-type-chip">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceMutedBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusPill}"/>
+        <Setter Property="Padding" Value="8,3"/>
+    </Style>
+
+    <Style Selector="Border.verdict-race-type-chip TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-race-card-title">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="TextBlock.verdict-race-card-meta">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundColor}"/>
+    </Style>
+
+    <Style Selector="StackPanel.verdict-race-card-stats TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Foreground" Value="{DynamicResource MutedColor}"/>
+    </Style>
+
+    <Style Selector="StackPanel.verdict-race-card-stats lucide|LucideIcon">
+        <Setter Property="Foreground" Value="{DynamicResource MutedColor}"/>
+    </Style>
+
+    <Style Selector="Button.verdict-add-race-card">
+        <Setter Property="Width" Value="284"/>
+        <Setter Property="Height" Value="184"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundColor}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-add-race-card-frame">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor60}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusSurface}"/>
+    </Style>
+
+    <Style Selector="Button.verdict-add-race-card:pointerover Border.verdict-add-race-card-frame">
+        <Setter Property="Background" Value="{DynamicResource GhostColor}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+    </Style>
+
+    <Style Selector="Button">
+        <Setter Property="Background" Value="{DynamicResource GhostColor}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusControl}"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button:pointerover">
+        <Setter Property="Background" Value="{DynamicResource GhostHoverColor}"/>
+    </Style>
+
+    <Style Selector="Button:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <Style Selector="Button.primary, Button.Primary">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundColor}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+
+    <Style Selector="Button.primary:pointerover, Button.Primary:pointerover">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColor75}"/>
+    </Style>
+
+    <Style Selector="Button.outline, Button.Outline">
+        <Setter Property="Background" Value="{DynamicResource GhostColor}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+
+    <Style Selector="Button.outline:pointerover, Button.Outline:pointerover">
+        <Setter Property="Background" Value="{DynamicResource GhostHoverColor}"/>
+    </Style>
+
+    <Style Selector="Button.ghost, Button.Ghost">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+
+    <Style Selector="Button.ghost:pointerover, Button.Ghost:pointerover">
+        <Setter Property="Background" Value="{DynamicResource GhostColor}"/>
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{DynamicResource GhostColor}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusControl}"/>
+        <Setter Property="MinHeight" Value="34"/>
+    </Style>
+
+    <Style Selector="Border.verdict-table-sheet">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor30}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <Style Selector="DataGrid">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="CanUserSortColumns" Value="False"/>
+        <Setter Property="CanUserReorderColumns" Value="False"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="DataGridRow">
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+    </Style>
+
+    <Style Selector="DataGridRow:nth-child(even)">
+        <Setter Property="Background" Value="{DynamicResource ZebraBrush}"/>
+    </Style>
+
+    <Style Selector="DataGridRow:pointerover">
+        <Setter Property="Background" Value="{DynamicResource GhostHoverColor50}"/>
+    </Style>
+
+    <Style Selector="DataGridCell">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+    </Style>
+
+    <Style Selector="DataGridColumnHeader">
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceMutedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource MutedColor}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge">
+        <Setter Property="CornerRadius" Value="{DynamicResource VerdictRadiusPill}"/>
+        <Setter Property="Padding" Value="7,2"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge-dnf">
+        <Setter Property="Background" Value="{DynamicResource WarningColor20}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge-dnf TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource WarningColor}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge-dns">
+        <Setter Property="Background" Value="{DynamicResource GhostColor}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge-dns TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MutedColor}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge-dq">
+        <Setter Property="Background" Value="{DynamicResource ErrorColor10}"/>
+    </Style>
+
+    <Style Selector="Border.verdict-badge-dq TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource ErrorColor}"/>
+    </Style>
+
+</Styles>

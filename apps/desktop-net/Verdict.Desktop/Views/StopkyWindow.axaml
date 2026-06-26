@@ -5,10 +5,11 @@
         x:Class="Verdict.Desktop.Views.StopkyWindow"
         x:DataType="vm:StopkyViewModel"
         Title="Stopky"
-        Width="640" Height="700"
-        MinWidth="500" MinHeight="500"
+        Width="1280" Height="760"
+        MinWidth="1040" MinHeight="620"
         WindowStartupLocation="CenterOwner"
-        CanResize="True">
+        CanResize="True"
+        Classes="verdict-window">
 
   <local:StopkyView DataContext="{Binding}" />
 

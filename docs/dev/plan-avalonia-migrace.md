@@ -1,5 +1,11 @@
 # Plán — migrace Electron → AvaloniaUI (.NET)
 
+> **Poznámka 2026-06-25:** UI část tohoto plánu je částečně překonaná. Volba
+> ShadUI už není aktuální design směr; nový vizuální zdroj pravdy je
+> [docs/design.md](../design.md) a aktuální UI spike plán je
+> [plan-avalonia-ursa-ui-spike.md](./plan-avalonia-ursa-ui-spike.md).
+> Pravidlová/data část plánu zůstává užitečná.
+
 > **Účel:** Přepsat desktopovou aplikaci **Verdict** (dříve „Časomíra") z Electron (React/TS) na
 > **AvaloniaUI (.NET / C#)** se **100% zachováním chování a pravidel** (1:1).
 > **Důvod:** Electron je na cílovém HW pomalý a zasekává se; appka má dál růst.
@@ -57,18 +63,17 @@ zadané časy) → **bitově/hodnotově shodné body, pořadí a PDF obsah** jak
 |--------|-------|------|
 | Runtime | **.NET 9** | aktuální LTS-blízká řada, NativeAOT pro rychlost |
 | UI framework | **AvaloniaUI 11** | nativní kreslené UI, Win+macOS, rychlé |
-| UI kit / téma | **ShadUI** (základ) | nejblíž HeroUI/shadcn estetice, tokenizovatelné barvy |
+| UI kit / téma | **Historicky ShadUI; aktuálně Ursa/Semi spike** | ShadUI směr je překonaný, viz `plan-avalonia-ursa-ui-spike.md` |
 | MVVM | **CommunityToolkit.Mvvm** | jednodušší než ReactiveUI, source-generated |
 | SQLite | **Microsoft.Data.Sqlite** + **Dapper** | stejný formát DB jako `better-sqlite3` |
 | Excel | **ClosedXML** | čte `.xlsx`; pro `.xls` viz §6 (riziko) |
 | PDF | **QuestPDF** | C# fluent layout (viz §7 — největší rozdíl) |
 | Build/instal. | **velopack** nebo `dotnet publish` + NSIS / `.dmg` | Win installer + macOS dmg |
 
-> **UI kit — rozhodnuto:** ShadUI jako základ. Barvy z CLAUDE.md §2c se přepíšou
-> přes ShadUI color tokeny (light/dark `ThemeDictionaries`). Kde ShadUI komponent
-> nemá (např. segmentový přepínač fází s přetékáním), **doimplementujeme vlastní
-> XAML** nad stejnými tokeny — **nemixovat** druhou knihovnu (SukiUI) do stejné
-> appky (kolize stylů základních kontrol).
+> **UI kit — historická volba:** tento plán původně počítal se ShadUI jako
+> základem. Po vizuálním porovnání s Electron/HeroUI referencí je aktuální směr
+> Ursa/Semi + vlastní Verdict tokeny a wrapper vrstva. Detaily jsou v
+> `plan-avalonia-ursa-ui-spike.md`.
 
 ### Cílová struktura projektu
 
@@ -86,7 +91,7 @@ apps/desktop-net/                 # nový .NET projekt (vedle stávajícího Ele
 │   ├── ViewModels/
 │   ├── Views/                    # XAML obrazovky
 │   ├── Controls/                 # vlastní (segment fází, badge, medaile)
-│   ├── Themes/                   # ShadUI override + mac tokeny
+│   ├── Themes/                   # Verdict tokeny + Ursa/Semi integration
 │   └── App.axaml
 └── Verdict.Tests/                # paritní + jednotkové testy
 ```
@@ -112,7 +117,7 @@ neprojde paritními testy. Žádný „big bang".
 | `main/backup/*` | — | `Core/Backup/*` | střední |
 | `main/ipc.ts` | 248 | `IRaceService` rozhraní | nízká (jen tvar) |
 | `renderer/screens/*` (10) | ~2700 | `Views/*.axaml` + `ViewModels/*` | **vysoká** |
-| `renderer/components/*` (15+) | ~1900 | `Controls/*` + ShadUI | **vysoká** |
+| `renderer/components/*` (15+) | ~1900 | `Controls/*` + Verdict.UI wrapper | **vysoká** |
 | `hooks/useHotkeys.ts` | — | Avalonia `KeyBindings` + `ICommand` | střední |
 
 **Velikostně:** ~9 700 ř. TS → odhad ~12–15 tis. ř. C# + XAML.
@@ -139,7 +144,7 @@ neprojde paritními testy. Žádný „big bang".
   výsledky → klasifikace → závěr (SF/F/A/B) → celkově.
 
 ### Fáze 2 — Avalonia shell (3–5 dní)
-- ShadUI + token override (barvy CLAUDE.md §2c, light/dark přepínač).
+- Ursa/Semi spike + Verdict tokeny (viz `docs/design.md`, light/dark přepínač).
 - Layout: sidebar (kategorie + počty), toolbar (breadcrumb, Stopky, Uložit PDF),
   **segmentový přepínač fází s vodorovným přetékáním** (vlastní control — pozor,
   v prototypu se „Celkově" ořezávalo, to NEopakovat).

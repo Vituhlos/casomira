@@ -17,6 +17,12 @@ Thumbs.db
 .code-review-graph/
 # Lokální offline kopie HeroUI v3 dokumentace
 .heroui-docs/
+# Codex lokální přílohy
+.codex-remote-attachments/
+
+# .NET build výstupy
+bin/
+obj/
 
 # Lokální archivy, instalátory, zálohy (necommitovat)
 bordel/

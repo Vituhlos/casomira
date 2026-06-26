@@ -4,54 +4,74 @@
              x:Class="Verdict.Desktop.Views.StartListView"
              x:DataType="vm:StartListViewModel">
 
-    <DockPanel>
+    <DockPanel Background="{DynamicResource SurfaceColor}">
 
-        <!-- Toolbar -->
+        <!-- Záhlaví sekce s názvem, podtitulem a akčními tlačítky -->
         <Border DockPanel.Dock="Top"
-                Padding="12,8"
-                BorderThickness="0,0,0,1"
-                BorderBrush="{DynamicResource BorderColor}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="＋ Přidat jezdce"
-                        Command="{Binding PridatJezdceCommand}"
-                        Classes="outline"/>
-                <Button Content="Smazat"
-                        Command="{Binding SmazatJezdceCommand}"
-                        CommandParameter="{Binding SelectedJezdec}"
-                        IsEnabled="{Binding SelectedJezdec, Converter={x:Static ObjectConverters.IsNotNull}}"
-                        Classes="outline"/>
-                <Separator Width="1" Background="{DynamicResource BorderColor}" Margin="4,0"/>
-                <Button x:Name="ImportButton"
-                        Content="Importovat Excel…"
-                        Classes="outline"
-                        Click="OnImportClick"/>
-                <TextBlock Text="{Binding StatusText}"
-                           VerticalAlignment="Center"
-                           FontSize="13"
-                           Opacity="0.75"
-                           IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-            </StackPanel>
+                Padding="20,18,20,10"
+                BorderThickness="0"
+                Background="{DynamicResource SurfaceColor}">
+            <Grid ColumnDefinitions="*,Auto">
+
+                <!-- Název + status podtitulek vlevo -->
+                <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                     <TextBlock Text="Startovní listina"
+                               FontSize="22" FontWeight="Bold"
+                               Foreground="{DynamicResource ForegroundColor}"/>
+                    <TextBlock Text="{Binding StatusText}"
+                               FontSize="12"
+                               Foreground="{DynamicResource SecondaryForegroundColor}"
+                               IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <!-- Tlačítka vpravo -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button x:Name="ImportButton"
+                            Content="Importovat z Excelu"
+                            Classes="outline"
+                            Click="OnImportClick"/>
+                    <Button Content="＋ Přidat jezdce"
+                            Command="{Binding PridatJezdceCommand}"
+                            Classes="primary"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Tabulka jezdců -->
-        <DataGrid x:Name="Grid"
-                  ItemsSource="{Binding Jezdci}"
-                  SelectedItem="{Binding SelectedJezdec}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="False"
-                  GridLinesVisibility="Horizontal"
-                  CellEditEnded="OnCellEditEnded">
+        <Border Classes="verdict-table-sheet"
+                Margin="20,8,20,20">
+            <DataGrid x:Name="Grid"
+                      ItemsSource="{Binding Jezdci}"
+                      SelectedItem="{Binding SelectedJezdec}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="False"
+                      GridLinesVisibility="Horizontal"
+                      Background="{DynamicResource SurfaceColor}"
+                      CellEditEnded="OnCellEditEnded">
 
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Los"      Binding="{Binding LosText}"      Width="70"/>
-                <DataGridTextColumn Header="St.č."    Binding="{Binding StCisloText}"   Width="70"/>
-                <DataGridTextColumn Header="Příjmení" Binding="{Binding Prijmeni}"      Width="170"/>
-                <DataGridTextColumn Header="Jméno"    Binding="{Binding Jmeno}"         Width="130"/>
-                <DataGridTextColumn Header="Značka"   Binding="{Binding Znacka}"        Width="130"/>
-                <DataGridTextColumn Header="Model"    Binding="{Binding Model}"         Width="150"/>
+                <DataGridTextColumn Header="St.č."    Binding="{Binding StCisloText}"  Width="80"/>
+                <DataGridTemplateColumn Header="Příjmení" Width="180">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:JezdecRowViewModel">
+                            <TextBlock Text="{Binding Prijmeni}" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" Margin="12,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate x:DataType="vm:JezdecRowViewModel">
+                            <TextBox Text="{Binding Prijmeni}" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Jméno"    Binding="{Binding Jmeno}"        Width="140"/>
+                <DataGridTextColumn Header="Značka"   Binding="{Binding Znacka}"       Width="135"/>
+                <DataGridTextColumn Header="Model"    Binding="{Binding Model}"        Width="175"/>
             </DataGrid.Columns>
 
-        </DataGrid>
+            </DataGrid>
+        </Border>
 
     </DockPanel>
 
