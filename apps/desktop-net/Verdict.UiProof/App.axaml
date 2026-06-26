@@ -5,6 +5,7 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Verdict.UI/Theme/VerdictTypography.axaml" />
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictControls.axaml" />
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictTable.axaml" />
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictBadges.axaml" />

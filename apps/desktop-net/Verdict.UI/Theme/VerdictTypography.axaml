@@ -1,0 +1,42 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Verdict.UI — type ramp. Obrazovky používají třídy místo
+         inline FontSize. Velikosti jdou z token škály (FontSize*).
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- Nadpis obrazovky (např. „Startovní listina") -->
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="{DynamicResource FontSize2xl}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+
+    <!-- Sekundární nadpis -->
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeLg}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+
+    <!-- Běžný text -->
+    <Style Selector="TextBlock.body">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBase}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+
+    <!-- Podtitulek / popisek (menší, tlumený) -->
+    <Style Selector="TextBlock.subtitle">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+    </Style>
+
+    <!-- Sekční štítek (KATEGORIE, …) -->
+    <Style Selector="TextBlock.label">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeXs}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictMutedBrush}"/>
+    </Style>
+
+</Styles>

@@ -209,4 +209,14 @@
     <sys:Double x:Key="Space10">40</sys:Double>
     <sys:Double x:Key="Space12">48</sys:Double>
 
+    <!-- Type scale (desktop body = 13) — místo magických font-size v obrazovkách -->
+    <sys:Double x:Key="FontSizeXs">11</sys:Double>
+    <sys:Double x:Key="FontSizeSm">12</sys:Double>
+    <sys:Double x:Key="FontSizeBase">13</sys:Double>
+    <sys:Double x:Key="FontSizeMd">14</sys:Double>
+    <sys:Double x:Key="FontSizeLg">16</sys:Double>
+    <sys:Double x:Key="FontSizeXl">18</sys:Double>
+    <sys:Double x:Key="FontSize2xl">22</sys:Double>
+    <sys:Double x:Key="FontSize3xl">28</sys:Double>
+
 </ResourceDictionary>
