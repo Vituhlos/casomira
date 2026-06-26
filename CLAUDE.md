@@ -7,6 +7,43 @@
 
 ---
 
+## 0. AKTIVNÍ PRÁCE — Avalonia UI rebuild (čti první)
+
+> **Probíhá přepis UI z Electronu na čistou AvaloniaUI (.NET).** Stack §2b
+> (Electron/React) je teď **vizuální + logická SPECIFIKACE/reference**, ne cíl
+> buildu. Zdroj pravdy směru: [docs/dev/plan-verdict-ui-rebuild.md](docs/dev/plan-verdict-ui-rebuild.md).
+> Logika (`Verdict.Core`) + testy se **zachovávají**, přepisuje se prezentační vrstva.
+> Sdílená design-system vrstva: `apps/desktop-net/Verdict.UI`.
+
+### UI work loop — definition of done pro každou obrazovku/komponentu
+1. **Načti matching `avalonia` subskill** před psaním (mvvm, controls/data-display,
+   custom-controls, pro-max/design-system…). Skill > odhad.
+2. **Stav jen z `Verdict.UI`** — tokeny + komponenty. ŽÁDNÝ raw hex, žádná
+   magická čísla (font z `FontSize*`, spacing ze `Space*`).
+3. **Architektura:** View = `UserControl`; VM = CommunityToolkit
+   (`[ObservableProperty]`/`[RelayCommand]`, `partial`), `ObservableCollection`,
+   async commandy; routing přes ViewLocator.
+4. **Ověř vizuálně objektivně** — headless render do PNG a porovnej s Electron
+   referencí: `dotnet run -c Release -- --render out.png [w h]` (NE computer-use).
+   Před buildem zabij běžící instance (DLL lock); NIKDY `open_application` po
+   `dotnet run` (spustí druhou instanci).
+5. **`ava-review`** na nový AXAML.
+6. **Před „hotovo":** relevantní body `avalonia-pro-max/review-checklist`
+   (focus ring, light/dark, tokeny). Plný screen-reader pass NEřešit (single-operator
+   offline nástroj). Compact šířku ANO (sidebar SplitView už sbaleno).
+7. **Commit** po každém ověřeném kousku.
+
+### Gotchas (nezopakovat)
+- **`StaticResource` na app-merged tokeny ve Styles souboru NEfunguje** →
+  `KeyNotFoundException`. Ve stylech vždy `DynamicResource`.
+- **`ExtendClientAreaChromeHints` v Avalonii 12.0.5 NEEXISTUJE** (skilly cílí
+  starší build). Custom titlebar neřešíme — necháváme OS titlebar (tmavý přes
+  dark theme), jako Electron.
+- **Soft tabulky NE přes `DataGrid`** (desktop-grid look) → `ListBox.verdict-table`,
+  zebra přes `:nth-child(even)`.
+
+---
+
 ## 1. Kontext
 
 Nahrazujeme časoměřičský systém vedený v Excelu. Dnes: **1 sešit na kategorii**,
