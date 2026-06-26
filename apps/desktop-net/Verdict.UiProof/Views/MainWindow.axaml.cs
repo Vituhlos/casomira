@@ -1,6 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Reactive;
 
 namespace Verdict.UiProof.Views;
 
@@ -44,9 +48,26 @@ public partial class MainWindow : Window
         ("60", "71", "Marek", "Ondřej", "Peugeot", "106"),
     }.Select(r => new Rider(r.los, r.c, r.p, r.j, r.zn, r.m)).ToList();
 
+    // Šířka, pod kterou se sidebar sbalí do overlaye + hamburger.
+    private const double CompactBreakpoint = 860;
+
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
+        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(
+            b => ApplyResponsive(b.Width)));
+    }
+
+    private void OnTogglePane(object? sender, RoutedEventArgs e)
+        => Split.IsPaneOpen = !Split.IsPaneOpen;
+
+    private void ApplyResponsive(double width)
+    {
+        if (width <= 0) return;
+        bool compact = width < CompactBreakpoint;
+        Split.DisplayMode = compact ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
+        Split.IsPaneOpen = !compact;
+        PaneToggle.IsVisible = compact;
     }
 }

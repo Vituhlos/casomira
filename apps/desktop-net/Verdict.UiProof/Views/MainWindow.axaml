@@ -10,11 +10,15 @@
         Icon="avares://Verdict.UI/Assets/verdict.ico"
         Background="{DynamicResource VerdictHostFallbackBrush}">
 
-    <Grid Margin="12" ColumnDefinitions="252,12,*">
+    <SplitView x:Name="Split" Margin="12"
+               DisplayMode="Inline" IsPaneOpen="True"
+               OpenPaneLength="264" CompactPaneLength="0"
+               PaneBackground="Transparent">
 
         <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
-        <Border Grid.Column="0"
-                Background="{DynamicResource VerdictSidebarBrush}"
+        <SplitView.Pane>
+        <Border Background="{DynamicResource VerdictSidebarBrush}"
+                Margin="0,0,12,0"
                 CornerRadius="16"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource VerdictBorderBrush}">
@@ -85,9 +89,10 @@
                 </Border>
             </Grid>
         </Border>
+        </SplitView.Pane>
 
         <!-- ══ HLAVNÍ OBLAST ════════════════════════════════════════ -->
-        <Grid Grid.Column="2" RowDefinitions="Auto,12,*">
+        <Grid RowDefinitions="Auto,12,*">
 
             <!-- TOPBAR -->
             <Border Grid.Row="0"
@@ -97,13 +102,19 @@
                     BorderBrush="{DynamicResource VerdictBorderBrush}"
                     Padding="14,12">
                 <Grid RowDefinitions="Auto,10,Auto">
-                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                        <Button x:Name="PaneToggle" Grid.Column="0"
+                                Classes="ghost" Content="☰" Padding="9,5"
+                                Margin="0,0,8,0"
+                                IsVisible="False"
+                                ToolTip.Tip="Kategorie"
+                                Click="OnTogglePane"/>
+                        <TextBlock Grid.Column="1"
                                    VerticalAlignment="Center">
                             <Run Text="N1600" Foreground="{DynamicResource VerdictForegroundBrush}" FontWeight="SemiBold"/>
                             <Run Text="  ›  Startovní listina" Foreground="{DynamicResource VerdictSecondaryBrush}"/>
                         </TextBlock>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                             <Button Classes="ghost" Content="☽" Padding="9,5"/>
                             <Button Classes="ghost" Content="⚙" Padding="9,5"/>
                             <Button Classes="outline" Content="Stopky"/>
@@ -200,5 +211,5 @@
                 </DockPanel>
             </Border>
         </Grid>
-    </Grid>
+    </SplitView>
 </Window>
