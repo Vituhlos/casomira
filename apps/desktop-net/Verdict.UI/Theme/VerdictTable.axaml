@@ -1,0 +1,75 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Verdict.UI — soft tabulka.
+         Obrazovka dá ListBox Classes="verdict-table" + ItemTemplate (buňky)
+         a samostatnou hlavičku (Grid se stejnými ColumnDefinitions).
+         Zebra/hover/výška/radius řeší tato vrstva. Žádný code-behind.
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- Kontejner -->
+    <Style Selector="ListBox.verdict-table">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- Řádek -->
+    <Style Selector="ListBox.verdict-table ListBoxItem">
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Height" Value="44"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <!-- Zebra (sudé řádky) -->
+    <Style Selector="ListBox.verdict-table ListBoxItem:nth-child(even) /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ZebraBrush}"/>
+    </Style>
+
+    <!-- Hover -->
+    <Style Selector="ListBox.verdict-table ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#12FFFFFF"/>
+    </Style>
+
+    <!-- Bez selection zvýraznění (read-only tabulka) -->
+    <Style Selector="ListBox.verdict-table ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.verdict-table ListBoxItem:selected:nth-child(even) /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ZebraBrush}"/>
+    </Style>
+    <Style Selector="ListBox.verdict-table ListBoxItem:selected:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#12FFFFFF"/>
+    </Style>
+
+    <!-- ── Hlavička ──────────────────────────────────────────────────── -->
+    <Style Selector="TextBlock.th">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictMutedBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ── Buňky ─────────────────────────────────────────────────────── -->
+    <Style Selector="TextBlock.td">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.td-strong">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.td-num">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+        <!-- tabulkové číslice (pevná šířka) -->
+        <Setter Property="FontFeatures" Value="+tnum"/>
+    </Style>
+
+</Styles>

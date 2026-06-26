@@ -6,6 +6,7 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictControls.axaml" />
+        <StyleInclude Source="avares://Verdict.UI/Theme/VerdictTable.axaml" />
     </Application.Styles>
 
     <Application.Resources>

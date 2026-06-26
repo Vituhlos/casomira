@@ -181,41 +181,22 @@
                             Margin="22,0"/>
 
                     <!-- Rows -->
-                    <ScrollViewer>
-                        <ItemsControl ItemsSource="{Binding Jezdci}" Margin="10,0,10,10">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="views:Rider">
-                                    <Border Background="{Binding RowBackground}"
-                                            CornerRadius="7"
-                                            Padding="12,0"
-                                            Height="44">
-                                        <Grid ColumnDefinitions="60,84,*,150,150,180">
-                                            <TextBlock Grid.Column="0" Text="{Binding Los}"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource VerdictSecondaryBrush}"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Cislo}"
-                                                       VerticalAlignment="Center"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource VerdictForegroundBrush}"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding Prijmeni}"
-                                                       VerticalAlignment="Center"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource VerdictForegroundBrush}"/>
-                                            <TextBlock Grid.Column="3" Text="{Binding Jmeno}"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource VerdictSecondaryBrush}"/>
-                                            <TextBlock Grid.Column="4" Text="{Binding Znacka}"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource VerdictSecondaryBrush}"/>
-                                            <TextBlock Grid.Column="5" Text="{Binding Model}"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource VerdictSecondaryBrush}"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <ListBox Classes="verdict-table"
+                             ItemsSource="{Binding Jezdci}"
+                             Margin="10,0,10,10">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="views:Rider">
+                                <Grid ColumnDefinitions="70,84,*,150,150,180">
+                                    <TextBlock Grid.Column="0" Text="{Binding Los}" Classes="td-num"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Cislo}" Classes="td-strong"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Prijmeni}" Classes="td-strong"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding Jmeno}" Classes="td"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding Znacka}" Classes="td"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding Model}" Classes="td"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </DockPanel>
             </Border>
         </Grid>
