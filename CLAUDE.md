@@ -41,6 +41,11 @@
   dark theme), jako Electron.
 - **Soft tabulky NE přes `DataGrid`** (desktop-grid look) → `ListBox.verdict-table`,
   zebra přes `:nth-child(even)`.
+- **SVG (loga/symboly/watermarky)** = balíček `Svg.Controls.Skia.Avalonia`
+  (NE deprecated `Avalonia.Svg.Skia`, ten končí na Avalonia 11).
+  `xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"`,
+  pak `<Image><Image.Source><svg:SvgImage Source="…svg"/></Image.Source></Image>`.
+  Window `Icon` zůstává `.ico` (ikony oken SVG neberou). Brand SVG jsou v `Verdict.UI/Assets`.
 
 ---
 
