@@ -1,0 +1,61 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Verdict.UI — stavové badge a medailové puntíky.
+         Badge:   <Border Classes="badge dnf"><TextBlock Text="DNF"/></Border>
+         Medaile: <Border Classes="medal gold"/>  (1./2./3. místo)
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- ── Stavový badge (DNF / DNS / DQ) ───────────────────────────── -->
+    <Style Selector="Border.badge">
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="6,2"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="Border.badge > TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="LetterSpacing" Value="0.3"/>
+    </Style>
+
+    <Style Selector="Border.badge.dnf">
+        <Setter Property="Background" Value="{DynamicResource VerdictDnfSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.badge.dnf > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictDnfBrush}"/>
+    </Style>
+
+    <Style Selector="Border.badge.dns">
+        <Setter Property="Background" Value="{DynamicResource VerdictDnsSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.badge.dns > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictDnsBrush}"/>
+    </Style>
+
+    <Style Selector="Border.badge.dq">
+        <Setter Property="Background" Value="{DynamicResource VerdictDqSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.badge.dq > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictDqBrush}"/>
+    </Style>
+
+    <!-- ── Medailový puntík (1./2./3. místo) ───────────────────────── -->
+    <Style Selector="Border.medal">
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.medal.gold">
+        <Setter Property="Background" Value="{DynamicResource MedalGoldBrush}"/>
+    </Style>
+    <Style Selector="Border.medal.silver">
+        <Setter Property="Background" Value="{DynamicResource MedalSilverBrush}"/>
+    </Style>
+    <Style Selector="Border.medal.bronze">
+        <Setter Property="Background" Value="{DynamicResource MedalBronzeBrush}"/>
+    </Style>
+
+</Styles>

@@ -23,4 +23,12 @@
     <!-- Pill pozadí (počty kategorií, jemné chipy) -->
     <SolidColorBrush x:Key="VerdictBadgeBrush" Color="{DynamicResource ForegroundColor}" Opacity="0.08"/>
 
+    <!-- Stavy jízdy: text + soft pozadí -->
+    <SolidColorBrush x:Key="VerdictDnfBrush" Color="{DynamicResource DnfColor}"/>
+    <SolidColorBrush x:Key="VerdictDnsBrush" Color="{DynamicResource DnsColor}"/>
+    <SolidColorBrush x:Key="VerdictDqBrush" Color="{DynamicResource DqColor}"/>
+    <SolidColorBrush x:Key="VerdictDnfSoftBrush" Color="{DynamicResource DnfColor}" Opacity="0.18"/>
+    <SolidColorBrush x:Key="VerdictDnsSoftBrush" Color="{DynamicResource DnsColor}" Opacity="0.22"/>
+    <SolidColorBrush x:Key="VerdictDqSoftBrush" Color="{DynamicResource DqColor}" Opacity="0.18"/>
+
 </ResourceDictionary>
