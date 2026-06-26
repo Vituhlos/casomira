@@ -1,0 +1,67 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Verdict.UI — karta závodu (race hub).
+         <Border Classes="race-card"> chip + název + meta + čára + statistiky </Border>
+         Přidávací karta: <Rectangle Classes="race-add-outline"/> + obsah uprostřed.
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- Karta závodu -->
+    <Style Selector="Border.race-card">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource VerdictBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="Padding" Value="18"/>
+        <Setter Property="Width" Value="248"/>
+        <Setter Property="MinHeight" Value="176"/>
+        <Setter Property="BoxShadow" Value="0 1 3 0 #14000000"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Border.race-card:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource VerdictPrimaryBrush}"/>
+    </Style>
+
+    <!-- Typ-chip uvnitř karty (RAC RACE / RX CUP) -->
+    <Style Selector="Border.race-chip">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceMutedBrush}"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="7,3"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="Border.race-chip > TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeXs}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LetterSpacing" Value="0.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+    </Style>
+
+    <!-- Texty karty -->
+    <Style Selector="TextBlock.race-card-title">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeLg}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+    <Style Selector="TextBlock.race-card-meta">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+    </Style>
+
+    <!-- Přidávací karta — dashed obrys (Border nemá dash → Rectangle) -->
+    <Style Selector="Rectangle.race-add-outline">
+        <Setter Property="Stroke" Value="{DynamicResource VerdictBorderBrush}"/>
+        <Setter Property="StrokeThickness" Value="1.5"/>
+        <Setter Property="StrokeDashArray" Value="5,3"/>
+        <Setter Property="RadiusX" Value="16"/>
+        <Setter Property="RadiusY" Value="16"/>
+        <Setter Property="Fill" Value="Transparent"/>
+    </Style>
+
+</Styles>

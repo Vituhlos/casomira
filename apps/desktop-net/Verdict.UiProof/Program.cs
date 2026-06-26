@@ -3,7 +3,9 @@ using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Verdict.UiProof.Views;
 
@@ -14,7 +16,7 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        // Headless PNG náhled: dotnet run -- --render <cesta> [šířka výška]
+        // Headless PNG nahled: dotnet run -- --render <cesta> [w h] [light|dark] [main|hub]
         if (args.Length >= 2 && args[0] == "--render")
             return RenderToPng(args);
 
@@ -33,6 +35,8 @@ internal static class Program
         var outPath = args[1];
         int w = args.Length >= 4 && int.TryParse(args[2], out var pw) ? pw : 1280;
         int h = args.Length >= 4 && int.TryParse(args[3], out var ph) ? ph : 800;
+        string theme = args.Length >= 5 ? args[4] : "dark";
+        string scene = args.Length >= 6 ? args[5] : "main";
 
         AppBuilder.Configure<App>()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
@@ -44,7 +48,23 @@ internal static class Program
         {
             try
             {
-                var window = new MainWindow { Width = w, Height = h };
+                var variant = theme.Equals("light", StringComparison.OrdinalIgnoreCase)
+                    ? ThemeVariant.Light : ThemeVariant.Dark;
+                Application.Current!.RequestedThemeVariant = variant;
+
+                Window window;
+                if (scene.Equals("hub", StringComparison.OrdinalIgnoreCase))
+                {
+                    window = new Window { Width = w, Height = h, Content = new RaceHubView() };
+                    if (Application.Current.TryGetResource("VerdictHostFallbackBrush", variant, out var bg)
+                        && bg is IBrush brush)
+                        window.Background = brush;
+                }
+                else
+                {
+                    window = new MainWindow { Width = w, Height = h };
+                }
+
                 window.Show();
 
                 // Dva layout passy, ať se počáteční stav usadí.
@@ -60,7 +80,7 @@ internal static class Program
 
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath))!);
                 bmp.Save(outPath);
-                Console.WriteLine($"Vyrenderováno: {outPath} ({w}x{h})");
+                Console.WriteLine($"Vyrenderovano: {outPath} ({w}x{h}, {theme}, {scene})");
                 return 0;
             }
             catch (Exception ex)

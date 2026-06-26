@@ -9,6 +9,7 @@
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictControls.axaml" />
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictTable.axaml" />
         <StyleInclude Source="avares://Verdict.UI/Theme/VerdictBadges.axaml" />
+        <StyleInclude Source="avares://Verdict.UI/Theme/VerdictCards.axaml" />
     </Application.Styles>
 
     <Application.Resources>
