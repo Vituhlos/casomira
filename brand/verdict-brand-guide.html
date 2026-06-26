@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verdict — Brand Guide</title>
+<style>
+  @font-face{font-family:"Figtree";src:url("fonts/Figtree-var.ttf") format("truetype");font-weight:300 900;font-display:swap;}
+  :root{--blue:#2563FF;--ink:#0B0D12;--snow:#FFFFFF;--bg:#0a0b0f;--panel:#13151c;--line:rgba(255,255,255,.08);--txt:#eef0f4;--mut:#9aa1ad;--mut2:#6b7280;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:"Figtree",system-ui,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;letter-spacing:-0.011em;}
+  .wrap{max-width:1000px;margin:0 auto;padding:60px 40px 120px;}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mut2);}
+  h1{font-size:40px;font-weight:600;letter-spacing:-0.03em;margin:12px 0 0;}
+  .lede{color:var(--mut);font-size:16px;max-width:680px;margin:14px 0 0;line-height:1.55;}
+  h2{font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin:0 0 18px;}
+  section{margin-top:64px;}
+  .hr{height:1px;background:var(--line);border:0;margin:0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .panel{border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:40px;position:relative;min-height:180px;}
+  .panel.light{background:var(--snow);} .panel.dark{background:var(--ink);}
+  .panel svg{display:block;overflow:visible;}
+  .ptag{position:absolute;left:14px;top:12px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;}
+  .panel.light .ptag{color:#aab0bb;} .panel.dark .ptag{color:#525a68;}
+  .cap{font-size:13px;color:var(--mut);margin:10px 2px 0;}
+  .swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .sw{border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .sw .chip{height:96px;} .sw .meta{padding:12px 14px;}
+  .sw .nm{font-size:14px;font-weight:600;} .sw .hex{font-size:12.5px;color:var(--mut);font-family:ui-monospace,monospace;margin-top:3px;}
+  .sw .use{font-size:12px;color:var(--mut2);margin-top:6px;line-height:1.4;}
+  .specs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;}
+  .spec{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--panel);}
+  .spec .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut2);}
+  .spec .v{font-size:16px;font-weight:600;margin-top:5px;}
+  .spec .v small{font-weight:400;color:var(--mut);font-size:13px;}
+  .rules{margin:0;padding:0;list-style:none;}
+  .rules li{padding:13px 0;border-bottom:1px solid var(--line);font-size:14.5px;color:var(--mut);display:flex;gap:12px;line-height:1.5;}
+  .rules li b{color:var(--txt);font-weight:600;}
+  .rules li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--blue);margin-top:7px;}
+  .scaleband{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;background:#fff;border-radius:14px;padding:26px;border:1px solid var(--line);}
+  .scaleband .si{display:flex;flex-direction:column;align-items:center;}
+  .scaleband .si .c{font-size:11px;color:#9aa1ad;margin-top:8px;}
+  .foot{margin-top:72px;color:var(--mut2);font-size:12.5px;}
+  @media print{
+    body{background:#fff;color:#0B0D12;}
+    .wrap{max-width:none;padding:0;}
+    section{margin-top:34px;page-break-inside:avoid;}
+    .panel.dark{background:var(--ink);} .panel.light{background:#fff;border-color:#e5e7eb;}
+    .eyebrow,.spec .k,.cap{color:#6b7280;} .lede,.rules li,.sw .hex{color:#374151;}
+    .spec,.sw,.panel{border-color:#e5e7eb;} .hr{background:#e5e7eb;}
+    h1,.spec .v,.sw .nm,.rules li b{color:#0B0D12;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Verdict · Brand Guide</div>
+  <h1>Logo systém &amp; identita</h1>
+  <p class="lede">Dva oficiální prvky převedené na křivky. Hlavní logo nese symbol&nbsp;P1 v iniciále „V"; wordmark drží modrý pivot jako tečku nad „i". Pivot vždy plná Race&nbsp;Blue, žádné gradienty ani efekty.</p>
+
+  <section>
+    <h2>01 — Hlavní logo · Směr 03</h2>
+    <div class="grid2">
+      <div><div class="panel light"><span class="ptag">Light</span><div id="main-l"></div></div><div class="cap">Iniciála „V" = čepele symbolu P1 + modrý pivot. Primární značka.</div></div>
+      <div><div class="panel dark"><span class="ptag">Dark</span><div id="main-d"></div></div><div class="cap">App/avatar, splash, hero, GitHub header, marketing, social.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>02 — Wordmark · Směr 01</h2>
+    <div class="grid2">
+      <div><div class="panel light"><span class="ptag">Light</span><div id="wm-l"></div></div><div class="cap">Pivot jako tečka nad „i". Klidný logotyp.</div></div>
+      <div><div class="panel dark"><span class="ptag">Dark</span><div id="wm-d"></div></div><div class="cap">UI, dokumenty, malé velikosti, jednobarevný tisk.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>03 — Lockupy</h2>
+    <div class="grid2">
+      <div><div class="panel dark" style="min-height:260px"><span class="ptag">Vertikální</span><div id="lv-d"></div></div><div class="cap">Symbol P1 nad wordmarkem 01. Čtvercové plochy.</div></div>
+      <div><div class="panel dark"><span class="ptag">Horizontální</span><div id="lh-d"></div></div><div class="cap">Symbol P1 + wordmark 01. Hlavičky, patičky.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>04 — Symbol P1 · neměnný</h2>
+    <div class="grid2">
+      <div class="panel light"><span class="ptag">Light</span><div id="sym-l"></div></div>
+      <div class="panel dark"><span class="ptag">Dark</span><div id="sym-d"></div></div>
+    </div>
+    <p class="cap">Symbol, app ikony a favicony zůstávají beze změny — jsou jen symbol, bez textu.</p>
+  </section>
+
+  <section>
+    <h2>05 — Barvy</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#2563FF"></div><div class="meta"><div class="nm">Race Blue</div><div class="hex">#2563FF</div><div class="use">Pivot (vždy plná), akcenty, primární akce</div></div></div>
+      <div class="sw"><div class="chip" style="background:#0B0D12"></div><div class="meta"><div class="nm">Ink</div><div class="hex">#0B0D12</div><div class="use">Tmavá pozadí, písmena na světlém, text</div></div></div>
+      <div class="sw"><div class="chip" style="background:#fff;border-bottom:1px solid var(--line)"></div><div class="meta"><div class="nm">Snow</div><div class="hex">#FFFFFF</div><div class="use">Světlá pozadí, písmena na tmavém</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>06 — Typografie logotypu</h2>
+    <div class="specs">
+      <div class="spec"><div class="k">Písmo</div><div class="v">Figtree <small>SemiBold · 600</small></div></div>
+      <div class="spec"><div class="k">Tracking</div><div class="v">−1,2 % <small>baseline-lock</small></div></div>
+      <div class="spec"><div class="k">Kerning</div><div class="v">Nativní <small>z fontu</small></div></div>
+      <div class="spec"><div class="k">Forma</div><div class="v">Křivky <small>nezávislé na fontu</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>07 — Test čitelnosti</h2>
+    <div class="scaleband" id="scaleband"></div>
+  </section>
+
+  <section>
+    <h2>08 — Pravidla použití</h2>
+    <ul class="rules">
+      <li><b>Pivot vždy plná #2563FF.</b> Nikdy se nepřebarvuje ani nedává do gradientu.</li>
+      <li><b>Monochromní písmena.</b> Bílá na tmavém, Ink (#0B0D12) na světlém.</li>
+      <li><b>Hlavní logo 03 je primární značka</b> — avatar, splash, hero. Funguje samostatně.</li>
+      <li><b>Wordmark 01</b> pro klidná, malá a jednobarevná použití. Min. výška 18 px.</li>
+      <li><b>Ochranná zóna</b> = průměr modrého pivotu na všech stranách.</li>
+      <li><b>Žádné gradienty ani efekty</b> v logu. Symbol P1 a ikony neměnné.</li>
+    </ul>
+  </section>
+
+  <p class="foot">© 2026 Verdict · Symbol P1 · Logotyp Figtree převedený na křivky (SIL OFL)</p>
+</div>
+
+<script src="verdict-brand.js"></script>
+<script>
+const V=window.VERDICT;
+function svg(box,inner,h){return '<svg viewBox="'+box.x+' '+box.y+' '+box.w+' '+box.h+'" height="'+h+'" style="width:auto;max-width:100%">'+inner+'</svg>';}
+const mb=V.mainBox(), wb=V.wordmark01Box();
+document.getElementById('main-l').innerHTML=svg(mb,V.mainInner('light'),64);
+document.getElementById('main-d').innerHTML=svg(mb,V.mainInner('dark'),64);
+document.getElementById('wm-l').innerHTML=svg(wb,V.wordmark01Inner('light'),50);
+document.getElementById('wm-d').innerHTML=svg(wb,V.wordmark01Inner('dark'),50);
+const vp=V.vertParts('dark'); document.getElementById('lv-d').innerHTML=svg({x:0,y:0,w:vp.w,h:vp.h},vp.inner,180);
+const hp=V.horizParts('dark'); document.getElementById('lh-d').innerHTML=svg({x:hp.x,y:hp.y,w:hp.w,h:hp.h},hp.inner,56);
+document.getElementById('sym-l').innerHTML='<svg viewBox="0 0 100 100" height="92">'+V.markInner(V.DARK,V.BLUE)+'</svg>';
+document.getElementById('sym-d').innerHTML='<svg viewBox="0 0 100 100" height="92">'+V.markInner(V.WHITE,V.BLUE)+'</svg>';
+const band=document.getElementById('scaleband');
+[64,40,28,20,16].forEach(px=>{const w=px*(wb.w/wb.h);
+  band.insertAdjacentHTML('beforeend','<div class="si"><svg viewBox="'+wb.x+' '+wb.y+' '+wb.w+' '+wb.h+'" height="'+px+'" width="'+w.toFixed(1)+'">'+V.wordmark01Inner('light')+'</svg><div class="c">'+px+' px</div></div>');});
+</script>
+</body>
+</html>
