@@ -20,5 +20,8 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.5" />
+    <!-- Headless render pro PNG nahledy obrazovek -->
+    <PackageReference Include="Avalonia.Headless" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Skia" Version="12.0.5" />
   </ItemGroup>
 </Project>

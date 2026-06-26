@@ -7,30 +7,10 @@
         Width="1280" Height="780"
         MinWidth="980" MinHeight="640"
         WindowStartupLocation="CenterScreen"
-        Icon="avares://Verdict.UI/Assets/verdict-symbol-light.png"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1"
+        Icon="avares://Verdict.UI/Assets/verdict.ico"
         Background="{DynamicResource VerdictHostFallbackBrush}">
 
-    <DockPanel>
-
-        <!-- ══ CUSTOM TITLEBAR (jako Electron) ════════════════════════ -->
-        <Border DockPanel.Dock="Top" Height="38"
-                Background="{DynamicResource VerdictHostFallbackBrush}"
-                IsHitTestVisible="False">
-            <StackPanel Orientation="Horizontal" Spacing="8"
-                        VerticalAlignment="Center" Margin="12,0">
-                <Image Source="avares://Verdict.UI/Assets/verdict-symbol-light.png"
-                       Width="18" Height="18"
-                       VerticalAlignment="Center"/>
-                <TextBlock Text="Verdict — N1600 · Startovní listina"
-                           FontSize="12"
-                           Foreground="{DynamicResource VerdictSecondaryBrush}"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-
-    <Grid Margin="12,4,12,12" ColumnDefinitions="252,12,*">
+    <Grid Margin="12" ColumnDefinitions="252,12,*">
 
         <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
         <Border Grid.Column="0"
@@ -240,5 +220,4 @@
             </Border>
         </Grid>
     </Grid>
-    </DockPanel>
 </Window>
