@@ -7,10 +7,30 @@
         Width="1280" Height="780"
         MinWidth="980" MinHeight="640"
         WindowStartupLocation="CenterScreen"
-        TransparencyLevelHint="Mica"
+        Icon="avares://Verdict.UI/Assets/verdict-symbol-light.png"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Background="{DynamicResource VerdictHostFallbackBrush}">
 
-    <Grid Margin="12" ColumnDefinitions="252,12,*">
+    <DockPanel>
+
+        <!-- ══ CUSTOM TITLEBAR (jako Electron) ════════════════════════ -->
+        <Border DockPanel.Dock="Top" Height="38"
+                Background="{DynamicResource VerdictHostFallbackBrush}"
+                IsHitTestVisible="False">
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        VerticalAlignment="Center" Margin="12,0">
+                <Image Source="avares://Verdict.UI/Assets/verdict-symbol-light.png"
+                       Width="18" Height="18"
+                       VerticalAlignment="Center"/>
+                <TextBlock Text="Verdict — N1600 · Startovní listina"
+                           FontSize="12"
+                           Foreground="{DynamicResource VerdictSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+    <Grid Margin="12,4,12,12" ColumnDefinitions="252,12,*">
 
         <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
         <Border Grid.Column="0"
@@ -21,7 +41,7 @@
             <Grid RowDefinitions="Auto,*,Auto">
 
                 <StackPanel Grid.Row="0" Spacing="6" Margin="14,16,14,10">
-                    <Image Source="/Assets/verdict-mainlogo-light.png"
+                    <Image Source="avares://Verdict.UI/Assets/verdict-mainlogo-light.png"
                            Width="150" Height="34"
                            Stretch="Uniform"
                            HorizontalAlignment="Left"/>
@@ -220,4 +240,5 @@
             </Border>
         </Grid>
     </Grid>
+    </DockPanel>
 </Window>
