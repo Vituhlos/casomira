@@ -5,12 +5,14 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Verdict.UI/Theme/VerdictControls.axaml" />
     </Application.Styles>
 
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Verdict.UiProof/Styles/VerdictTokens.axaml" />
+                <ResourceInclude Source="avares://Verdict.UI/Tokens/VerdictTokens.axaml" />
+                <ResourceInclude Source="avares://Verdict.UI/Theme/VerdictBrushes.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -1,0 +1,26 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Semantické štětce odvozené z Verdict tokenů (Color → Brush).
+         Color se resolvuje přes DynamicResource → automaticky se mění s light/dark.
+         Tohle je JEDINÝ způsob, jak v obrazovkách sahat na barvy — žádné raw hex. -->
+
+    <SolidColorBrush x:Key="VerdictForegroundBrush" Color="{DynamicResource ForegroundColor}"/>
+    <SolidColorBrush x:Key="VerdictSecondaryBrush" Color="{DynamicResource SecondaryForegroundColor}"/>
+    <SolidColorBrush x:Key="VerdictMutedBrush" Color="{DynamicResource MutedColor}"/>
+
+    <SolidColorBrush x:Key="VerdictSidebarBrush" Color="{DynamicResource SidebarBackgroundColor}"/>
+    <SolidColorBrush x:Key="VerdictTabBarBrush" Color="{DynamicResource TabBarColor}"/>
+    <SolidColorBrush x:Key="VerdictSelectionBrush" Color="{DynamicResource SelectionColor}"/>
+    <SolidColorBrush x:Key="VerdictGhostHoverBrush" Color="{DynamicResource GhostHoverColor}"/>
+
+    <SolidColorBrush x:Key="VerdictBorderBrush" Color="{DynamicResource BorderColor}"/>
+
+    <SolidColorBrush x:Key="VerdictPrimaryBrush" Color="{DynamicResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="VerdictPrimaryForegroundBrush" Color="{DynamicResource PrimaryForegroundColor}"/>
+    <SolidColorBrush x:Key="VerdictAccentBrush" Color="{DynamicResource AccentColor}"/>
+
+    <!-- Pill pozadí (počty kategorií, jemné chipy) -->
+    <SolidColorBrush x:Key="VerdictBadgeBrush" Color="{DynamicResource ForegroundColor}" Opacity="0.08"/>
+
+</ResourceDictionary>

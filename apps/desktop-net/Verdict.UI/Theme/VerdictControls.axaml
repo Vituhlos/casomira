@@ -1,0 +1,103 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Verdict.UI — sdílené control styly.
+         Obrazovky používají Classes="primary|outline|ghost|sidebar|tabs|th"
+         a nikdy nesahají na raw primitivy ani hex.
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- ── Tlačítka ──────────────────────────────────────────────────── -->
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{DynamicResource VerdictPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictPrimaryForegroundBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#0977E8"/>
+    </Style>
+
+    <Style Selector="Button.outline">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="13,6"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource VerdictBorderBrush}"/>
+    </Style>
+    <Style Selector="Button.outline:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictGhostHoverBrush}"/>
+    </Style>
+
+    <Style Selector="Button.ghost">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictGhostHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+
+    <!-- ── Sidebar (seznam kategorií) ────────────────────────────────── -->
+    <Style Selector="ListBox.sidebar">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8,0"/>
+    </Style>
+    <Style Selector="ListBox.sidebar ListBoxItem">
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.sidebar ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictGhostHoverBrush}"/>
+    </Style>
+    <Style Selector="ListBox.sidebar ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictSelectionBrush}"/>
+    </Style>
+
+    <!-- ── Phase tabs ────────────────────────────────────────────────── -->
+    <Style Selector="ListBox.tabs">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.tabs ListBoxItem">
+        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="Margin" Value="0,0,2,0"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictMutedBrush}"/>
+    </Style>
+    <Style Selector="ListBox.tabs ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#12FFFFFF"/>
+    </Style>
+    <Style Selector="ListBox.tabs ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+
+    <!-- ── Hlavička tabulky ──────────────────────────────────────────── -->
+    <Style Selector="TextBlock.th">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictMutedBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+</Styles>
