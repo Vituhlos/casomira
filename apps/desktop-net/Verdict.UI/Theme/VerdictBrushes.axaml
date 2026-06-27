@@ -31,4 +31,8 @@
     <SolidColorBrush x:Key="VerdictDnsSoftBrush" Color="{DynamicResource DnsColor}" Opacity="0.22"/>
     <SolidColorBrush x:Key="VerdictDqSoftBrush" Color="{DynamicResource DqColor}" Opacity="0.18"/>
 
+    <!-- Typ závodu (chip RAC RACE) — teal -->
+    <SolidColorBrush x:Key="VerdictTealBrush" Color="{DynamicResource TealColor}"/>
+    <SolidColorBrush x:Key="VerdictTealSoftBrush" Color="{DynamicResource TealColor}" Opacity="0.16"/>
+
 </ResourceDictionary>

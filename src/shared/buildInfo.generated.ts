@@ -5,10 +5,10 @@ export const BUILD_INFO = {
   "name": "verdict",
   "productName": "Verdict",
   "version": "0.9.13-beta",
-  "commitSha": "b832071b81a2500cf688a2e27b5a6377ca602787",
-  "shortCommitSha": "b832071",
-  "buildDate": "2026-06-25T06:41:07.932Z",
+  "commitSha": "24d3d52f034f459796b531400d8094182253f7c8",
+  "shortCommitSha": "24d3d52",
+  "buildDate": "2026-06-26T14:44:36.372Z",
   "releaseChannel": "beta",
-  "gitRef": "claude/avalonia-migration-plan",
+  "gitRef": "verdict-ui-rebuild",
   "packagedBy": "local"
 } as const

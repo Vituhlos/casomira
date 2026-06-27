@@ -2,9 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ════════════════════════════════════════════════════════════════
-         Verdict.UI — karta závodu (race hub).
-         <Border Classes="race-card"> chip + název + meta + čára + statistiky </Border>
-         Přidávací karta: <Rectangle Classes="race-add-outline"/> + obsah uprostřed.
+         Verdict.UI — karta závodu (race hub), chování dle Electronu:
+         hover = nadzvednutí + větší stín + fade-in akčních ikon vpravo nahoře.
          ════════════════════════════════════════════════════════════════ -->
 
     <!-- Karta závodu -->
@@ -18,19 +17,49 @@
         <Setter Property="MinHeight" Value="176"/>
         <Setter Property="BoxShadow" Value="0 1 3 0 #14000000"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransform" Value="none"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut"/>
             </Transitions>
         </Setter>
     </Style>
     <Style Selector="Border.race-card:pointerover">
-        <Setter Property="BorderBrush" Value="{DynamicResource VerdictPrimaryBrush}"/>
+        <Setter Property="RenderTransform" Value="translateY(-4px)"/>
+        <Setter Property="BoxShadow" Value="0 12 28 -8 #33000000"/>
     </Style>
 
-    <!-- Typ-chip uvnitř karty (RAC RACE / RX CUP) -->
+    <!-- Akční ikony (zálohovat / upravit / smazat) — skryté, fade-in na hover -->
+    <Style Selector="StackPanel.card-actions">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Border.race-card:pointerover StackPanel.card-actions">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <!-- Ikonové tlačítko v kartě -->
+    <Style Selector="Button.card-icon">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictMutedBrush}"/>
+    </Style>
+    <Style Selector="Button.card-icon:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictGhostHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.card-icon.danger:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictDqBrush}"/>
+    </Style>
+
+    <!-- Typ-chip uvnitř karty (RAC RACE) — soft teal -->
     <Style Selector="Border.race-chip">
-        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceMutedBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictTealSoftBrush}"/>
         <Setter Property="CornerRadius" Value="5"/>
         <Setter Property="Padding" Value="7,3"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -39,7 +68,7 @@
         <Setter Property="FontSize" Value="{DynamicResource FontSizeXs}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="LetterSpacing" Value="0.5"/>
-        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictTealBrush}"/>
     </Style>
 
     <!-- Texty karty -->

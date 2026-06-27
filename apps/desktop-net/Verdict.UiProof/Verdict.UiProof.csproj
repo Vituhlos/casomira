@@ -25,5 +25,7 @@
     <PackageReference Include="Avalonia.Skia" Version="12.0.5" />
     <!-- SVG (loga, symboly, watermarky) ve vysoke kvalite -->
     <PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.13" />
+    <!-- Ikony (cista line sada, barvi se dle foregroundu) -->
+    <PackageReference Include="Lucide.Avalonia" Version="0.2.11" />
   </ItemGroup>
 </Project>
