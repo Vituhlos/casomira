@@ -17,6 +17,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://Verdict.UI/Tokens/VerdictTokens.axaml" />
                 <ResourceInclude Source="avares://Verdict.UI/Theme/VerdictBrushes.axaml" />
+                <ResourceInclude Source="avares://Verdict.UI/Theme/VerdictIcons.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

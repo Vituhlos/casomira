@@ -46,6 +46,11 @@
   `xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"`,
   pak `<Image><Image.Source><svg:SvgImage Source="…svg"/></Image.Source></Image>`.
   Window `Icon` zůstává `.ico` (ikony oken SVG neberou). Brand SVG jsou v `Verdict.UI/Assets`.
+- **Ikony UI = Gravity UI** (jako Electron), NE Lucide. Path geometrie vytažená z
+  `node_modules/@gravity-ui/icons/svgs/*.svg` do `Verdict.UI/Theme/VerdictIcons.axaml`
+  (`<StreamGeometry x:Key="Ico…">F0 …</StreamGeometry>`, `F0` = evenodd kvůli dírám).
+  Použití: `<PathIcon Data="{StaticResource Ico…}" Width="16" Height="16"/>` — barví se
+  dle `Foreground` (theme-aware). Nové ikony přidávej stejně z gravity SVG.
 
 ---
 
