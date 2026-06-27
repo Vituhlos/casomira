@@ -85,6 +85,8 @@
             <Color x:Key="MedalSilverColor">#9EA3A8</Color>
             <Color x:Key="MedalBronzeColor">#A0522D</Color>
             <Color x:Key="TealColor">#1D9E75</Color>
+            <Color x:Key="RaceRacColor">#2563EB</Color>
+            <Color x:Key="RaceRxColor">#7C3AED</Color>
 
             <SolidColorBrush x:Key="VerdictHostFallbackBrush" Color="#D819201E"/>
             <SolidColorBrush x:Key="VerdictSurfaceBrush" Color="#FFFFFF"/>
@@ -178,6 +180,8 @@
             <Color x:Key="MedalSilverColor">#B0B5BB</Color>
             <Color x:Key="MedalBronzeColor">#CD7F32</Color>
             <Color x:Key="TealColor">#5DCAA5</Color>
+            <Color x:Key="RaceRacColor">#6CA0F0</Color>
+            <Color x:Key="RaceRxColor">#A78BFA</Color>
 
             <SolidColorBrush x:Key="VerdictHostFallbackBrush" Color="#17191C"/>
             <SolidColorBrush x:Key="VerdictSurfaceBrush" Color="#2A2B2F"/>

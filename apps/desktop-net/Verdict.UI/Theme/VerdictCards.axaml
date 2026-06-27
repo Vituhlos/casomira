@@ -59,7 +59,7 @@
 
     <!-- Typ-chip uvnitř karty (RAC RACE) — soft teal -->
     <Style Selector="Border.race-chip">
-        <Setter Property="Background" Value="{DynamicResource VerdictTealSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictSurfaceMutedBrush}"/>
         <Setter Property="CornerRadius" Value="5"/>
         <Setter Property="Padding" Value="7,3"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -68,7 +68,31 @@
         <Setter Property="FontSize" Value="{DynamicResource FontSizeXs}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="LetterSpacing" Value="0.5"/>
-        <Setter Property="Foreground" Value="{DynamicResource VerdictTealBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+    </Style>
+
+    <!-- RAC Race = modrá -->
+    <Style Selector="Border.race-chip.rac">
+        <Setter Property="Background" Value="{DynamicResource VerdictRacSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.race-chip.rac > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictRacBrush}"/>
+    </Style>
+
+    <!-- RX Cup = fialová -->
+    <Style Selector="Border.race-chip.rx">
+        <Setter Property="Background" Value="{DynamicResource VerdictRxSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.race-chip.rx > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictRxBrush}"/>
+    </Style>
+
+    <!-- Ve vývoji = warning -->
+    <Style Selector="Border.race-chip.warn">
+        <Setter Property="Background" Value="{DynamicResource VerdictWarnSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.race-chip.warn > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource VerdictWarnBrush}"/>
     </Style>
 
     <!-- Texty karty -->

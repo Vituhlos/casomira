@@ -67,7 +67,7 @@
 
                             <!-- Hlavička: chip vlevo + akce vpravo (hover) -->
                             <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                                <Border Grid.Column="0" Classes="race-chip">
+                                <Border Grid.Column="0" Classes="race-chip rac">
                                     <TextBlock Text="RAC RACE"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" Classes="card-actions"
@@ -104,6 +104,48 @@
                                     <lucide:LucideIcon Kind="Users" Size="13"
                                                        Foreground="{DynamicResource VerdictSecondaryBrush}"/>
                                     <TextBlock Text="124 jezdců" Classes="race-card-meta"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- RX Cup závod (jiný typ → jiná barva) -->
+                    <Border Classes="race-card">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                                    <Border Classes="race-chip rx"><TextBlock Text="RX CUP"/></Border>
+                                    <Border Classes="race-chip warn"><TextBlock Text="Ve vývoji"/></Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Classes="card-actions"
+                                            Orientation="Horizontal" Spacing="2" Margin="0,-4,-6,0">
+                                    <Button Classes="card-icon" ToolTip.Tip="Zálohovat závod">
+                                        <lucide:LucideIcon Kind="Download" Size="15"/>
+                                    </Button>
+                                    <Button Classes="card-icon" ToolTip.Tip="Upravit údaje">
+                                        <lucide:LucideIcon Kind="Pencil" Size="15"/>
+                                    </Button>
+                                    <Button Classes="card-icon danger" ToolTip.Tip="Smazat závod">
+                                        <lucide:LucideIcon Kind="Trash2" Size="15"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Grid.Row="1" Classes="race-card-title"
+                                       Text="RX Cup — Sosnová" Margin="0,14,0,0"/>
+                            <TextBlock Grid.Row="2" Classes="race-card-meta"
+                                       Text="14. 6. 2026 · Sosnová" Margin="0,6,0,0"/>
+                            <Border Grid.Row="4" Height="1"
+                                    Background="{DynamicResource VerdictBorderBrush}" Margin="0,12,0,0"/>
+                            <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="16" Margin="0,10,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                    <lucide:LucideIcon Kind="LayoutGrid" Size="13"
+                                                       Foreground="{DynamicResource VerdictSecondaryBrush}"/>
+                                    <TextBlock Text="9 kategorií" Classes="race-card-meta"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                    <lucide:LucideIcon Kind="Users" Size="13"
+                                                       Foreground="{DynamicResource VerdictSecondaryBrush}"/>
+                                    <TextBlock Text="86 jezdců" Classes="race-card-meta"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>

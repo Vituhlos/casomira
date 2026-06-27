@@ -31,8 +31,14 @@
     <SolidColorBrush x:Key="VerdictDnsSoftBrush" Color="{DynamicResource DnsColor}" Opacity="0.22"/>
     <SolidColorBrush x:Key="VerdictDqSoftBrush" Color="{DynamicResource DqColor}" Opacity="0.18"/>
 
-    <!-- Typ závodu (chip RAC RACE) — teal -->
-    <SolidColorBrush x:Key="VerdictTealBrush" Color="{DynamicResource TealColor}"/>
-    <SolidColorBrush x:Key="VerdictTealSoftBrush" Color="{DynamicResource TealColor}" Opacity="0.16"/>
+    <!-- Typy závodů (chip): RAC = modrá, RX = fialová -->
+    <SolidColorBrush x:Key="VerdictRacBrush" Color="{DynamicResource RaceRacColor}"/>
+    <SolidColorBrush x:Key="VerdictRacSoftBrush" Color="{DynamicResource RaceRacColor}" Opacity="0.15"/>
+    <SolidColorBrush x:Key="VerdictRxBrush" Color="{DynamicResource RaceRxColor}"/>
+    <SolidColorBrush x:Key="VerdictRxSoftBrush" Color="{DynamicResource RaceRxColor}" Opacity="0.15"/>
+
+    <!-- Stav „Ve vývoji" — warning -->
+    <SolidColorBrush x:Key="VerdictWarnBrush" Color="{DynamicResource WarningColor}"/>
+    <SolidColorBrush x:Key="VerdictWarnSoftBrush" Color="{DynamicResource WarningColor}" Opacity="0.18"/>
 
 </ResourceDictionary>
