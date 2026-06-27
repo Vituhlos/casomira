@@ -74,6 +74,27 @@
         <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
     </Style>
 
+    <!-- ── Press-scale + přechody (HeroUI feel) ──────────────────────
+         Stisk = jemné zmenšení (scale 0.97), plynulý transform 200ms.
+         Dle HeroUI button.css (transform 250ms, scale 0.97). -->
+    <Style Selector="Button.primary, Button.outline, Button.ghost, Button.group-btn, Button.card-icon">
+        <Setter Property="RenderTransform" Value="none"/>
+        <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.primary:pressed, Button.outline:pressed, Button.ghost:pressed, Button.group-btn:pressed, Button.card-icon:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)"/>
+    </Style>
+
+    <!-- Disabled = ztlumení (jako HeroUI status-disabled) -->
+    <Style Selector="Button.primary:disabled, Button.outline:disabled, Button.ghost:disabled, Button.group-btn:disabled, Button.card-icon:disabled">
+        <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+
     <!-- ── Sidebar (seznam kategorií) ────────────────────────────────── -->
     <Style Selector="ListBox.sidebar">
         <Setter Property="Background" Value="Transparent"/>
