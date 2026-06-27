@@ -19,6 +19,7 @@
     </Style>
     <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="#0977E8"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictPrimaryForegroundBrush}"/>
     </Style>
 
     <Style Selector="Button.outline">
@@ -32,6 +33,32 @@
     </Style>
     <Style Selector="Button.outline:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource VerdictGhostHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+
+    <!-- ── Spojená tlačítková skupina (outline pill se separátorem) ──── -->
+    <Style Selector="Border.btn-group">
+        <Setter Property="BorderBrush" Value="{DynamicResource VerdictBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <Style Selector="Button.group-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.group-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VerdictGhostHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource VerdictForegroundBrush}"/>
+    </Style>
+    <Style Selector="Border.btn-group-sep">
+        <Setter Property="Width" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource VerdictBorderBrush}"/>
+        <Setter Property="Margin" Value="0,6"/>
     </Style>
 
     <Style Selector="Button.ghost">
